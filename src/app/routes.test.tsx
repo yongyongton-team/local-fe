@@ -1,0 +1,135 @@
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { renderApp } from '@/test/renderApp';
+
+const heading1 = (name: string) => screen.findByRole('heading', { level: 1, name });
+
+describe('첫 화면', () => {
+  it('역할 선택, 동네 선택, 시작하기를 렌더링한다', async () => {
+    renderApp();
+
+    expect(await heading1('우리 동네에 없는 가게, 원하면 생겨요')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(screen.getByRole('radio', { name: /^주민/ })).toBeChecked();
+    expect(await screen.findByRole('option', { name: '기흥구 구성동' })).toBeInTheDocument();
+    expect(screen.getByLabelText('내 동네')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '시작하기' })).toBeInTheDocument();
+  });
+
+  it.each([
+    { role: /^주민/, title: '동네 탐색' },
+    { role: /^사장님/, title: '수요 동네 탐색' },
+    { role: /^예비 창업자/, title: '입지 찾기' },
+  ])('역할($role)을 고르고 시작하면 해당 기본 페이지로 이동한다', async ({ role, title }) => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await screen.findByRole('option', { name: '기흥구 구성동' });
+    await user.selectOptions(screen.getByLabelText('내 동네'), 'guseong');
+    await user.click(screen.getByRole('radio', { name: role }));
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+
+    expect(await heading1(title)).toBeInTheDocument();
+  });
+
+  it('동네를 고르지 않으면 이동하지 않고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await screen.findByRole('option', { name: '기흥구 구성동' });
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('동네를 선택해 주세요');
+    expect(screen.getByLabelText('내 동네')).toHaveFocus();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('우리 동네에 없는 가게');
+  });
+
+  it('선택한 동네를 주민 화면에서 보여준다', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await screen.findByRole('option', { name: '기흥구 보정동' });
+    await user.selectOptions(screen.getByLabelText('내 동네'), 'bojeong');
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+
+    expect(await screen.findByText('기흥구 보정동')).toBeInTheDocument();
+    expect(await screen.findByText(/요청 14명/)).toBeInTheDocument();
+    expect(screen.getByText('예시 데이터')).toBeInTheDocument();
+  });
+});
+
+describe('Not Found', () => {
+  it('정의되지 않은 경로는 Not Found 를 보여준다', async () => {
+    renderApp(['/없는/경로']);
+
+    expect(await heading1('찾을 수 없음')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '첫 화면으로' })).toHaveAttribute('href', '/');
+  });
+});
+
+describe('URL 직접 진입', () => {
+  it('동네를 선택하지 않아도 주민 화면은 렌더링되고 선택 안내를 보여준다', async () => {
+    renderApp(['/resident']);
+
+    expect(await heading1('동네 탐색')).toBeInTheDocument();
+    expect(screen.getByText('내 동네를 먼저 선택해 주세요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '첫 화면으로' })).toHaveAttribute('href', '/');
+  });
+
+  it.each([
+    ['/resident/requests', '내 요청'],
+    ['/resident/requests/new', '가게 요청 작성'],
+    ['/merchant', '수요 동네 탐색'],
+    ['/founder', '입지 찾기'],
+  ])('%s 는 %s 제목으로 렌더링된다', async (path, title) => {
+    renderApp([path]);
+
+    expect(await heading1(title)).toBeInTheDocument();
+  });
+
+  it('사장님 동네 상세는 areaId 의 수요를 보여준다', async () => {
+    renderApp(['/merchant/areas/guseong']);
+
+    expect(await heading1('구성동 수요')).toBeInTheDocument();
+    expect(screen.getByText('29명')).toBeInTheDocument();
+    expect(screen.getByText('2.4km')).toBeInTheDocument();
+    expect(screen.getByText('예시 데이터')).toBeInTheDocument();
+  });
+
+  it('창업자 리포트의 설명 영역은 준비 중 자리표시자다', async () => {
+    renderApp(['/founder/areas/mabuk/report']);
+
+    expect(await heading1('마북동 리포트')).toBeInTheDocument();
+    expect(screen.getByText('설명은 준비 중이에요')).toBeInTheDocument();
+  });
+
+  it.each(['/merchant/areas/unknown', '/founder/areas/unknown/report'])(
+    '%s 는 페이지 안에서 찾을 수 없음을 안내한다',
+    async (path) => {
+      renderApp([path]);
+
+      expect(await heading1('찾을 수 없음')).toBeInTheDocument();
+      expect(screen.getByText('찾을 수 없는 동네예요')).toBeInTheDocument();
+    },
+  );
+});
+
+describe('하단 내비게이션(임시안)', () => {
+  it.each(['/resident', '/resident/requests'])('%s 에서는 표시된다', async (path) => {
+    renderApp([path]);
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.getByRole('navigation', { name: '주민 메뉴' })).toBeInTheDocument();
+  });
+
+  it.each(['/', '/resident/requests/new', '/merchant', '/founder'])(
+    '%s 에서는 숨겨진다',
+    async (path) => {
+      renderApp([path]);
+
+      await screen.findByRole('heading', { level: 1 });
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    },
+  );
+});

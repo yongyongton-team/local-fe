@@ -1,0 +1,21 @@
+.map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  border-radius: var(--radius-card);
+  background: repeating-conic-gradient(
+      var(--color-surface-muted) 0% 25%,
+      var(--color-surface) 0% 50%
+    )
+    0 0 / 48px 48px;
+}
+
+.text {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: var(--font-caption);
+  text-align: center;
+}

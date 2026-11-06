@@ -1,0 +1,143 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+}
+
+.devBadge {
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-black);
+  border-radius: var(--radius-pill);
+  font: var(--font-caption);
+  color: var(--color-text-primary);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.sub {
+  margin-top: var(--space-2);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-black);
+  border-radius: var(--radius-pill);
+  font: var(--font-caption);
+  font-size: var(--font-size-chip);
+  white-space: nowrap;
+}
+
+/* 출처 구분은 색상 외에 테두리 모양으로도 전달한다. */
+.ds {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.screen {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.temp {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.swatches {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.chipColor {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+
+.swatchText {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  min-width: 0;
+  font: var(--font-caption);
+}
+
+.typeRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+}
+
+.sizeList {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sizeItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  font: var(--font-caption);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.page code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-chip);
+  overflow-wrap: anywhere;
+}
