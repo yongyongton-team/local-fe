@@ -3,18 +3,43 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '@/test/renderApp';
 
-const heading1 = (name: string) => screen.findByRole('heading', { level: 1, name });
+const heading1 = (name: string | RegExp) => screen.findByRole('heading', { level: 1, name });
 
 describe('첫 화면', () => {
-  it('역할 선택, 동네 선택, 시작하기를 렌더링한다', async () => {
+  it('로고, 제목, 역할 3종, 동네 선택, 시작하기를 렌더링하고 역할은 선택되어 있지 않다', async () => {
     renderApp();
 
-    expect(await heading1('우리 동네에 없는 가게, 원하면 생겨요')).toBeInTheDocument();
-    expect(screen.getAllByRole('radio')).toHaveLength(3);
-    expect(screen.getByRole('radio', { name: /^주민/ })).toBeChecked();
-    expect(await screen.findByRole('option', { name: '기흥구 구성동' })).toBeInTheDocument();
-    expect(screen.getByLabelText('내 동네')).toBeInTheDocument();
+    expect(await heading1(/우리 동네에 없는 가게,\s*원하면 생겨요/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '생기면 갈게요' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '나는' })).toBeInTheDocument();
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(3);
+    radios.forEach((radio) => expect(radio).not.toBeChecked());
     expect(screen.getByRole('button', { name: '시작하기' })).toBeInTheDocument();
+  });
+
+  it('동네는 목록의 첫 항목(기흥구 구성동)이 기본 선택되어 있다', async () => {
+    renderApp();
+
+    const select = await screen.findByRole('combobox', { name: '내 동네' });
+    await screen.findByRole('option', { name: '기흥구 구성동' });
+    expect(select).toHaveDisplayValue('기흥구 구성동');
+    expect(select).toBeEnabled();
+  });
+
+  it('역할을 고르면 그 역할만 선택 상태가 된다', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole('radio', { name: /^사장님/ }));
+
+    expect(screen.getByRole('radio', { name: /^사장님/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^주민/ })).not.toBeChecked();
+
+    await user.click(screen.getByRole('radio', { name: /^예비 창업자/ }));
+
+    expect(screen.getByRole('radio', { name: /^예비 창업자/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^사장님/ })).not.toBeChecked();
   });
 
   it.each([
@@ -26,23 +51,26 @@ describe('첫 화면', () => {
     renderApp();
 
     await screen.findByRole('option', { name: '기흥구 구성동' });
-    await user.selectOptions(screen.getByLabelText('내 동네'), 'guseong');
     await user.click(screen.getByRole('radio', { name: role }));
     await user.click(screen.getByRole('button', { name: '시작하기' }));
 
     expect(await heading1(title)).toBeInTheDocument();
   });
 
-  it('동네를 고르지 않으면 이동하지 않고 안내한다', async () => {
+  it('역할을 고르지 않고 시작하면 이동하지 않고 안내한다', async () => {
     const user = userEvent.setup();
     renderApp();
 
     await screen.findByRole('option', { name: '기흥구 구성동' });
     await user.click(screen.getByRole('button', { name: '시작하기' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('동네를 선택해 주세요');
-    expect(screen.getByLabelText('내 동네')).toHaveFocus();
+    expect(screen.getByRole('alert')).toHaveTextContent('역할을 선택해 주세요');
+    expect(screen.getAllByRole('radio')[0]).toHaveFocus();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('우리 동네에 없는 가게');
+
+    // 역할을 고르면 안내가 사라진다.
+    await user.click(screen.getByRole('radio', { name: /^주민/ }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('선택한 동네를 주민 화면에서 보여준다', async () => {
@@ -51,6 +79,7 @@ describe('첫 화면', () => {
 
     await screen.findByRole('option', { name: '기흥구 보정동' });
     await user.selectOptions(screen.getByLabelText('내 동네'), 'bojeong');
+    await user.click(screen.getByRole('radio', { name: /^주민/ }));
     await user.click(screen.getByRole('button', { name: '시작하기' }));
 
     expect(await screen.findByText('기흥구 보정동')).toBeInTheDocument();

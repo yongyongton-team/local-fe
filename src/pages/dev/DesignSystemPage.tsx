@@ -343,7 +343,7 @@ export function DesignSystemPage() {
             <Text variant="display">Display 우리 동네에 없는 가게, 원하면 생겨요</Text>
             <Text variant="caption">
               <SourceTag source="screen" /> 온보딩 큰 제목{' '}
-              <TokenValue token="--font-size-display" /> (원본 SemiBold, 여기서는 Bold)
+              <TokenValue token="--font-size-display" /> SemiBold
             </Text>
           </div>
           <Sub>시각 스타일과 HTML 의미 분리: 같은 Title 스타일을 다른 태그로</Sub>

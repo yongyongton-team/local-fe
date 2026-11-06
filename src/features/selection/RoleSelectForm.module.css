@@ -1,21 +1,42 @@
+/*
+ * 첫 화면 폼 (Figma node 2:1169). 간격·크기는 해당 화면에서 읽은 값이다.
+ *   카드 사이 16px, 라벨→카드 8px, 카드 끝→"내 동네" 라벨 24px, 카드·선택 박스 높이 60px
+ */
 .form {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: 24px;
 }
 
 .roles {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
-.legend {
+/* 라벨: Medium 14px (디자인 시스템 Caption 크기, 색은 본문색) */
+.label {
   display: block;
-  margin-bottom: var(--space-2);
   padding: 0;
   font: var(--font-caption);
+  line-height: 17px; /* [화면] Figma 라벨 높이(normal) */
   color: var(--color-text-primary);
+}
+
+/* fieldset 의 legend 는 flex gap 바깥에 놓이므로 아래 간격(라벨→카드 8px)을 직접 준다. */
+.roles .label {
+  margin-bottom: 8px;
+}
+
+/* 라벨은 Figma 에서 카드보다 안쪽에 놓여 있다(텍스트 위치로 읽은 근사값). */
+.roleLabelInset {
+  margin-left: 22px;
+}
+
+.neighborhoodLabelInset {
+  margin-left: 16px;
+  margin-bottom: 8px;
 }
 
 .roleOption {
@@ -25,20 +46,20 @@
 .roleCard {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  gap: 8px;
   min-height: var(--button-height-large);
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--color-border);
+  padding: 5px 24px 5px 19px;
   border-radius: var(--radius-card);
-  background: var(--color-surface);
+  /* [화면] 흰색 → 강한 라임 가로 그라데이션. DS Main 과 다른 #BCFF65 를 화면 전용 토큰으로 쓴다. */
+  background: linear-gradient(to right, var(--color-surface), var(--color-lime-strong) 99.99%);
+  box-shadow: var(--shadow-role-card);
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
+/* 선택됨: 그림자가 진해지고 체크가 채워진다(색상 외에 형태로도 구분). */
 .roleCardChecked {
-  border-color: var(--color-black);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  box-shadow: var(--shadow-role-card-selected);
 }
 
 /* 시각적으로 숨긴 라디오의 키보드 포커스를 카드에 표시한다. */
@@ -47,36 +68,63 @@
   outline-offset: 2px;
 }
 
+.characterSlot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 50px;
+}
+
+.character {
+  position: relative;
+  display: block;
+  height: 50px;
+  overflow: hidden;
+}
+
+.characterImage {
+  position: absolute;
+  top: 0;
+  left: var(--left);
+  width: var(--w);
+  height: 100%;
+  max-width: none;
+}
+
 .roleText {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
-.roleLabel {
-  font: var(--font-title);
+/* [화면] 카드 글자는 SemiBold: 제목 14px, 설명 12px #4D4D4D */
+.roleTitle {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
 }
 
-/* 라임 배경에서도 읽히도록 보조 텍스트도 본문 색을 쓴다. */
 .roleDescription {
-  font: var(--font-caption);
-  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-description);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-on-card-muted);
 }
 
+/* 선택 전: 옅은 회색 외곽선 원, 선택 후: 검정 채운 원 + 흰 체크 */
 .roleMark {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex: none;
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--color-black);
-  border-radius: 50%;
+  color: var(--color-check-idle);
 }
 
 .roleCardChecked .roleMark {
-  background: var(--color-black);
-  color: var(--color-text-inverse);
+  color: var(--color-black);
 }
 
 .field {
@@ -84,21 +132,47 @@
   flex-direction: column;
 }
 
-.select {
-  min-height: var(--button-height-large);
-  padding: 0 var(--space-4);
-  border: 2px solid transparent;
-  border-radius: var(--radius-field);
-  background-color: var(--color-surface-field);
+.selectWrap {
+  position: relative;
 }
 
-.select[aria-invalid='true'] {
-  border-color: var(--color-danger);
+.select {
+  width: 100%;
+  min-height: var(--button-height-large);
+  padding: 0 56px 0 39px;
+  border: 0;
+  border-radius: var(--radius-field);
+  background-color: var(--color-surface-field);
+  font: var(--font-contents);
+  font-size: max(16px, 1rem);
+  appearance: none;
+  cursor: pointer;
+}
+
+.select:disabled {
+  cursor: progress;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  display: inline-flex;
+  color: var(--color-text-primary);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .error {
   margin-top: var(--space-2);
+  margin-left: 16px;
   color: var(--color-danger);
   font: var(--font-caption);
   font-weight: var(--font-weight-bold);
+}
+
+/* 시작하기 버튼: 내용이 짧으면 화면 아래쪽으로 밀리고, 길면 본문 끝에서 이어진다(겹치지 않음). */
+.submit {
+  margin-top: auto;
+  padding-top: var(--space-4);
 }

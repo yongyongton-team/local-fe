@@ -1,12 +1,38 @@
+/*
+ * 첫 화면 레이아웃 (Figma node 2:1169).
+ *   로고(129×43) → 32px → 제목 → 6px → 소개 → 약 39px → "나는" 라벨 …
+ * 402×874 는 참고 크기이므로 높이를 고정하지 않고, 시작하기 버튼만 화면 아래쪽으로 밀어낸다.
+ */
 .page {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding-top: var(--space-5);
+  gap: 39px;
+  padding-top: var(--space-2);
+  /*
+   * Figma 에서 시작하기 버튼 아래 간격은 45px(홈 인디케이터 영역 포함)이다.
+   * 공통 본문 하단 여백(32px)보다 좁아서 이 화면만 20px 줄인다. safe-area 는 그대로 더해진다.
+   */
+  margin-bottom: -20px;
 }
 
 .intro {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 32px;
+}
+
+/* 로고 이미지는 Figma 에서 본문보다 6px 안쪽(x=26)에 놓여 있다. */
+.logo {
+  display: block;
+  width: 129px;
+  max-width: 100%;
+  height: auto;
+  margin-left: 6px;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
