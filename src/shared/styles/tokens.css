@@ -33,11 +33,17 @@
   --color-surface-field: #f2f2f2; /* [화면] 동네 선택 박스 배경 근사값(원본 rgba(195,195,195,0.21)) */
   --color-page-bg: #f5f5f5; /* [임시] 넓은 화면에서 모바일 영역 바깥 배경 */
 
+  /* 디자인 시스템 밖의 개별 화면 전용 색 (첫 화면 역할 카드) */
+  --color-lime-strong: #bcff65; /* [화면] 역할 카드 그라데이션 끝. DS Main(#C8FF80)과 다름 */
+  --color-text-on-card-muted: #4d4d4d; /* [화면] 역할 카드 설명 */
+  --color-check-idle: rgb(134 129 129 / 40%); /* [화면] 선택되지 않은 체크 원 */
+
   /* ───────── 타이포그래피 ───────── */
   --font-family-base:
     'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
     'Malgun Gothic', system-ui, sans-serif; /* [DS] Pretendard + [임시] 한글 시스템 폰트 폴백 */
   --font-weight-medium: 500; /* [DS] Contents·Caption */
+  --font-weight-semibold: 600; /* [화면] DS 밖 개별 화면(첫 화면 제목·역할 카드) */
   --font-weight-bold: 700; /* [DS] Title */
   --letter-spacing-base: 0; /* [DS] 0% */
 
@@ -61,11 +67,13 @@
     var(--font-family-base);
 
   /* 디자인 시스템 밖의 개별 화면 스타일 */
-  --font-size-display: 28px; /* [화면] 온보딩 큰 제목 */
-  --line-height-display: 36px; /* [임시] 원본은 normal */
+  --font-size-display: 28px; /* [화면] 첫 화면 큰 제목 */
+  --line-height-display: 34px; /* [화면 근사] 원본은 normal(Pretendard 약 1.2배) */
   --letter-spacing-display: -0.56px; /* [화면] 원본 -2% */
-  --font-display: var(--font-weight-bold) var(--font-size-display) / var(--line-height-display)
-    var(--font-family-base); /* [화면] 원본은 SemiBold(600). 600 파일은 포함하지 않아 700 사용 */
+  --font-display: var(--font-weight-semibold) var(--font-size-display) / var(--line-height-display)
+    var(--font-family-base); /* [화면] 원본 SemiBold */
+  --font-size-role-title: 14px; /* [화면] 역할 카드 제목(SemiBold) */
+  --font-size-role-description: 12px; /* [화면] 역할 카드 설명(SemiBold) */
   --font-size-chip: 12px; /* [화면] 칩 라벨 */
   --font-size-button-large: 18px; /* [화면] 큰 버튼 라벨 */
   --font-size-button-small: 14px; /* [화면] 작은 버튼 라벨 */
@@ -84,6 +92,9 @@
   --radius-field: 20px; /* [화면] 선택 박스. 입력 필드에도 같은 값을 임시 적용 */
   --radius-pill: 999px; /* [화면] 버튼·칩·내비는 높이 이상(40~50px)의 완전 알약형 */
   --shadow-floating: 0 2px 10px rgb(0 0 0 / 10%); /* [화면] 하단 내비게이션 */
+  /* 역할 카드 그림자: MCP 로 값을 읽지 못해 스크린샷을 보고 근사한 값이다. 디자인 확인 필요. */
+  --shadow-role-card: 0 1px 4px rgb(0 0 0 / 12%); /* [화면 근사] 기본 */
+  --shadow-role-card-selected: 0 4px 6px rgb(0 0 0 / 30%); /* [화면 근사] 선택됨 */
 
   /* ───────── 크기 ───────── */
   --button-height-large: 60px; /* [화면] "시작하기" */
