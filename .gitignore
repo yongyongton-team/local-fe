@@ -1,0 +1,13 @@
+node_modules
+dist
+*.tsbuildinfo
+coverage
+
+# 환경 변수 파일은 커밋하지 않는다. 값 없는 예시 파일만 예외.
+.env*
+!.env.example
+
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.log

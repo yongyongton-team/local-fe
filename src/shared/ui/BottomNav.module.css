@@ -1,0 +1,48 @@
+.nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: min(100%, var(--layout-max-width));
+  margin-inline: auto;
+  padding: 0 max(var(--space-page), env(safe-area-inset-right))
+    calc(var(--bottom-nav-gap) + env(safe-area-inset-bottom))
+    max(var(--space-page), env(safe-area-inset-left));
+  pointer-events: none;
+}
+
+.list {
+  display: flex;
+  height: var(--bottom-nav-height);
+  padding: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+  pointer-events: auto;
+}
+
+.item {
+  flex: 1;
+  min-width: 0;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: var(--tap-target-min);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font: var(--font-contents);
+  text-decoration: none;
+}
+
+/* 현재 탭: 색상 외에 굵기와 밑줄로도 구분한다. */
+.active {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

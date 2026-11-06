@@ -1,0 +1,20 @@
+.display {
+  font: var(--font-display);
+  letter-spacing: var(--letter-spacing-display);
+  color: var(--color-text-primary);
+}
+
+.title {
+  font: var(--font-title);
+  color: var(--color-text-primary);
+}
+
+.contents {
+  font: var(--font-contents);
+  color: var(--color-text-primary);
+}
+
+.caption {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}

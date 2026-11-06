@@ -1,0 +1,32 @@
+.shell {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-inline: auto;
+  /* dvh 미지원 브라우저를 위한 fallback */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: max(var(--space-4), env(safe-area-inset-top));
+  padding-right: max(var(--space-page), env(safe-area-inset-right));
+  padding-left: max(var(--space-page), env(safe-area-inset-left));
+  background: var(--color-surface);
+}
+
+.header {
+  min-width: 0;
+  margin-bottom: var(--space-3);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+/* 하단 내비게이션(fixed)이 본문 끝을 가리지 않도록 높이만큼 여백을 더한다. */
+.withBottomNav {
+  padding-bottom: calc(
+    var(--space-6) + var(--bottom-nav-height) + var(--bottom-nav-gap) + env(safe-area-inset-bottom)
+  );
+}

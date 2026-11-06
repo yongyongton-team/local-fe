@@ -1,0 +1,24 @@
+.card {
+  display: block;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.default {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.interactive {
+  min-height: var(--tap-target-min);
+  cursor: pointer;
+}

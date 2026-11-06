@@ -1,0 +1,104 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.legend {
+  display: block;
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font: var(--font-caption);
+  color: var(--color-text-primary);
+}
+
+.roleOption {
+  display: block;
+}
+
+.roleCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--button-height-large);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.roleCardChecked {
+  border-color: var(--color-black);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* 시각적으로 숨긴 라디오의 키보드 포커스를 카드에 표시한다. */
+.roleOption input:focus-visible + .roleCard {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.roleText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roleLabel {
+  font: var(--font-title);
+}
+
+/* 라임 배경에서도 읽히도록 보조 텍스트도 본문 색을 쓴다. */
+.roleDescription {
+  font: var(--font-caption);
+  color: var(--color-text-primary);
+}
+
+.roleMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-black);
+  border-radius: 50%;
+}
+
+.roleCardChecked .roleMark {
+  background: var(--color-black);
+  color: var(--color-text-inverse);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.select {
+  min-height: var(--button-height-large);
+  padding: 0 var(--space-4);
+  border: 2px solid transparent;
+  border-radius: var(--radius-field);
+  background-color: var(--color-surface-field);
+}
+
+.select[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.error {
+  margin-top: var(--space-2);
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}
