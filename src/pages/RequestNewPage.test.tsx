@@ -360,6 +360,32 @@ describe('요청 보내기', () => {
   });
 });
 
+describe('제출 후 내 요청 화면', () => {
+  it('제출하면 /resident/requests 로 이동하고 방금 보낸 요청이 요약 카드에 보인다', async () => {
+    const user = setup();
+    renderRequestPage();
+    await typeAndSummarize(user, EXAMPLE);
+    await user.click(screen.getByRole('button', { name: '평일 저녁' }));
+    await user.click(screen.getByRole('radio', { name: '주 1번 이상' }));
+
+    await user.click(sendButton());
+
+    expect(await screen.findByRole('heading', { level: 1, name: '내 요청' })).toBeInTheDocument();
+    // 과일/채소 요청이 29 → 30명이 되어 "결정 필요" 상태의 요약 카드가 보인다.
+    const card = within(await screen.findByRole('region', { name: '요청했어요!' }));
+    expect(
+      card.getByText('구성동에서 과일·채소 가게를 원하는 주민이 30명이 됐어요.'),
+    ).toBeInTheDocument();
+    expect(card.getByText('결정 필요')).toBeInTheDocument();
+    expect(screen.getByText('구성동 · 평일 저녁 · 주 1번 이상')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: '주민 메뉴' })).getByRole('link', {
+        name: '내 요청',
+      }),
+    ).toHaveAttribute('aria-current', 'page');
+  });
+});
+
 describe('뒤로가기', () => {
   it('앱 안에서 이전 화면이 있으면 그 화면으로 돌아간다', async () => {
     const user = setup();

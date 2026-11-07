@@ -1,0 +1,71 @@
+/* 요청 카드 (Figma 2:1660): 흰 배경 + 1px #999 윤곽선, 모서리 20px */
+.card {
+  min-width: 0;
+  padding: var(--space-3) var(--space-5) var(--space-2);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* [화면] 제목·인원: SemiBold 16px */
+.title,
+.count {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+}
+
+.count {
+  flex: none;
+  white-space: nowrap;
+}
+
+.meta,
+.noResponse {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.meta {
+  margin-top: var(--space-2);
+}
+
+.noResponse {
+  margin-top: var(--space-1);
+}
+
+/* 사장님 응답 박스: 옅은 라임 바탕. 카드 안쪽 여백보다 넓게 펼친다(Figma: 카드보다 14px 안쪽). */
+.response {
+  margin: var(--space-1) calc(var(--space-3) - var(--space-5)) 0;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+}
+
+.responseLabel,
+.responseMessage {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  line-height: var(--line-height-chip);
+}
+
+.responseLabel {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.responseMessage {
+  margin-top: var(--space-1);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
