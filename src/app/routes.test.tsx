@@ -109,7 +109,7 @@ describe('URL 직접 진입', () => {
 
   it.each([
     ['/resident/requests', '내 요청'],
-    ['/resident/requests/new', '가게 요청 작성'],
+    ['/resident/requests/new', '가게 요청하기'],
     ['/merchant', '수요 동네 탐색'],
     ['/founder', '입지 찾기'],
   ])('%s 는 %s 제목으로 렌더링된다', async (path, title) => {
@@ -145,21 +145,21 @@ describe('URL 직접 진입', () => {
   );
 });
 
-describe('하단 내비게이션(임시안)', () => {
-  it.each(['/resident', '/resident/requests'])('%s 에서는 표시된다', async (path) => {
-    renderApp([path]);
-
-    await screen.findByRole('heading', { level: 1 });
-    expect(screen.getByRole('navigation', { name: '주민 메뉴' })).toBeInTheDocument();
-  });
-
-  it.each(['/', '/resident/requests/new', '/merchant', '/founder'])(
-    '%s 에서는 숨겨진다',
+describe('하단 내비게이션', () => {
+  it.each(['/resident', '/resident/requests/new', '/resident/requests'])(
+    '%s 에서는 표시된다',
     async (path) => {
       renderApp([path]);
 
       await screen.findByRole('heading', { level: 1 });
-      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.getByRole('navigation', { name: '주민 메뉴' })).toBeInTheDocument();
     },
   );
+
+  it.each(['/', '/merchant', '/founder'])('%s 에서는 숨겨진다', async (path) => {
+    renderApp([path]);
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
 });

@@ -4,6 +4,8 @@ import styles from './TextArea.module.css';
 interface TextAreaProps extends Omit<ComponentProps<'textarea'>, 'id'> {
   /** 보이는 label. 필수 */
   label: string;
+  /** label 의 시각 스타일. title(기본) 또는 큰 제목형 display. HTML 의미는 항상 label 이다. */
+  labelVariant?: 'title' | 'display';
   /** 입력 방법 등 보조 설명 */
   description?: string;
   /** 있으면 오류 상태. 메시지는 입력 필드와 aria-describedby 로 연결된다. */
@@ -15,7 +17,15 @@ interface TextAreaProps extends Omit<ComponentProps<'textarea'>, 'id'> {
  * label, 설명, 오류 메시지가 연결된 여러 줄 입력.
  * value / onChange 등 네이티브 textarea 속성을 그대로 지원한다. 글자 크기는 16px 이상(iOS 확대 방지).
  */
-export function TextArea({ label, description, error, id, rows = 4, ...props }: TextAreaProps) {
+export function TextArea({
+  label,
+  labelVariant = 'title',
+  description,
+  error,
+  id,
+  rows = 4,
+  ...props
+}: TextAreaProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
   const descriptionId = `${fieldId}-description`;
@@ -24,7 +34,10 @@ export function TextArea({ label, description, error, id, rows = 4, ...props }: 
 
   return (
     <div className={styles.field}>
-      <label htmlFor={fieldId} className={styles.label}>
+      <label
+        htmlFor={fieldId}
+        className={`${styles.label} ${labelVariant === 'display' ? styles.labelDisplay : ''}`}
+      >
         {label}
       </label>
       {description && (

@@ -62,13 +62,14 @@ src/
     selection/  역할·동네 선택 (Context, 폼, 역할 정의, assets/ 캐릭터 이미지)
     demand/     수요 카드·수치·리포트 목록/로더
     resident-map/  주민 탐색 화면: 지도 필터·마커 규칙(순수 함수), 요청 카드, 데이터 훅. 마커 위치는 지도 영역 대비 상대좌표(0~1)이며 네이버 지도 연동 때 위경도로 교체 예정
+    store-request/  가게 요청하기 화면: 선택지 상수, 문장 정리 훅(오래된 응답 무시), 칩 그룹, AI 정리 카드, 제출 가능 여부 규칙
   shared/
     ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, Page, Notice, BottomNav, MapPlaceholder, SampleDataBadge)
     layouts/    MobileLayout(헤더·하단 내비 슬롯), RootLayout·ResidentTabsLayout(라우트용)
     assets/     공통 이미지(로고)
     lib/        경로 상수, useAsyncData
     styles/     tokens.css(디자인 토큰), fonts.css(@font-face), global.css(reset·전역), fonts/(Pretendard WOFF2·라이선스)
-  services/     데이터 접근 인터페이스, 목 구현, AI 설명 생성 인터페이스(타입만)
+  services/     데이터 접근 인터페이스, 목 구현, 입력 문장 정리(키워드 규칙 목)·요청 제출(메모리 목) 인터페이스, AI 설명 생성 인터페이스(타입만)
   mocks/        목 데이터
   types/        공통 도메인 타입
   test/         테스트 설정과 renderApp 헬퍼

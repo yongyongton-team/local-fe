@@ -6,9 +6,14 @@ import { routes as appRoutes } from '@/app/routes';
 /**
  * 실제 앱과 같은 라우트·Provider 를 메모리 라우터로 렌더링한다. 네트워크는 사용하지 않는다.
  * @param routes 기본은 앱 라우트. 프로덕션 라우트 구성을 검증할 때 createRoutes() 결과를 넘긴다.
+ * @param initialIndex initialEntries 중 처음 열 위치. 이전 화면이 있는 상태를 만들 때 쓴다.
  */
-export function renderApp(initialEntries: string[] = ['/'], routes: RouteObject[] = appRoutes) {
-  const router = createMemoryRouter(routes, { initialEntries });
+export function renderApp(
+  initialEntries: string[] = ['/'],
+  routes: RouteObject[] = appRoutes,
+  initialIndex?: number,
+) {
+  const router = createMemoryRouter(routes, { initialEntries, initialIndex });
   return render(
     <AppProviders>
       <RouterProvider router={router} />

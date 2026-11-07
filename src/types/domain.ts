@@ -25,14 +25,30 @@ export interface StoreCategory {
   missingLabel: string;
 }
 
+/** 방문하기 좋은 시간대. 여러 개를 고를 수 있다. */
+export type VisitTime = 'weekday-day' | 'weekday-evening' | 'weekend';
+
+/** 방문 빈도. 하나만 고른다. */
+export type VisitFrequency = 'weekly' | 'monthly' | 'rarely';
+
 /** 주민이 작성하는 가게 요청. 위치는 동 단위로만 가진다. */
 export interface StoreRequest {
   id: string;
+  /** 위치는 선택된 동네 id 만 저장한다. 현재 위치는 사용하지 않는다. */
   neighborhoodId: string;
   categoryId: string;
-  /** 주민이 자유롭게 적은 원하는 가게와 조건 */
+  /** 주민이 자유롭게 적은 원하는 가게와 조건(입력 문장) */
   detail: string;
+  /** 문장에서 정리한 조건 목록. 예: 늦게까지 영업 */
+  conditions: string[];
+  /** 선택하지 않으면 빈 배열 */
+  visitTimes: VisitTime[];
+  /** 선택하지 않으면 없음 */
+  visitFrequency?: VisitFrequency;
 }
+
+/** 제출할 요청. id 는 저장하는 쪽이 정한다. */
+export type NewStoreRequest = Omit<StoreRequest, 'id'>;
 
 /** 동네·업종별 수요 수치. 수치는 구조화된 데이터가 기준이다. */
 export interface DemandSummary {
