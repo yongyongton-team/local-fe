@@ -1,21 +1,72 @@
+/* 체크무늬는 Figma 의 이미지 자리표시이므로 복제하지 않고 중립적인 단색 배경을 쓴다. */
 .map {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 180px;
-  border-radius: var(--radius-card);
-  background: repeating-conic-gradient(
-      var(--color-surface-muted) 0% 25%,
-      var(--color-surface) 0% 50%
-    )
-    0 0 / 48px 48px;
+  position: relative;
+  width: 100%;
+  /* 너비에 비례해 높이가 정해져 마커의 위치 관계가 유지된다. 기준은 402×288. */
+  aspect-ratio: var(--map-aspect);
+  min-height: var(--map-min-height);
+  overflow: hidden;
+  border-radius: var(--map-radius, var(--radius-card));
+  background: var(--color-map-bg);
 }
 
-.text {
-  padding: var(--space-2) var(--space-4);
+.markers {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 마커의 좌상단을 지도 영역 대비 비율 위치에 둔다. */
+.marker {
+  position: absolute;
+  left: calc(var(--x) * 100%);
+  top: calc(var(--y) * 100%);
+}
+
+.request,
+.missing {
+  display: inline-flex;
+  align-items: center;
+  height: var(--marker-height);
+  padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+  white-space: nowrap;
+}
+
+/* 주민 요청: 어두운 회색 알약 + 흰 글자 */
+.request {
+  background: var(--color-marker-request);
+  color: var(--color-text-inverse);
+}
+
+/* 없는 가게: 점선 테두리 + 빨간 글자. 색뿐 아니라 "X :" 문구와 점선으로도 구분된다. */
+.missing {
+  border: 1px dashed var(--color-danger);
+  background: var(--color-marker-missing-bg);
+  color: var(--color-danger);
+}
+
+.pin {
+  display: inline-flex;
+  color: var(--color-black);
+}
+
+.notice {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-marker-missing-bg);
   color: var(--color-text-secondary);
-  font: var(--font-caption);
-  text-align: center;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
 }

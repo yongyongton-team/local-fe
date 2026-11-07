@@ -1,5 +1,10 @@
-import { mockCategories, mockDemandSummaries, mockNeighborhoods } from '@/mocks/demand';
-import type { NeighborhoodReport } from '@/types/domain';
+import {
+  mockCategories,
+  mockDemandSummaries,
+  mockMarkerPlacements,
+  mockNeighborhoods,
+} from '@/mocks/demand';
+import type { MapMarker, NeighborhoodReport } from '@/types/domain';
 import type { DemandService } from './demandService';
 
 function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodReport | null {
@@ -9,6 +14,34 @@ function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodRe
     (d) => d.neighborhoodId === neighborhoodId && d.categoryId === categoryId,
   );
   return neighborhood && category && demand ? { neighborhood, category, demand } : null;
+}
+
+/** 위치(placement)에 수요 데이터를 합쳐 마커를 만든다. 조건에 맞지 않으면 null. */
+function buildMarker(
+  placement: (typeof mockMarkerPlacements)[number],
+  index: number,
+): MapMarker | null {
+  const { neighborhoodId, kind, categoryId, position } = placement;
+  const id = `${neighborhoodId}-${kind}-${categoryId ?? index}`;
+
+  if (kind === 'existing') {
+    return { id, kind, categoryId, label: '있는 가게 위치', position };
+  }
+  const report = categoryId ? buildReport(neighborhoodId, categoryId) : null;
+  if (!report) return null;
+
+  if (kind === 'request') {
+    return {
+      id,
+      kind,
+      categoryId,
+      label: `${report.category.requestLabel} 요청 ${report.demand.requestCount}`,
+      position,
+    };
+  }
+  // missing: 주변 같은 업종이 없을 때만 표시한다.
+  if (report.demand.nearbySameCategoryCount > 0) return null;
+  return { id, kind, categoryId, label: `X : ${report.category.missingLabel}`, position };
 }
 
 /** 네트워크 없이 목 데이터를 비동기로 돌려주는 구현. */
@@ -26,5 +59,19 @@ export const mockDemandService: DemandService = {
 
   async getReport(neighborhoodId, categoryId) {
     return buildReport(neighborhoodId, categoryId);
+  },
+
+  async listReportsByNeighborhood(neighborhoodId) {
+    return mockCategories
+      .map((c) => buildReport(neighborhoodId, c.id))
+      .filter((report): report is NeighborhoodReport => report !== null);
+  },
+
+  async listMapMarkers(neighborhoodId) {
+    return mockMarkerPlacements
+      .map((placement, index) => ({ placement, index }))
+      .filter(({ placement }) => placement.neighborhoodId === neighborhoodId)
+      .map(({ placement, index }) => buildMarker(placement, index))
+      .filter((marker): marker is MapMarker => marker !== null);
   },
 };

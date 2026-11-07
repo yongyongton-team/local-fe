@@ -16,8 +16,9 @@ export function DemandCard({ title, report, to }: DemandCardProps) {
     <span className={styles.content}>
       <span className={styles.title}>{title}</span>
       <span className={styles.stats}>
-        요청 {demand.requestCount}명 · 주변 같은 업종 {demand.nearbySameCategoryCount}곳 · 대형마트{' '}
-        {demand.nearestHypermarketKm}km
+        요청 {demand.requestCount}명 · 주변 같은 업종 {demand.nearbySameCategoryCount}곳
+        {demand.nearestHypermarketKm !== undefined &&
+          ` · 대형마트 ${demand.nearestHypermarketKm}km`}
       </span>
     </span>
   );
