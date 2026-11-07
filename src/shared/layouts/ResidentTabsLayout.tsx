@@ -5,11 +5,11 @@ import { LinkPlusIcon, MapIcon, PersonShieldIcon } from '@/shared/ui/icons';
 import { MobileLayout } from './MobileLayout';
 
 /*
- * 임시안: Figma 하단 내비는 이름 없는 아이콘 3개뿐이라 아래처럼 임시로 매핑했다.
- *   지도 아이콘 → 탐색(/resident), 링크+ 아이콘 → 가게 요청(/resident/requests/new),
- *   사람+방패 아이콘 → 내 요청(/resident/requests)
- * 표시 범위(임시 규칙)는 그대로다: 주민 화면 /resident, /resident/requests 에만 보이고
- * 첫 화면·요청 작성·상세·리포트에서는 숨긴다.
+ * 하단 내비는 이름 없는 아이콘 3개다(Figma).
+ *   가운데 링크+ 아이콘 → 가게 요청(/resident/requests/new): 확정
+ *   지도 아이콘 → 탐색(/resident), 사람+방패 아이콘 → 내 요청(/resident/requests): 임시 매핑
+ * 표시 범위: 주민 화면 /resident, /resident/requests/new, /resident/requests 에 보이고
+ * 첫 화면·상세·리포트에서는 숨긴다.
  */
 const RESIDENT_TABS = [
   {

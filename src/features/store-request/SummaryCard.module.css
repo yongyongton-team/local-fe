@@ -1,0 +1,96 @@
+/*
+ * AI 정리 카드 (Figma 2:1549 / 2:1600).
+ * 바탕: 거의 단색의 옅은 라임(#F4FBEB 근사)에 중심만 약간 밝다. 원본의 큰 타원 방사형 그라데이션을 근사했다.
+ */
+.card {
+  position: relative;
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--space-1));
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+  color: var(--color-text-primary);
+}
+
+/* 임시 표시: 카드 안쪽 우측 위 구석 */
+.sample {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-marker-missing-bg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  /* 원본: 제목이 배지 바로 오른쪽(간격 없음)에서 시작한다. */
+  gap: 0;
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ai-badge-size);
+  height: var(--ai-badge-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    var(--color-ai-badge-center),
+    var(--color-ai-badge-edge)
+  );
+  font: var(--font-contents);
+}
+
+.title {
+  font: var(--font-contents);
+}
+
+/* 라벨(회색 Medium 14px) + 값(검정 SemiBold 14px) */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--ai-label-width) minmax(0, 1fr);
+  align-items: baseline;
+}
+
+.row dt {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.row dd {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
+}
+
+.choices {
+  padding-left: var(--space-2);
+}
+
+.notice {
+  margin-top: var(--space-2);
+  padding-left: var(--space-2);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-description);
+  font-weight: var(--font-weight-medium);
+  line-height: 16px;
+  color: var(--color-text-on-card-muted);
+}

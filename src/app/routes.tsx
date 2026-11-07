@@ -21,10 +21,11 @@ import { devRoutes } from './devRoutes';
 export function createRoutes(extraRoutes: RouteObject[] = []): RouteObject[] {
   return [
     {
-      // 하단 내비게이션(탐색·내 요청)은 이 두 화면에만 표시한다.
+      // 하단 내비게이션은 주민 화면 /resident, /resident/requests/new, /resident/requests 에만 표시한다.
       element: <ResidentTabsLayout />,
       children: [
         { path: 'resident', element: <ResidentExplorePage /> },
+        { path: 'resident/requests/new', element: <RequestNewPage /> },
         { path: 'resident/requests', element: <MyRequestsPage /> },
       ],
     },
@@ -32,7 +33,6 @@ export function createRoutes(extraRoutes: RouteObject[] = []): RouteObject[] {
       element: <RootLayout />,
       children: [
         { index: true, element: <HomePage /> },
-        { path: 'resident/requests/new', element: <RequestNewPage /> },
         { path: 'merchant', element: <MerchantExplorePage /> },
         { path: 'merchant/areas/:areaId', element: <MerchantAreaDetailPage /> },
         { path: 'founder', element: <FounderExplorePage /> },

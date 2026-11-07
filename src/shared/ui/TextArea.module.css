@@ -1,11 +1,17 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--textarea-gap, var(--space-2));
 }
 
 .label {
   font: var(--font-title);
+}
+
+/* 큰 제목형 label (디자인 시스템 밖의 개별 화면 스타일) */
+.labelDisplay {
+  font: var(--font-display);
+  letter-spacing: var(--letter-spacing-display);
 }
 
 .description {
@@ -15,7 +21,7 @@
 
 .textarea {
   width: 100%;
-  min-height: calc(var(--tap-target-min) * 2);
+  min-height: var(--textarea-min-height, calc(var(--tap-target-min) * 2));
   padding: var(--space-3) var(--space-4);
   border: 2px solid var(--color-border-control);
   border-radius: var(--radius-field);

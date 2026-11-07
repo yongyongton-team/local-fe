@@ -106,20 +106,51 @@
   --layout-max-width: 430px; /* [임시] 화면 기준 402px 안팎. 고정 크기가 아님 */
 
   /* 주민 탐색 화면(/resident) 전용 */
-  --chip-padding-x: var(
-    --space-4
-  ); /* [임시] 칩 좌우 패딩. 좁은 화면에서 한 줄에 들어가도록 화면에서 줄인다 */
-  --map-aspect: 402 / 288; /* [화면] 지도 영역 비율. 높이를 고정하지 않고 너비에 비례 */
-  --map-min-height: 200px; /* [임시] 아주 좁은 화면에서의 최소 높이 */
-  --marker-height: 26px; /* [화면] 요청·없는 가게 마커 알약 높이 */
-  --header-inset-x: 6px; /* [화면] 헤더가 본문(20px)보다 안쪽(26px)에 놓인 정도 */
-  --compact-card-gap: 11px; /* [화면] 요청 카드 사이 간격 */
-  --bottom-nav-inset-x: 34px; /* [화면] 하단 내비 좌우 여백 */
-  --nav-glow-size: 91px; /* [화면] 선택된 내비 아이콘 뒤 라임 번짐 크기 */
-  --fab-gap: 8px; /* [임시] 떠 있는 "+가게 요청하기" 버튼과 하단 내비 사이 간격. 디자인은 내비가 버튼을 가린다 */
-  --color-map-bg: #eeeeee; /* [임시] 지도 자리표시자의 중립 배경 */
-  --color-marker-request: #4d4d4d; /* [화면] 요청 마커 배경 */
-  --color-marker-missing-bg: rgb(
-    255 255 255 / 80%
-  ); /* [임시] 지도 위 글자 가독성을 위한 반투명 흰 배경(디자인은 투명) */
+  /* [임시] 칩 좌우 패딩. 좁은 화면에서 한 줄에 들어가도록 화면에서 줄인다 */
+  --chip-padding-x: var(--space-4);
+  /* [화면] 지도 영역 비율. 높이를 고정하지 않고 너비에 비례 */
+  --map-aspect: 402 / 288;
+  /* [임시] 아주 좁은 화면에서의 최소 높이 */
+  --map-min-height: 200px;
+  /* [화면] 요청·없는 가게 마커 알약 높이 */
+  --marker-height: 26px;
+  /* [화면] 헤더가 본문(20px)보다 안쪽(26px)에 놓인 정도 */
+  --header-inset-x: 6px;
+  /* [화면] 요청 카드 사이 간격 */
+  --compact-card-gap: 11px;
+  /* [화면] 하단 내비 좌우 여백 */
+  --bottom-nav-inset-x: 34px;
+  /* [화면] 선택된 내비 아이콘 뒤 라임 번짐 크기 */
+  --nav-glow-size: 91px;
+  /* [임시] 떠 있는 "+가게 요청하기" 버튼과 하단 내비 사이 간격. 디자인은 내비가 버튼을 가린다 */
+  --fab-gap: 8px;
+  /* [임시] 지도 자리표시자의 중립 배경 */
+  --color-map-bg: #eeeeee;
+  /* [화면] 요청 마커 배경 */
+  --color-marker-request: #4d4d4d;
+  /* [임시] 지도 위 글자 가독성을 위한 반투명 흰 배경(디자인은 투명) */
+  --color-marker-missing-bg: rgb(255 255 255 / 80%);
+
+  /* 가게 요청하기 화면(/resident/requests/new) 전용 */
+  /* [화면] 시간대·빈도 칩의 시각적 높이 */
+  --chip-height-large: 34px;
+  /* [화면] 칩 라벨 줄 높이. 칩의 시각 높이가 줄 높이가 아니라 --chip-height(26px)로 정해지게 한다 */
+  --line-height-chip: 14px;
+  /* [화면] 입력창 높이(최소 높이로만 쓴다) */
+  --request-input-min-height: 98px;
+  /* [화면] 입력창과 AI 카드 사이 */
+  --request-gap-card: 14px;
+  /* [화면] 일관된 섹션 간격. B 상태에서 Figma 가 12px 로 줄인 것은 따르지 않는다 */
+  --request-gap-section: 28px;
+  /* [화면] AI 원형 배지 */
+  --ai-badge-size: 47px;
+  /* [화면] AI 카드 "업종/조건" 라벨 칸 너비 */
+  --ai-label-width: 54px;
+  /* [화면 근사] AI 카드 바탕. 스크린샷 픽셀값 */
+  --color-ai-card: #f4fbeb;
+  /* [화면 근사] AI 카드 중심 하이라이트. 원본은 큰 타원 방사형 그라데이션 */
+  --color-ai-card-glow: #fffdf3;
+  /* [화면] AI 배지 방사형 그라데이션. 원본 #B1FFAD → #F6FEF0, 불투명도 0.6 */
+  --color-ai-badge-center: rgb(177 255 173 / 60%);
+  --color-ai-badge-edge: rgb(246 254 240 / 60%);
 }
