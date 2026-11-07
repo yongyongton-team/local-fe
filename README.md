@@ -61,6 +61,7 @@ src/
   features/
     selection/  역할·동네 선택 (Context, 폼, 역할 정의, assets/ 캐릭터 이미지)
     demand/     수요 카드·수치·리포트 목록/로더
+    resident-map/  주민 탐색 화면: 지도 필터·마커 규칙(순수 함수), 요청 카드, 데이터 훅. 마커 위치는 지도 영역 대비 상대좌표(0~1)이며 네이버 지도 연동 때 위경도로 교체 예정
   shared/
     ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, Page, Notice, BottomNav, MapPlaceholder, SampleDataBadge)
     layouts/    MobileLayout(헤더·하단 내비 슬롯), RootLayout·ResidentTabsLayout(라우트용)
@@ -82,7 +83,9 @@ src/
 - iOS safe-area(`env(safe-area-inset-*)`) 대응, 하단 내비게이션 높이만큼 본문 여백 확보.
 - 입력 필드 글자 크기 16px 이상(iOS 포커스 자동 확대 방지), 주요 터치 영역 최소 44px.
 - 한국어 `word-break: keep-all` + 긴 문자열 `overflow-wrap: anywhere`.
-- 선택 상태는 색상 외에 체크 표시·`aria-pressed`·`aria-current`·밑줄로도 전달합니다.
+- 지도 영역은 너비에 비례(`aspect-ratio`)하고 마커는 영역 대비 비율로 배치해 너비가 달라져도 위치 관계가 유지됩니다.
+- 하단 내비와 그 위에 떠 있는 버튼은 본문 하단 여백을 늘려 마지막 항목을 가리지 않게 합니다.
+- 선택 상태는 색상 외에 체크 표시·라디오 선택(`checked`)·`aria-pressed`·`aria-current`·밑줄·굵은 아이콘으로도 전달합니다.
 
 ## 개발용 확인 페이지
 

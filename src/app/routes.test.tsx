@@ -82,9 +82,10 @@ describe('첫 화면', () => {
     await user.click(screen.getByRole('radio', { name: /^주민/ }));
     await user.click(screen.getByRole('button', { name: '시작하기' }));
 
+    // 선택한 동네 이름과 그 동네의 지도 마커(과일 요청 14)를 보여준다.
     expect(await screen.findByText('기흥구 보정동')).toBeInTheDocument();
-    expect(await screen.findByText(/요청 14명/)).toBeInTheDocument();
-    expect(screen.getByText('예시 데이터')).toBeInTheDocument();
+    expect(await screen.findByText('과일 요청 14')).toBeInTheDocument();
+    expect(screen.getByText(/예시 데이터/)).toBeInTheDocument();
   });
 });
 

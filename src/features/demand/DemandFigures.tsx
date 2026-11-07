@@ -13,10 +13,12 @@ export function DemandFigures({ demand }: { demand: DemandSummary }) {
         <dt>주변 같은 업종</dt>
         <dd>{demand.nearbySameCategoryCount}곳</dd>
       </div>
-      <div className={styles.item}>
-        <dt>가장 가까운 대형마트</dt>
-        <dd>{demand.nearestHypermarketKm}km</dd>
-      </div>
+      {demand.nearestHypermarketKm !== undefined && (
+        <div className={styles.item}>
+          <dt>가장 가까운 대형마트</dt>
+          <dd>{demand.nearestHypermarketKm}km</dd>
+        </div>
+      )}
     </dl>
   );
 }

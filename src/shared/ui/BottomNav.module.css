@@ -5,9 +5,9 @@
   left: 0;
   width: min(100%, var(--layout-max-width));
   margin-inline: auto;
-  padding: 0 max(var(--space-page), env(safe-area-inset-right))
+  padding: 0 max(var(--bottom-nav-inset-x), env(safe-area-inset-right))
     calc(var(--bottom-nav-gap) + env(safe-area-inset-bottom))
-    max(var(--space-page), env(safe-area-inset-left));
+    max(var(--bottom-nav-inset-x), env(safe-area-inset-left));
   pointer-events: none;
 }
 
@@ -19,6 +19,11 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-floating);
   pointer-events: auto;
+}
+
+/* 아이콘 내비: 아이콘이 가운데 쪽으로 모이도록 좌우 안쪽 여백을 둔다. */
+.iconList {
+  padding-inline: var(--space-5);
 }
 
 .item {
@@ -38,11 +43,38 @@
   text-decoration: none;
 }
 
-/* 현재 탭: 색상 외에 굵기와 밑줄로도 구분한다. */
+/* 현재 탭(글자 내비): 색상 외에 굵기와 밑줄로도 구분한다. */
 .active {
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-weight: var(--font-weight-bold);
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+/* 아이콘 내비: 모든 아이콘은 검정, 현재 항목은 굵은 선 + 라임 번짐 */
+.iconLink {
+  position: relative;
+  color: var(--color-text-primary);
+}
+
+.iconActive {
+  color: var(--color-text-primary);
+}
+
+.iconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--nav-glow-size);
+  height: var(--nav-glow-size);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--color-accent), transparent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }

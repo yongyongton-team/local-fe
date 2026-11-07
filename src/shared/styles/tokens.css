@@ -104,4 +104,22 @@
   --bottom-nav-height: 66px; /* [화면] */
   --bottom-nav-gap: 12px; /* [임시] */
   --layout-max-width: 430px; /* [임시] 화면 기준 402px 안팎. 고정 크기가 아님 */
+
+  /* 주민 탐색 화면(/resident) 전용 */
+  --chip-padding-x: var(
+    --space-4
+  ); /* [임시] 칩 좌우 패딩. 좁은 화면에서 한 줄에 들어가도록 화면에서 줄인다 */
+  --map-aspect: 402 / 288; /* [화면] 지도 영역 비율. 높이를 고정하지 않고 너비에 비례 */
+  --map-min-height: 200px; /* [임시] 아주 좁은 화면에서의 최소 높이 */
+  --marker-height: 26px; /* [화면] 요청·없는 가게 마커 알약 높이 */
+  --header-inset-x: 6px; /* [화면] 헤더가 본문(20px)보다 안쪽(26px)에 놓인 정도 */
+  --compact-card-gap: 11px; /* [화면] 요청 카드 사이 간격 */
+  --bottom-nav-inset-x: 34px; /* [화면] 하단 내비 좌우 여백 */
+  --nav-glow-size: 91px; /* [화면] 선택된 내비 아이콘 뒤 라임 번짐 크기 */
+  --fab-gap: 8px; /* [임시] 떠 있는 "+가게 요청하기" 버튼과 하단 내비 사이 간격. 디자인은 내비가 버튼을 가린다 */
+  --color-map-bg: #eeeeee; /* [임시] 지도 자리표시자의 중립 배경 */
+  --color-marker-request: #4d4d4d; /* [화면] 요청 마커 배경 */
+  --color-marker-missing-bg: rgb(
+    255 255 255 / 80%
+  ); /* [임시] 지도 위 글자 가독성을 위한 반투명 흰 배경(디자인은 투명) */
 }

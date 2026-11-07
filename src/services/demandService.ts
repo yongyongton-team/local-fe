@@ -1,4 +1,4 @@
-import type { Neighborhood, NeighborhoodReport } from '@/types/domain';
+import type { MapMarker, Neighborhood, NeighborhoodReport } from '@/types/domain';
 
 /**
  * 업종 선택 UI 가 확정되기 전까지 화면이 공통으로 쓰는 기본 업종.
@@ -13,4 +13,8 @@ export interface DemandService {
   listReports(categoryId: string): Promise<NeighborhoodReport[]>;
   /** 존재하지 않는 동네·업종이면 null */
   getReport(neighborhoodId: string, categoryId: string): Promise<NeighborhoodReport | null>;
+  /** 한 동네의 업종별 리포트. 정렬·필터는 호출하는 쪽의 규칙이다. 없는 동네면 빈 배열 */
+  listReportsByNeighborhood(neighborhoodId: string): Promise<NeighborhoodReport[]>;
+  /** 한 동네의 지도 마커. 문구는 수요 데이터에서 파생한다. 없는 동네면 빈 배열 */
+  listMapMarkers(neighborhoodId: string): Promise<MapMarker[]>;
 }
