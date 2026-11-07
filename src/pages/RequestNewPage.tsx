@@ -32,7 +32,7 @@ import styles from './RequestNewPage.module.css';
 /**
  * 가게 요청하기 (Figma node 2:1549 업종 인식 / 2:1600 업종 선택).
  * 두 디자인은 같은 폼의 두 상태다: 입력 문장에서 업종이 하나로 정해지면 A, 아니면 후보 칩에서 고르는 B.
- * 제출하면 임시로 /resident/requests(내 요청)로 이동한다. 제출 완료 화면은 이번 범위가 아니다.
+ * 제출하면 /resident/requests(내 요청)로 이동한다. 별도의 제출 완료 화면은 없다.
  */
 export function RequestNewPage() {
   const { neighborhood } = useSelection();

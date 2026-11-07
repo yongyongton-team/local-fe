@@ -11,6 +11,7 @@ function report(categoryId: string, requestCount: number, nearby: number): Neigh
       cardTitle: categoryId,
       requestLabel: categoryId,
       missingLabel: categoryId,
+      objectPhrase: categoryId,
     },
     demand: { neighborhoodId: 'n', categoryId, requestCount, nearbySameCategoryCount: nearby },
   };

@@ -1,0 +1,55 @@
+/*
+ * 내 요청 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
+ * 402×874 는 참고 크기라 높이를 고정하지 않는다. 목록이 길어지면 스크롤하고, 하단 내비에 가려지지 않도록
+ * 본문 하단 여백은 ResidentTabsLayout(MobileLayout)이 확보한다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: block;
+  width: 129px;
+  max-width: 100%;
+  height: auto;
+  margin-left: var(--header-inset-x);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.summary {
+  margin-top: var(--space-3);
+}
+
+.share {
+  margin-top: var(--space-3);
+}
+
+/* Figma 의 섹션 제목은 x=24 로 다른 화면(20)과 달라 20 으로 통일했다. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
