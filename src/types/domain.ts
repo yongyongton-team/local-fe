@@ -23,6 +23,8 @@ export interface StoreCategory {
   requestLabel: string;
   /** "없는 가게" 마커의 업종 표기. 예: 과일 / 채소 → "X : 과일 / 채소" */
   missingLabel: string;
+  /** 문장에 쓰는 업종 표기. 조사까지 완성된 값이다(조사를 코드로 계산하지 않는다). 예: 과일·채소 가게를 */
+  objectPhrase: string;
 }
 
 /** 방문하기 좋은 시간대. 여러 개를 고를 수 있다. */
@@ -49,6 +51,23 @@ export interface StoreRequest {
 
 /** 제출할 요청. id 는 저장하는 쪽이 정한다. */
 export type NewStoreRequest = Omit<StoreRequest, 'id'>;
+
+/** 사장님이 주민 요청에 남긴 응답. 화면에는 "업체(지역): 메시지" 로 보여준다. */
+export interface MerchantResponse {
+  merchantName: string;
+  areaName: string;
+  message: string;
+}
+
+/** 내 요청 화면의 한 항목. 요청 인원은 수요 데이터에서 계산한 해당 동네·업종의 전체 요청 인원이다. */
+export interface MyRequest {
+  request: StoreRequest;
+  neighborhood: Neighborhood;
+  category: StoreCategory;
+  requestCount: number;
+  /** 사장님 응답이 없으면 없음 */
+  response?: MerchantResponse;
+}
 
 /** 동네·업종별 수요 수치. 수치는 구조화된 데이터가 기준이다. */
 export interface DemandSummary {

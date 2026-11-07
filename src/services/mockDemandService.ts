@@ -1,19 +1,18 @@
-import {
-  mockCategories,
-  mockDemandSummaries,
-  mockMarkerPlacements,
-  mockNeighborhoods,
-} from '@/mocks/demand';
+import { mockCategories, mockMarkerPlacements, mockNeighborhoods } from '@/mocks/demand';
+import { getDb } from '@/mocks/memoryDb';
 import type { MapMarker, NeighborhoodReport } from '@/types/domain';
 import type { DemandService } from './demandService';
 
 function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodReport | null {
   const neighborhood = mockNeighborhoods.find((n) => n.id === neighborhoodId);
   const category = mockCategories.find((c) => c.id === categoryId);
-  const demand = mockDemandSummaries.find(
+  // 메모리 DB 의 수요 수치를 읽는다(제출하면 갱신된다). 복사해서 돌려줘 호출한 쪽이 DB 를 바꾸지 못하게 한다.
+  const found = getDb().summaries.find(
     (d) => d.neighborhoodId === neighborhoodId && d.categoryId === categoryId,
   );
-  return neighborhood && category && demand ? { neighborhood, category, demand } : null;
+  return neighborhood && category && found
+    ? { neighborhood, category, demand: { ...found } }
+    : null;
 }
 
 /** 위치(placement)에 수요 데이터를 합쳐 마커를 만든다. 조건에 맞지 않으면 null. */

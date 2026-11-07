@@ -2,8 +2,10 @@ import type {
   DemandSummary,
   MapMarkerKind,
   MapPosition,
+  MerchantResponse,
   Neighborhood,
   StoreCategory,
+  StoreRequest,
 } from '@/types/domain';
 
 /*
@@ -25,6 +27,7 @@ export const mockCategories: StoreCategory[] = [
     cardTitle: '과일 / 채소 가게',
     requestLabel: '과일',
     missingLabel: '과일 / 채소',
+    objectPhrase: '과일·채소 가게를',
   },
   {
     id: 'side-dish',
@@ -32,6 +35,7 @@ export const mockCategories: StoreCategory[] = [
     cardTitle: '반찬가게',
     requestLabel: '반찬',
     missingLabel: '반찬',
+    objectPhrase: '반찬 가게를',
   },
   {
     id: 'bakery',
@@ -39,6 +43,7 @@ export const mockCategories: StoreCategory[] = [
     cardTitle: '빵집',
     requestLabel: '빵',
     missingLabel: '빵집',
+    objectPhrase: '빵집을',
   },
 ];
 
@@ -144,5 +149,35 @@ export const mockMarkerPlacements: MockMarkerPlacement[] = [
     kind: 'missing',
     categoryId: 'fruit-vegetable',
     position: at(200, 50),
+  },
+];
+
+/** 메모리 DB 에 들어 있는 요청 한 건. 사장님 응답은 목 시드로만 존재한다. */
+export interface MockStoredRequest {
+  request: StoreRequest;
+  response?: MerchantResponse;
+}
+
+/**
+ * [임의] 처음부터 있는 "내가 보낸 요청". 개발용 값이다.
+ * 구성동 반찬 요청 12명·"내가 요청함"(위 수요 데이터)과 일치하게 두었다.
+ * 사장님 응답의 업체·지역·문구도 개발용이다(Figma 예시는 과일/채소 카드의 "싱싱과일(신갈동)" 응답).
+ */
+export const mockSeedRequests: MockStoredRequest[] = [
+  {
+    request: {
+      id: 'mock-request-seed-1',
+      neighborhoodId: 'guseong',
+      categoryId: 'side-dish',
+      detail: '반찬가게가 생기면 좋겠어요.',
+      conditions: [],
+      visitTimes: ['weekday-evening'],
+      visitFrequency: 'monthly',
+    },
+    response: {
+      merchantName: '맛나반찬',
+      areaName: '신갈동',
+      message: '토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+    },
   },
 ];

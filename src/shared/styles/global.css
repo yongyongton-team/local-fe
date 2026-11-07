@@ -8,6 +8,11 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /*
+   * 데스크톱 브라우저에서 화면마다 세로 스크롤 유무가 달라도 콘텐츠 폭과 중앙 위치가 같도록
+   * 스크롤바 자리를 항상 확보한다. 스크롤바가 화면 위에 겹쳐 보이는 모바일에서는 영향이 없다.
+   */
+  scrollbar-gutter: stable;
 }
 
 body {

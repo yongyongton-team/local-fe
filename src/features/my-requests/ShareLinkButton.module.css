@@ -1,0 +1,20 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.status {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* 문구가 있을 때만 버튼과 간격을 둔다. */
+.status:not(:empty) {
+  margin-top: var(--space-2);
+}
+
+.error {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
+}

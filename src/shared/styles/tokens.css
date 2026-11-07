@@ -153,4 +153,18 @@
   /* [화면] AI 배지 방사형 그라데이션. 원본 #B1FFAD → #F6FEF0, 불투명도 0.6 */
   --color-ai-badge-center: rgb(177 255 173 / 60%);
   --color-ai-badge-edge: rgb(246 254 240 / 60%);
+
+  /* 내 요청 화면(/resident/requests) 전용 */
+  /* [화면] 요약 카드 좌우 안쪽 여백. 진행 영역은 이 값에서, 글자는 여기에 아래 inset 을 더한 위치에서 시작한다 */
+  --summary-card-pad-x: 21px;
+  --summary-card-inset: 4px;
+  /* [화면] 진행 막대 높이 */
+  --progress-bar-height: 9px;
+  /* [임시] 진행 막대 트랙. 디자인에는 가득 찬(30/30) 막대만 있어 트랙 색이 없다 */
+  --color-progress-track: var(--color-surface);
+  /* [화면] 요청 카드 윤곽선 */
+  --color-border-card: #999999;
+  /* [화면] "결정 필요" 알약. 글자는 Figma 변수 Accents/Red, 배경은 rgba(255,0,0,0.12) */
+  --color-decision-text: #ff383c;
+  --color-decision-bg: rgb(255 0 0 / 12%);
 }

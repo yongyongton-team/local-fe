@@ -5,9 +5,9 @@ import { LinkPlusIcon, MapIcon, PersonShieldIcon } from '@/shared/ui/icons';
 import { MobileLayout } from './MobileLayout';
 
 /*
- * 하단 내비는 이름 없는 아이콘 3개다(Figma).
- *   가운데 링크+ 아이콘 → 가게 요청(/resident/requests/new): 확정
- *   지도 아이콘 → 탐색(/resident), 사람+방패 아이콘 → 내 요청(/resident/requests): 임시 매핑
+ * 하단 내비는 이름 없는 아이콘 3개다(Figma). 아이콘과 경로의 매핑은 모두 확정이다.
+ *   지도 아이콘 → 탐색(/resident), 링크+ 아이콘 → 가게 요청(/resident/requests/new),
+ *   사람+방패 아이콘 → 내 요청(/resident/requests)
  * 표시 범위: 주민 화면 /resident, /resident/requests/new, /resident/requests 에 보이고
  * 첫 화면·상세·리포트에서는 숨긴다.
  */

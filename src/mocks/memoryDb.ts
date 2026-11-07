@@ -1,0 +1,35 @@
+import type { DemandSummary } from '@/types/domain';
+import { mockDemandSummaries, mockSeedRequests, type MockStoredRequest } from './demand';
+
+/*
+ * 목 서비스가 함께 쓰는 메모리 DB. 새로고침하면 시드 상태로 돌아간다. 서버에는 아무것도 보내지 않는다.
+ * 동네 탐색의 카드·마커, 내가 요청함 표시, 내 요청 화면이 모두 같은 수요 데이터(summaries)를
+ * 읽기 때문에 요청을 제출하면 UI 코드를 바꾸지 않아도 같은 값으로 갱신된다.
+ */
+interface MemoryDb {
+  /** 동네·업종별 수요 수치. 제출하면 인원이 늘어난다. */
+  summaries: DemandSummary[];
+  /** 내가 보낸 요청. 배열 끝이 가장 최근이다. */
+  requests: MockStoredRequest[];
+  nextRequestNumber: number;
+}
+
+function createInitialDb(): MemoryDb {
+  return {
+    summaries: mockDemandSummaries.map((summary) => ({ ...summary })),
+    requests: mockSeedRequests.map(({ request, response }) => ({
+      request: { ...request },
+      response: response && { ...response },
+    })),
+    nextRequestNumber: 1,
+  };
+}
+
+let db = createInitialDb();
+
+export const getDb = (): MemoryDb => db;
+
+/** 메모리 상태를 시드로 되돌린다. 테스트 사이에 호출한다. */
+export function resetMockDb(): void {
+  db = createInitialDb();
+}
