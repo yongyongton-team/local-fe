@@ -213,4 +213,22 @@
   --callout-pill-pad-x: 17px;
   /* [임시] 안전 영역이 없는 화면에서 결정 필요 영역 아래 최소 간격(Figma 는 홈 인디케이터 영역 34px) */
   --detail-bottom-gap-min: 16px;
+
+  /* 입지 찾기 화면(/founder) 전용 */
+  /* [화면] 업종 선택 상자: 높이 54px, 글자는 상자 안쪽 24px(테두리 1px 포함), chevron 은 오른쪽에서 23px */
+  --founder-select-height: 54px;
+  --founder-select-pad-left: 23px;
+  --founder-select-chevron-right: 23px;
+  /* [화면] 간격: 앱바 → 질문 10px, 질문 → 선택 상자 12px, 선택 상자 → 섹션 제목 19px, 부제 → 첫 행 15px(섹션 안 간격 4px 포함, 아래 값은 그 나머지), 마지막 행 → 지도 22px. 로고 아래 제목 줄은 2px 내려 놓인다 */
+  --founder-gap-question: 10px;
+  --founder-gap-select: 12px;
+  --founder-gap-section: 19px;
+  --founder-gap-list: 11px;
+  --founder-gap-header: 2px;
+  --founder-gap-map: 22px;
+  /* [화면] 지도 카드 362×199, 모서리 25px. 높이는 너비에 비례한다 */
+  --founder-map-aspect: 362 / 199;
+  --founder-map-radius: 25px;
+  /* [화면] 지도 공통 최소 높이(200px)를 쓰지 않고 카드 비율만 따른다 */
+  --founder-map-min-height: 0px;
 }

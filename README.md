@@ -44,6 +44,7 @@ pnpm dev           # 개발 서버
 | 그 외                           | Not Found               |
 
 - 라우트 정의(`src/app/routes.tsx`)는 라우터 생성 코드(`router.tsx`)와 분리되어 있어 테스트에서 메모리 라우터로 재사용합니다.
+- `/founder` 는 선택한 업종을 `?category={업종 id}` 로 보관하고(없거나 올바르지 않으면 기본 업종), 순위 행의 리포트 링크에도 같은 쿼리를 붙입니다.
 - `:areaId` 는 `Neighborhood.id` 와 같습니다. 존재하지 않으면 해당 페이지 안에서 "찾을 수 없음"을 안내합니다.
 - Figma 에서 같은 화면의 여러 상태(역할 선택 3종, 지도 필터 4종, 탐색 범위 3종, 동네별 리포트)는 별도 페이지가 아니라 공통 페이지의 상태(`useState`)나 `:areaId` 로 모델링했습니다.
 
@@ -65,14 +66,15 @@ src/
     store-request/  가게 요청하기 화면: 선택지 상수, 문장 정리 훅(오래된 응답 무시), 칩 그룹, AI 정리 카드, 제출 가능 여부 규칙
     my-requests/  내 요청 화면: 진행 상황 요약 카드, 요청 카드, 이웃에게 알리기(공유), 진행률·문구 규칙
     merchant-explore/  사장님 탐색 화면: 반경 칩 옵션, 동네 행, 문구 규칙, 데이터 훅
+    founder-explore/  예비 창업자 입지 찾기 화면: 순위 행 문구·지도 알약 규칙(순수 함수), 데이터 훅
     merchant-area/  사장님 동네 상세 화면: 요약 카드, 막대 행(길이는 데이터에서 계산), 한 줄 요약 카드, 결정 필요 영역, 표시 규칙·데이터 훅
   shared/
-    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, Page, AppBar, Notice, BottomNav, MapPlaceholder, SampleDataBadge)
+    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, ListRowLink, SelectBox, Page, AppBar, Notice, BottomNav, MapPlaceholder, SampleDataBadge)
     layouts/    MobileLayout(헤더·하단 내비 슬롯), RootLayout·ResidentTabsLayout(라우트용)
     assets/     공통 이미지(로고)
     lib/        경로 상수, useAsyncData, 방문 시간대 표기
     styles/     tokens.css(디자인 토큰), fonts.css(@font-face), global.css(reset·전역), fonts/(Pretendard WOFF2·라이선스)
-  services/     데이터 접근 인터페이스, 목 구현, 입력 문장 정리(키워드 규칙 목)·요청 제출·내 요청 조회·사장님 탐색·동네 상세(메모리 목) 인터페이스, 동네 상세 한 줄 요약 문장 생성(템플릿 목)과 AI 설명 생성 인터페이스
+  services/     데이터 접근 인터페이스, 목 구현, 입력 문장 정리(키워드 규칙 목)·요청 제출·내 요청 조회·사장님 탐색·동네 상세·창업자 입지 순위(메모리 목) 인터페이스, 동네 상세 한 줄 요약 문장 생성(템플릿 목)과 AI 설명 생성 인터페이스
   mocks/        목 데이터, 메모리 DB(요청 제출 시 인원이 늘어나는 상태. 새로고침하면 시드로 초기화)
   types/        공통 도메인 타입
   test/         테스트 설정과 renderApp 헬퍼

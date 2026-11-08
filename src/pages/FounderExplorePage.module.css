@@ -1,0 +1,94 @@
+/*
+ * 입지 찾기 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
+ * 402×874 는 참고 크기라 높이를 고정하지 않는다. 상단 상태 표시줄 자리와 하단 홈 영역은
+ * RootLayout(MobileLayout)의 safe-area-inset 여백이 맡고, 하단 내비게이션은 없다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: block;
+  width: 129px;
+  max-width: 100%;
+  height: auto;
+  margin-left: var(--header-inset-x);
+}
+
+/* 제목은 본문 왼쪽 끝(x=20)에서 시작하고, 사람들 아이콘 버튼이 오른쪽 끝에 있다. */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+  margin-top: var(--founder-gap-header);
+}
+
+/* 질문(큰 제목, select 의 label)과 업종 선택 상자 */
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--founder-gap-select);
+  margin-top: var(--founder-gap-question);
+}
+
+.questionLabel {
+  font: var(--font-display);
+  letter-spacing: var(--letter-spacing-display);
+  color: var(--color-text-primary);
+}
+
+/* 흰 배경 + 1px 라임 테두리, 높이 54px, 글자 SemiBold 16px. 나머지 모양은 첫 화면의 동네 선택과 같다. */
+.select {
+  --select-bg: var(--color-surface);
+  --select-border: 1px solid var(--color-accent);
+  --select-min-height: var(--founder-select-height);
+  --select-pad-left: var(--founder-select-pad-left);
+  --select-chevron-right: var(--founder-select-chevron-right);
+  --select-font-weight: var(--font-weight-semibold);
+}
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--founder-gap-section);
+}
+
+/* SemiBold 16px */
+.sectionTitle {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+/* 번호가 글자로 보이므로 기본 번호 표시는 숨기고 목록 의미(ol/li)는 유지한다. */
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--compact-card-gap);
+  margin: var(--founder-gap-list) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 좌우 여백이 있는 큰 모서리 카드(전체 너비 아님). 높이는 너비에 비례하고 알약 위치도 카드 대비 비율이다. */
+.map {
+  --map-aspect: var(--founder-map-aspect);
+  --map-radius: var(--founder-map-radius);
+  --map-min-height: var(--founder-map-min-height);
+  margin-top: var(--founder-gap-map);
+}

@@ -7,5 +7,8 @@ export const paths = {
   merchant: '/merchant',
   merchantArea: (areaId: string) => `/merchant/areas/${encodeURIComponent(areaId)}`,
   founder: '/founder',
-  founderAreaReport: (areaId: string) => `/founder/areas/${encodeURIComponent(areaId)}/report`,
+  /** 리포트는 업종별이라 categoryId 가 있으면 ?category= 로 전달한다. */
+  founderAreaReport: (areaId: string, categoryId?: string) =>
+    `/founder/areas/${encodeURIComponent(areaId)}/report` +
+    (categoryId ? `?category=${encodeURIComponent(categoryId)}` : ''),
 } as const;
