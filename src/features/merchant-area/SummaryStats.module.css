@@ -1,0 +1,47 @@
+/*
+ * 요약 카드 둘 (Figma 2:1971 / 2:1972). 높이 102px, 카드 사이 16px, 글자는 카드 안쪽 34px 에서 시작한다.
+ * 바탕은 AI 카드와 같은 옅은 라임 그라데이션이다.
+ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 행은 라벨 줄과 값 줄 둘이다. 카드가 두 행을 걸쳐(subgrid) 한쪽 라벨이 줄바꿈돼도 값의 높이가 같다. */
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-4);
+  row-gap: 0;
+  /* 카드 높이 102px 는 행 트랙에 걸어야 한다(subgrid 카드의 min-height 는 트랙에 반영되지 않는다). */
+  min-height: var(--detail-stat-card-height);
+  margin: 0;
+}
+
+.card {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: var(--detail-stat-gap);
+  min-width: 0;
+  /* 위쪽 여백 고정: 라벨이 두 줄로 줄바꿈돼도 두 카드의 첫 줄이 같은 높이에 있다. */
+  padding: var(--detail-stat-card-pad-top) var(--detail-stat-card-pad-x) var(--space-3);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+}
+
+/* 라벨: Medium 14px 회색 */
+.label {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+/* 값: Medium 24px 검정 */
+.value {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-stat-value);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-stat-value);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}

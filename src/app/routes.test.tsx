@@ -121,10 +121,8 @@ describe('URL 직접 진입', () => {
   it('사장님 동네 상세는 areaId 의 수요를 보여준다', async () => {
     renderApp(['/merchant/areas/guseong']);
 
-    expect(await heading1('구성동 수요')).toBeInTheDocument();
+    expect(await heading1('구성동 / 과일 가게')).toBeInTheDocument();
     expect(screen.getByText('29명')).toBeInTheDocument();
-    expect(screen.getByText('2.4km')).toBeInTheDocument();
-    expect(screen.getByText('예시 데이터')).toBeInTheDocument();
   });
 
   it('창업자 리포트의 설명 영역은 준비 중 자리표시자다', async () => {
@@ -134,15 +132,22 @@ describe('URL 직접 진입', () => {
     expect(screen.getByText('설명은 준비 중이에요')).toBeInTheDocument();
   });
 
-  it.each(['/merchant/areas/unknown', '/founder/areas/unknown/report'])(
-    '%s 는 페이지 안에서 찾을 수 없음을 안내한다',
-    async (path) => {
-      renderApp([path]);
+  it('창업자 리포트의 없는 동네는 페이지 안에서 찾을 수 없음을 안내한다', async () => {
+    renderApp(['/founder/areas/unknown/report']);
 
-      expect(await heading1('찾을 수 없음')).toBeInTheDocument();
-      expect(screen.getByText('찾을 수 없는 동네예요')).toBeInTheDocument();
-    },
-  );
+    expect(await heading1('찾을 수 없음')).toBeInTheDocument();
+    expect(screen.getByText('찾을 수 없는 동네예요')).toBeInTheDocument();
+  });
+
+  it('사장님 동네 상세의 없는 동네는 페이지 안에서 찾을 수 없음을 안내한다', async () => {
+    renderApp(['/merchant/areas/unknown']);
+
+    expect(await screen.findByText('찾을 수 없는 동네예요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '동네 목록으로' })).toHaveAttribute(
+      'href',
+      '/merchant',
+    );
+  });
 });
 
 describe('하단 내비게이션', () => {
@@ -156,10 +161,13 @@ describe('하단 내비게이션', () => {
     },
   );
 
-  it.each(['/', '/merchant', '/founder'])('%s 에서는 숨겨진다', async (path) => {
-    renderApp([path]);
+  it.each(['/', '/merchant', '/merchant/areas/guseong', '/founder'])(
+    '%s 에서는 숨겨진다',
+    async (path) => {
+      renderApp([path]);
 
-    await screen.findByRole('heading', { level: 1 });
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-  });
+      await screen.findByRole('heading', { level: 1 });
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    },
+  );
 });

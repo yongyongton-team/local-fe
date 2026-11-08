@@ -1,0 +1,70 @@
+/*
+ * 한 줄 요약 카드 (Figma 2:1970, 362×100). 배지는 좌상단에서 (14, 3), 문장은 배지 아래 12px 안쪽에서 시작한다.
+ * 바탕은 요청 화면 AI 카드와 같다.
+ */
+.card {
+  position: relative;
+  padding: var(--detail-summary-pad-top) var(--detail-summary-pad-x) var(--space-4);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+}
+
+/* 임시 표시: 카드 안쪽 우측 위 구석 */
+.sample {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  margin: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-marker-missing-bg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ai-badge-size);
+  height: var(--ai-badge-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    var(--color-ai-badge-center),
+    var(--color-ai-badge-edge)
+  );
+  font: var(--font-contents);
+}
+
+/* SemiBold 16px */
+.title {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+}
+
+/* Medium 14px 회색, 줄 높이 17px */
+.text {
+  margin: 0;
+  padding-left: var(--space-3);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-summary-text);
+  letter-spacing: -0.02em;
+  color: var(--color-text-secondary);
+}

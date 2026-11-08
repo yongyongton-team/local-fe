@@ -25,6 +25,8 @@ export interface StoreCategory {
   missingLabel: string;
   /** 문장에 쓰는 업종 표기. 조사까지 완성된 값이다(조사를 코드로 계산하지 않는다). 예: 과일·채소 가게를 */
   objectPhrase: string;
+  /** 사장님 동네 상세 제목의 업종 표기. 예: 과일 가게, 빵집 ("{동네} / {titleLabel}") */
+  titleLabel: string;
 }
 
 /** 방문하기 좋은 시간대. 여러 개를 고를 수 있다. */
@@ -148,4 +150,34 @@ export interface MapOrigin {
   position: MapPosition;
   /** 탐색 반경(km). 제한이 없으면 null */
   radiusKm: number | null;
+}
+
+/** 동네 상세의 조건 한 줄: 그 조건을 원한 주민 수. 문장 원문은 담지 않는다. */
+export interface AreaCondition {
+  /** 예: 늦게까지 영업 */
+  label: string;
+  /** 해당 조건을 원한 주민 수 */
+  count: number;
+}
+
+/** 동네 상세의 방문 시간대 한 줄. */
+export interface AreaVisitTime {
+  time: VisitTime;
+  /** 전체 대비 비율(%). 시간대 비율의 합은 100 이다. */
+  ratio: number;
+}
+
+/**
+ * 사장님용 동네 수요 상세. 개인 정보와 원문 문장은 담지 않고 개수·비율만 담는다.
+ * conditions 는 인원 내림차순, visitTimes 는 비율 내림차순이다(첫 항목이 가장 많은 시간대).
+ */
+export interface AreaDetail {
+  neighborhood: Neighborhood;
+  category: StoreCategory;
+  /** 요청한 주민 수(수요 데이터) */
+  requestCount: number;
+  /** 근처 같은 업종 가게 수(수요 데이터) */
+  nearbySameCategoryCount: number;
+  conditions: AreaCondition[];
+  visitTimes: AreaVisitTime[];
 }
