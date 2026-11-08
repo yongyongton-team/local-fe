@@ -1,10 +1,11 @@
+import { VISIT_TIME_LABELS } from '@/shared/lib/visitTime';
 import type { VisitFrequency, VisitTime } from '@/types/domain';
 
 /** 선택지 데이터. 표기는 화면(Figma) 그대로다. */
 export const VISIT_TIME_OPTIONS = [
-  { value: 'weekday-day', label: '평일 낮' },
-  { value: 'weekday-evening', label: '평일 저녁' },
-  { value: 'weekend', label: '주말' },
+  { value: 'weekday-day', label: VISIT_TIME_LABELS['weekday-day'] },
+  { value: 'weekday-evening', label: VISIT_TIME_LABELS['weekday-evening'] },
+  { value: 'weekend', label: VISIT_TIME_LABELS.weekend },
 ] as const satisfies readonly { value: VisitTime; label: string }[];
 
 export const VISIT_FREQUENCY_OPTIONS = [

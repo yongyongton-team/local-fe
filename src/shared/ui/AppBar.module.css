@@ -1,0 +1,11 @@
+/* 앱바: 뒤로가기 아이콘 버튼(44px) + h1. Figma 에서 화살표는 x=21, 제목은 x=45 에 있다. */
+.appBar {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-target-min);
+  margin-left: calc(-1 * var(--space-2));
+}
+
+.title {
+  margin-left: calc(-1 * var(--space-3));
+}

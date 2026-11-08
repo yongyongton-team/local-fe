@@ -28,6 +28,7 @@ export const mockCategories: StoreCategory[] = [
     requestLabel: '과일',
     missingLabel: '과일 / 채소',
     objectPhrase: '과일·채소 가게를',
+    titleLabel: '과일 가게',
   },
   {
     id: 'side-dish',
@@ -36,6 +37,7 @@ export const mockCategories: StoreCategory[] = [
     requestLabel: '반찬',
     missingLabel: '반찬',
     objectPhrase: '반찬 가게를',
+    titleLabel: '반찬 가게',
   },
   {
     id: 'bakery',
@@ -44,6 +46,7 @@ export const mockCategories: StoreCategory[] = [
     requestLabel: '빵',
     missingLabel: '빵집',
     objectPhrase: '빵집을',
+    titleLabel: '빵집',
   },
 ];
 

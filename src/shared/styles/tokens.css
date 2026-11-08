@@ -42,6 +42,7 @@
   --font-family-base:
     'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
     'Malgun Gothic', system-ui, sans-serif; /* [DS] Pretendard + [임시] 한글 시스템 폰트 폴백 */
+  --font-weight-regular: 400; /* [화면] 작은 알약 글자(결정 필요) */
   --font-weight-medium: 500; /* [DS] Contents·Caption */
   --font-weight-semibold: 600; /* [화면] DS 밖 개별 화면(첫 화면 제목·역할 카드) */
   --font-weight-bold: 700; /* [DS] Title */
@@ -176,4 +177,40 @@
   /* [화면] 지도 중심 핀(17×21)의 절반. 핀 좌상단 기준 좌표에서 핀 중심을 구할 때 쓴다 */
   --pin-half-width: 8.5px;
   --pin-half-height: 10.5px;
+
+  /* 사장님 동네 상세 화면(/merchant/areas/:areaId) 전용 */
+  /* [화면] 요약 카드(요청한 주민 / 근처 같은 업종): 높이 102px, 글자는 카드 안쪽 34px 에서 시작 */
+  --detail-stat-card-height: 102px;
+  --detail-stat-card-pad-x: 34px;
+  /* [화면 근사] 라벨+값(18+6+29=53px)을 102px 카드 가운데에 둔 위쪽 여백 */
+  --detail-stat-card-pad-top: 24.5px;
+  --detail-stat-gap: 6px;
+  /* [화면] 요약 카드 값 글자: Medium 24px. 줄 높이는 원본 normal 의 근사 */
+  --font-size-stat-value: 24px;
+  --line-height-stat-value: 29px;
+  /* [화면] 막대 행: 라벨 칸 95px, 값 칸 51px(글자는 4px 안쪽), 행 간격 28px, 막대 높이 15px */
+  --bar-label-width: 95px;
+  --bar-value-width: 51px;
+  --bar-value-inset: 4px;
+  --bar-row-height: 28px;
+  --bar-height: 15px;
+  /* [화면] 섹션 사이 간격: 요약 카드 → 조건 22px, 조건 → 시간 16px(space-4), 시간 → 한 줄 요약은 아래 */
+  --detail-gap-stats: 22px;
+  /* [화면] 앱바 아래(요약 카드 위) 추가 간격. 로고 아래 앱바 영역이 Figma 에서 47px 이다 */
+  --detail-gap-header: 3px;
+  /* [화면] 가기 좋은 시간 → 한 줄 요약 카드 간격(막대 행 하단 기준) */
+  --detail-gap-summary: 34px;
+  /* [화면] 한 줄 요약 카드: AI 배지 위치(14, 3), 문장 줄 높이 17px */
+  --detail-summary-pad-x: 14px;
+  --detail-summary-pad-top: 3px;
+  --line-height-summary-text: 17px;
+  /* [화면] 결정 필요 영역: 윤곽은 순수 빨강 점선 1px */
+  --color-callout-border: #ff0000;
+  --callout-pad-top: 10px;
+  --callout-pad: 11px;
+  --callout-gap: 7px;
+  --callout-pill-pad-y: 6px;
+  --callout-pill-pad-x: 17px;
+  /* [임시] 안전 영역이 없는 화면에서 결정 필요 영역 아래 최소 간격(Figma 는 홈 인디케이터 영역 34px) */
+  --detail-bottom-gap-min: 16px;
 }

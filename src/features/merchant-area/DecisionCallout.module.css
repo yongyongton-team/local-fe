@@ -1,0 +1,25 @@
+/*
+ * 결정 필요 영역 (Figma 2:1986 윤곽 362×116, 알약 2:1995 337×26, 버튼 2:1998 337×60).
+ * 점선 윤곽(빨강 1px) 안쪽 여백 10(위)/11(좌우·아래), 알약과 버튼 사이 7px.
+ */
+.callout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--callout-gap);
+  padding: var(--callout-pad-top) var(--callout-pad) var(--callout-pad);
+  border: 1px dashed var(--color-callout-border);
+  border-radius: var(--radius-card);
+}
+
+/* 알약: 전체 폭, 글자는 왼쪽 17px 안쪽. 12px Regular */
+.pill {
+  margin: 0;
+  padding: var(--callout-pill-pad-y) var(--callout-pill-pad-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-decision-bg);
+  color: var(--color-decision-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-chip);
+}

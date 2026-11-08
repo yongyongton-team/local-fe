@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { ChipFieldset } from '@/features/store-request/ChipFieldset';
 import {
   REQUEST_MAX_LENGTH,
@@ -20,9 +20,8 @@ import { useSelection } from '@/features/selection/SelectionContext';
 import { requestSubmitter } from '@/services';
 import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { AppBar } from '@/shared/ui/AppBar';
 import { Button } from '@/shared/ui/Button';
-import { IconButton } from '@/shared/ui/IconButton';
-import { ArrowLeftIcon } from '@/shared/ui/icons';
 import { Page } from '@/shared/ui/Page';
 import { Text } from '@/shared/ui/Text';
 import { TextArea } from '@/shared/ui/TextArea';
@@ -51,7 +50,6 @@ const SUBMIT_HINT_ID = 'request-submit-hint';
 
 function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [text, setText] = useState('');
   const [chosenCategoryId, setChosenCategoryId] = useState<string | null>(null);
@@ -75,16 +73,6 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
     setSubmitFailed(false);
     // 입력이 비면 카드가 사라지므로 고른 업종도 함께 비운다.
     if (isBlank(value)) setChosenCategoryId(null);
-  }
-
-  /** 앱 안에서 이전 화면이 있으면 그 화면으로, 직접 진입했으면 /resident 로 간다. */
-  function goBack() {
-    // location.key 가 'default' 이면 이 앱에서 처음 연 화면(직접 진입)이다.
-    if (location.key === 'default') {
-      void navigate(paths.resident);
-    } else {
-      void navigate(-1);
-    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -115,12 +103,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
     <div className={styles.screen}>
       <header className={styles.header}>
         <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
-        <div className={styles.appBar}>
-          <IconButton label="뒤로 가기" icon={<ArrowLeftIcon />} onClick={goBack} />
-          <Text as="h1" variant="title" className={styles.appBarTitle}>
-            가게 요청하기
-          </Text>
-        </div>
+        <AppBar title="가게 요청하기" fallbackTo={paths.resident} />
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
