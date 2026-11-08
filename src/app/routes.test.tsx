@@ -125,18 +125,21 @@ describe('URL 직접 진입', () => {
     expect(screen.getByText('29명')).toBeInTheDocument();
   });
 
-  it('창업자 리포트의 설명 영역은 준비 중 자리표시자다', async () => {
+  it('창업자 동네 리포트는 areaId 의 수치를 보여준다', async () => {
     renderApp(['/founder/areas/mabuk/report']);
 
-    expect(await heading1('마북동 리포트')).toBeInTheDocument();
-    expect(screen.getByText('설명은 준비 중이에요')).toBeInTheDocument();
+    expect(await heading1('마북동 / 과일 가게')).toBeInTheDocument();
+    expect(screen.getByText('9명')).toBeInTheDocument();
   });
 
   it('창업자 리포트의 없는 동네는 페이지 안에서 찾을 수 없음을 안내한다', async () => {
     renderApp(['/founder/areas/unknown/report']);
 
-    expect(await heading1('찾을 수 없음')).toBeInTheDocument();
-    expect(screen.getByText('찾을 수 없는 동네예요')).toBeInTheDocument();
+    expect(await screen.findByText('찾을 수 없는 동네예요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '입지 찾기로' })).toHaveAttribute(
+      'href',
+      '/founder?category=fruit-vegetable',
+    );
   });
 
   it('사장님 동네 상세의 없는 동네는 페이지 안에서 찾을 수 없음을 안내한다', async () => {

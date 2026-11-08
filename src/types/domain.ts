@@ -92,6 +92,14 @@ export interface NeighborhoodReport {
   demand: DemandSummary;
 }
 
+/**
+ * 예비 창업자용 동네 리포트: 수치와 많이 원하는 시간대. 설명 문장은 포함하지 않는다(문장 생성 경계가 따로 만든다).
+ * peakVisitTime 은 사장님 동네 상세와 같은 시간대 분포의 최상위다.
+ */
+export interface AreaReport extends NeighborhoodReport {
+  peakVisitTime: VisitTime;
+}
+
 /** 지도 마커 종류. request: 주민 요청, missing: 없는 가게, existing: 있는 가게 */
 export type MapMarkerKind = 'request' | 'missing' | 'existing';
 

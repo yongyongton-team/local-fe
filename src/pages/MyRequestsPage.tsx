@@ -1,12 +1,12 @@
 import { MyRequestCard } from '@/features/my-requests/MyRequestCard';
 import { ProgressSummaryCard } from '@/features/my-requests/ProgressSummaryCard';
 import { describeRequestSummary } from '@/features/my-requests/requestProgress';
-import { ShareLinkButton } from '@/features/my-requests/ShareLinkButton';
 import { useMyRequests } from '@/features/my-requests/useMyRequests';
 import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
 import { Notice } from '@/shared/ui/Notice';
 import { SampleDataBadge } from '@/shared/ui/SampleDataBadge';
+import { ShareButton } from '@/shared/ui/ShareButton';
 import { Text } from '@/shared/ui/Text';
 import type { MyRequest } from '@/types/domain';
 import styles from './MyRequestsPage.module.css';
@@ -61,7 +61,11 @@ function Content({ items }: { items: MyRequest[] }) {
         <ProgressSummaryCard item={latest} />
       </div>
       <div className={styles.share}>
-        <ShareLinkButton text={describeRequestSummary(latest)} />
+        <ShareButton
+          label="이웃에게 알리기 (링크 공유)"
+          text={describeRequestSummary(latest)}
+          url={`${window.location.origin}/`}
+        />
       </div>
 
       <section aria-labelledby="my-requests-list" className={styles.list}>

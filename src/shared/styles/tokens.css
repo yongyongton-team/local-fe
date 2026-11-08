@@ -231,4 +231,17 @@
   --founder-map-radius: 25px;
   /* [화면] 지도 공통 최소 높이(200px)를 쓰지 않고 카드 비율만 따른다 */
   --founder-map-min-height: 0px;
+
+  /* 동네 리포트 화면(/founder/areas/:areaId/report) 전용 */
+  /* [화면] "왜 이 동네인가요?" 카드: 가운데는 AI 카드 하이라이트(#fffdf3), 가장자리는 옅은 파란색(원본 rgba(233,240,255)) */
+  --color-report-card-edge: rgb(233 240 255);
+  --report-why-pad-bottom: 17px;
+  /* [화면] 근거 데이터 카드 좌우 안쪽 여백(글자 시작 x=45) */
+  --report-card-pad-x: 25px;
+  /* [화면] 간격: 요약 카드 줄 사이 12px, 요약 → 왜 이 동네 카드 21px, 왜 이 동네 카드 → 근거 데이터 제목 12px */
+  --report-gap-stat-rows: 12px;
+  --report-gap-why: 21px;
+  --report-gap-sources: 12px;
+  /* [임시] 공유 버튼 아래 간격(안전 영역에 더한다). Figma 는 홈 인디케이터 영역 34px + 11px */
+  --report-bottom-gap: 11px;
 }

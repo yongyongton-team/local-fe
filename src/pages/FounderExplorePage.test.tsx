@@ -125,13 +125,13 @@ describe('링크', () => {
     );
   });
 
-  it('행을 누르면 리포트(골격)가 열린다', async () => {
+  it('행을 누르면 그 동네 리포트가 열린다', async () => {
     const user = userEvent.setup();
     await openFounder();
 
     await user.click(screen.getByRole('link', { name: /^2\. 보정동/ }));
 
-    expect(await heading1('보정동 리포트')).toBeInTheDocument();
+    expect(await heading1('보정동 / 과일 가게')).toBeInTheDocument();
   });
 });
 
@@ -182,7 +182,7 @@ describe('업종 선택과 쿼리', () => {
     await user.selectOptions(select(), '빵집');
     expect(router.state.location.search).toBe('?category=bakery');
     await user.click(await screen.findByRole('link', { name: /^1\. 구성동, 요청 6명/ }));
-    expect(await heading1('구성동 리포트')).toBeInTheDocument();
+    expect(await heading1('구성동 / 빵집')).toBeInTheDocument();
     await act(() => router.navigate(-1));
 
     await waitFor(() => expect(select()).toHaveDisplayValue('빵집'));

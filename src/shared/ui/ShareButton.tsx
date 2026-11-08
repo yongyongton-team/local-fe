@@ -1,15 +1,24 @@
 import { useRef, useState } from 'react';
-import { Button } from '@/shared/ui/Button';
-import { shareLink } from './share';
-import styles from './ShareLinkButton.module.css';
+import { shareLink } from '@/shared/lib/share';
+import { Button } from './Button';
+import styles from './ShareButton.module.css';
 
 type Status = 'idle' | 'copied' | 'failed';
 
+interface ShareButtonProps {
+  /** 버튼 글자 */
+  label: string;
+  /** 공유 문구. 서비스 이름은 넣지 않는다(미확정). */
+  text: string;
+  /** 공유할 링크 */
+  url: string;
+}
+
 /**
- * 이웃에게 알리기(링크 공유). 동작이 디자인에서 확인되지 않아 임시로 구현했다.
+ * 링크 공유 버튼(임시 구현: 동작이 디자인에서 확인되지 않았다).
  * Web Share API → 클립보드 복사 순으로 시도하고, 공유를 취소하면 아무 문구도 띄우지 않는다.
  */
-export function ShareLinkButton({ text }: { text: string }) {
+export function ShareButton({ label, text, url }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>('idle');
   const busy = useRef(false);
 
@@ -18,7 +27,7 @@ export function ShareLinkButton({ text }: { text: string }) {
     busy.current = true;
     setStatus('idle');
     try {
-      const result = await shareLink({ text, url: `${window.location.origin}/` });
+      const result = await shareLink({ text, url });
       if (result === 'copied') setStatus('copied');
       if (result === 'failed') setStatus('failed');
     } finally {
@@ -29,7 +38,7 @@ export function ShareLinkButton({ text }: { text: string }) {
   return (
     <div className={styles.wrap}>
       <Button variant="highlight" fullWidth onClick={handleClick}>
-        이웃에게 알리기 (링크 공유)
+        {label}
       </Button>
       {/* 복사했음을 보조 기술에 알린다. 비어 있어도 항상 렌더링해 둔다. */}
       <p aria-live="polite" className={styles.status}>

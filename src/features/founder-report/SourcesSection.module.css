@@ -1,0 +1,45 @@
+/* 근거 데이터 (Figma 2:2044 카드 362×100, 글자는 카드 안쪽 25px·16px). 제목과 카드 사이 12px */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* SemiBold 16px */
+.heading {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+}
+
+.card {
+  padding: var(--space-4) var(--report-card-pad-x);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+}
+
+/* 글머리 "· " 는 list-style 로 그려 본문 글자에 섞이지 않는다. 줄바꿈된 줄은 글머리 아래로 이어진다. */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: '· ' inside;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-summary-text);
+  letter-spacing: -0.02em;
+  color: var(--color-text-secondary);
+}
+
+.notice {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-chip);
+  color: var(--color-text-secondary);
+}

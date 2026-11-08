@@ -1,26 +1,137 @@
-import { useParams } from 'react-router';
-import { DemandFigures } from '@/features/demand/DemandFigures';
-import { ReportLoader } from '@/features/demand/ReportLoader';
+import type { ReactNode } from 'react';
+import { useParams, useSearchParams } from 'react-router';
+import { CATEGORY_PARAM } from '@/features/founder-explore/constants';
+import { resolveCategoryId } from '@/features/founder-explore/locationRows';
+import { useCategories } from '@/features/founder-explore/useFounderExplore';
+import { buildReportStats, buildReportTitle } from '@/features/founder-report/reportView';
+import { SourcesSection } from '@/features/founder-report/SourcesSection';
+import { useAreaReport, useReportSentence } from '@/features/founder-report/useAreaReport';
+import { WhyCard } from '@/features/founder-report/WhyCard';
+import { DEFAULT_CATEGORY_ID } from '@/services';
+import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { AppBar } from '@/shared/ui/AppBar';
 import { Notice } from '@/shared/ui/Notice';
-import { Page } from '@/shared/ui/Page';
-import { SampleDataBadge } from '@/shared/ui/SampleDataBadge';
+import { ShareButton } from '@/shared/ui/ShareButton';
+import { StatCards } from '@/shared/ui/StatCards';
+import type { AreaReport } from '@/types/domain';
+import styles from './FounderAreaReportPage.module.css';
 
-/** 예비 창업자용 동네 리포트. 수치는 데이터 기준이고, 설명 문장은 아직 제공하지 않는다. */
+/** 로딩·오류·찾을 수 없음 화면의 앱바 제목 */
+const FALLBACK_TITLE = '동네 리포트';
+
+/**
+ * 예비 창업자용 동네 리포트 (Figma node 2:2015 구성동 / 2:2063 보정동 / 2:2111 마북동: 값만 다른 같은 화면).
+ * 리포트는 (동네, 업종) 단위이고, 업종은 입지 찾기 링크가 붙인 ?category= 로 받는다(없거나 올바르지 않으면 기본 업종).
+ * 역할·동네 선택이 없어도 렌더링한다(접근 권한이 아니다). 하단 내비게이션은 없다.
+ */
 export function FounderAreaReportPage() {
+  const categories = useCategories();
+
+  if (categories.status === 'success') {
+    return <ReportScreen categories={categories.data} />;
+  }
+  return (
+    <Shell title={FALLBACK_TITLE} backTo={paths.founderExplore()}>
+      {categories.status === 'loading' ? (
+        <p role="status">불러오는 중이에요.</p>
+      ) : (
+        <Notice title="업종을 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+      )}
+    </Shell>
+  );
+}
+
+function ReportScreen({ categories }: { categories: Parameters<typeof resolveCategoryId>[1] }) {
   const { areaId } = useParams();
+  const [params] = useSearchParams();
+  const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, DEFAULT_CATEGORY_ID);
+  // 뒤로 가기(직접 진입)와 안내 링크는 선택한 업종을 유지한 입지 찾기로 간다.
+  const backTo = paths.founderExplore(categoryId);
+  const state = useAreaReport(areaId, categoryId);
+
+  if (state.status === 'loading') {
+    return (
+      <Shell title={FALLBACK_TITLE} backTo={backTo}>
+        <p role="status">불러오는 중이에요.</p>
+      </Shell>
+    );
+  }
+  if (state.status === 'error') {
+    return (
+      <Shell title={FALLBACK_TITLE} backTo={backTo}>
+        <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+      </Shell>
+    );
+  }
+  if (!state.data || !areaId) {
+    return (
+      <Shell title={FALLBACK_TITLE} backTo={backTo}>
+        <Notice title="찾을 수 없는 동네예요" action={{ to: backTo, label: '입지 찾기로' }}>
+          주소가 잘못되었거나 아직 데이터가 없는 동네예요.
+        </Notice>
+      </Shell>
+    );
+  }
+  return (
+    <ReportContent report={state.data} areaId={areaId} categoryId={categoryId} backTo={backTo} />
+  );
+}
+
+function ReportContent({
+  report,
+  areaId,
+  categoryId,
+  backTo,
+}: {
+  report: AreaReport;
+  areaId: string;
+  categoryId: string;
+  backTo: string;
+}) {
+  const sentence = useReportSentence(report);
+  const title = buildReportTitle(report);
+  // 공유 문구는 "왜 이 동네인가요?" 문장이다. 아직 만들어지지 않았으면 제목을 쓴다.
+  const shareText = sentence.status === 'success' ? sentence.data : title;
 
   return (
-    <ReportLoader areaId={areaId} backTo={paths.founder}>
-      {(report) => (
-        <Page title={`${report.neighborhood.name} 리포트`} backTo={paths.founder}>
-          <SampleDataBadge />
-          <DemandFigures demand={report.demand} />
-          <Notice title="설명은 준비 중이에요">
-            수치를 바탕으로 한 설명 문장은 후속 작업에서 제공해요.
-          </Notice>
-        </Page>
-      )}
-    </ReportLoader>
+    <Shell title={title} backTo={backTo}>
+      <div className={styles.stats}>
+        <StatCards items={buildReportStats(report)} />
+      </div>
+      <div className={styles.why}>
+        <WhyCard sentence={sentence} />
+      </div>
+      <div className={styles.sources}>
+        <SourcesSection />
+      </div>
+      <footer className={styles.footer}>
+        <ShareButton
+          label="리포트 공유하기"
+          text={shareText}
+          url={`${window.location.origin}${paths.founderAreaReport(areaId, categoryId)}`}
+        />
+      </footer>
+    </Shell>
+  );
+}
+
+function Shell({
+  title,
+  backTo,
+  children,
+}: {
+  title: string;
+  backTo: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.screen}>
+      <header className={styles.header}>
+        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <AppBar title={title} fallbackTo={backTo} />
+      </header>
+      {children}
+    </div>
   );
 }
