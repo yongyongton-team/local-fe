@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mockNeighborhoodCenters } from '@/mocks/demand';
 import { demandService, founderService, merchantService, requestSubmitter } from '.';
 
 const FRUIT = 'fruit-vegetable';
@@ -178,5 +179,39 @@ describe('동네 리포트 목 서비스', () => {
     });
 
     expect(JSON.stringify(await report('guseong'))).not.toContain('비밀');
+  });
+});
+
+describe('입지 순위의 지도 좌표(서비스 계층)', () => {
+  it('순위 항목마다 동네 중심 좌표(임시)가 위도·경도로 내려온다', async () => {
+    const ranks = await founderService.listLocationRanks(FRUIT);
+
+    expect(ranks).toHaveLength(3);
+    for (const rank of ranks) {
+      const center = mockNeighborhoodCenters.find((c) => c.neighborhoodId === rank.neighborhood.id);
+      expect(rank.lat).toBe(center?.lat);
+      expect(rank.lng).toBe(center?.lng);
+      // 용인시 기흥구 부근(위도 37.x, 경도 127.x): 뒤바뀌거나 NaN 이 아니다.
+      expect(rank.lat).toBeGreaterThan(37.2);
+      expect(rank.lat).toBeLessThan(37.4);
+      expect(rank.lng).toBeGreaterThan(127.0);
+      expect(rank.lng).toBeLessThan(127.2);
+    }
+  });
+
+  it('좌표는 동네에 속한 값이라 업종이 바뀌어도 같고, 동네마다 다르다', async () => {
+    const fruit = await founderService.listLocationRanks(FRUIT);
+    const side = await founderService.listLocationRanks('side-dish');
+    const guseong = (ranks: typeof fruit) => ranks.find((r) => r.neighborhood.id === 'guseong');
+
+    expect([side[0]?.lat, side[0]?.lng]).toEqual([guseong(fruit)?.lat, guseong(fruit)?.lng]);
+    expect(new Set(fruit.map((r) => `${r.lat}|${r.lng}`)).size).toBe(3);
+  });
+
+  it('자리표시자용 상대좌표(position)도 그대로 유지한다', async () => {
+    const [first] = await founderService.listLocationRanks(FRUIT);
+
+    expect(first?.position.x).toBeGreaterThan(0);
+    expect(first?.position.x).toBeLessThan(1);
   });
 });

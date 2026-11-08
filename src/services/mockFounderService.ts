@@ -1,5 +1,5 @@
 import { mockAreaInsights } from '@/mocks/areaInsights';
-import { mockCategories, mockNeighborhoods } from '@/mocks/demand';
+import { mockCategories, mockNeighborhoodCenters, mockNeighborhoods } from '@/mocks/demand';
 import { mockFounderMapPositions } from '@/mocks/founder';
 import { getDb } from '@/mocks/memoryDb';
 import type { LocationRank } from '@/types/domain';
@@ -18,6 +18,8 @@ export const mockFounderService: FounderService = {
       );
       const placement = mockFounderMapPositions.find((p) => p.neighborhoodId === neighborhood.id);
       if (!demand || !placement) continue;
+      // [임의] 동네당 마커가 하나라 흩뿌리지 않고 동네 중심 좌표를 그대로 쓴다. 백엔드가 좌표를 주면 그 값으로 교체한다.
+      const center = mockNeighborhoodCenters.find((c) => c.neighborhoodId === neighborhood.id);
       items.push({
         neighborhood,
         requestCount: demand.requestCount,
@@ -26,6 +28,7 @@ export const mockFounderService: FounderService = {
           nearestHypermarketKm: demand.nearestHypermarketKm,
         }),
         position: { ...placement.position },
+        ...(center && { lat: center.lat, lng: center.lng }),
       });
     }
     return rankLocations(items);

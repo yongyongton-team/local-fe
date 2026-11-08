@@ -3,7 +3,7 @@ import type { MapMarker, MapOrigin } from '@/types/domain';
 import { PinIcon } from './icons';
 import styles from './MapPlaceholder.module.css';
 
-interface MapPlaceholderProps {
+export interface MapPlaceholderProps {
   /** 지금 보여줄 마커(필터를 적용한 결과). 위치는 지도 영역 대비 상대좌표다. */
   markers?: readonly MapMarker[];
   /**
@@ -15,6 +15,8 @@ interface MapPlaceholderProps {
   label?: string;
   /** 보이지 않는 aria-live 요약. 필터가 바뀔 때 보조 기술에 알린다. */
   summary?: string;
+  /** 지도 구석의 안내 문구. 없으면 "지도 연동 예정 · 예시 데이터". 실제 지도를 불러오지 못했을 때 폴백 문구로 바꾼다. */
+  notice?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function MapPlaceholder({
   origin,
   label = '지도 영역',
   summary,
+  notice = '지도 연동 예정 · 예시 데이터',
 }: MapPlaceholderProps) {
   return (
     <section className={styles.map} aria-label={label}>
@@ -69,7 +72,7 @@ export function MapPlaceholder({
         ))}
       </ul>
       {/* 디자인에 없는 임시 표시. 네이버 지도 연동 후 제거한다. */}
-      <p className={styles.notice}>지도 연동 예정 · 예시 데이터</p>
+      <p className={styles.notice}>{notice}</p>
       {summary !== undefined && (
         <p className="visually-hidden" aria-live="polite">
           {summary}

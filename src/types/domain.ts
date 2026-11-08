@@ -120,7 +120,14 @@ export interface MapMarker {
   categoryId?: string;
   /** 표시 문구. 글자가 보이지 않는 마커(existing)에서는 보조 기술용 텍스트로 쓴다. */
   label: string;
+  /** 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표 */
   position: MapPosition;
+  /**
+   * 실제 지도(NaverMap)가 쓰는 위도·경도. 백엔드 좌표 연동 전에는 목 데이터의 임시 값이다.
+   * 선택이라 없으면 자리표시자 지도만 이 마커를 그린다.
+   */
+  lat?: number;
+  lng?: number;
 }
 
 /** 사장님 프로필. 로그인과 가게 등록이 없어 목 데이터로만 존재한다. */
@@ -204,5 +211,12 @@ export interface LocationRank {
   nearbySameCategoryCount: number;
   /** 가장 가까운 대형마트까지의 거리(km). 값이 없으면 화면에 표시하지 않는다. */
   nearestHypermarketKm?: number;
+  /** 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표 */
   position: MapPosition;
+  /**
+   * 실제 지도(NaverMap)가 쓰는 위도·경도. 동네에 속한 값이라 업종이 바뀌어도 같다.
+   * 백엔드 순위(GET /founder/rankings)에는 좌표가 없어 지금은 목 데이터의 동네 중심 좌표다.
+   */
+  lat?: number;
+  lng?: number;
 }

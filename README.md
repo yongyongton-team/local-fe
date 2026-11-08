@@ -2,7 +2,7 @@
 
 ## 기술 스택
 
-React 19 · TypeScript(strict) · Vite · React Router · CSS Modules · Vitest + React Testing Library · ESLint(flat config) + Prettier · pnpm · Pretendard(자체 호스팅 WOFF2)
+React 19 · TypeScript(strict) · Vite · React Router · CSS Modules · Vitest + React Testing Library · ESLint(flat config) + Prettier · pnpm · Pretendard(자체 호스팅 WOFF2) · 네이버 지도(Web Dynamic Map, JavaScript API v3. 스크립트는 지도가 필요한 화면에서 동적으로 불러오고 타입은 `@types/navermaps`)
 
 ## 설치와 실행
 
@@ -27,7 +27,9 @@ pnpm dev           # 개발 서버
 | `pnpm format`       | Prettier 로 파일 수정              |
 | `pnpm format:check` | Prettier 포맷 검사                 |
 
-지도 SDK, 백엔드, AI 키 없이 실행됩니다.
+백엔드, AI 키 없이 실행됩니다. 네이버 지도 키도 없어도 실행되며, 그때는 기존 자리표시자 지도를 보여줍니다.
+
+실제 지도를 보려면 `.env.example` 을 참고해 `.env.local` 에 `VITE_NAVER_MAP_CLIENT_ID`(네이버 클라우드 콘솔의 Web Dynamic Map Client ID)를 넣고 개발 서버를 다시 시작합니다. `.env.local` 은 커밋되지 않습니다. `VITE_` 접두사 변수는 브라우저 번들에 그대로 공개되므로 Client Secret 이나 비밀 키는 넣지 않습니다(프런트에서 필요하지 않습니다). 콘솔의 Web 서비스 URL 에 `http://localhost:5173` 과 배포 주소를 등록해야 인증됩니다.
 
 ## 라우트
 
@@ -62,18 +64,18 @@ src/
   features/
     selection/  역할·동네 선택 (Context, 폼, 역할 정의, assets/ 캐릭터 이미지)
     demand/     수요 카드·수치·리포트 목록/로더
-    resident-map/  주민 탐색 화면: 지도 필터·마커 규칙(순수 함수), 요청 카드, 데이터 훅. 마커 위치는 지도 영역 대비 상대좌표(0~1)이며 네이버 지도 연동 때 위경도로 교체 예정
+    resident-map/  주민 탐색 화면: 지도 필터·마커 규칙(순수 함수), 요청 카드, 데이터 훅. 마커 위치는 자리표시자용 상대좌표(0~1)와 실제 지도용 임시 위경도(`lat`·`lng`, 백엔드 좌표로 교체 예정)를 함께 가진다
     store-request/  가게 요청하기 화면: 선택지 상수, 문장 정리 훅(오래된 응답 무시), 칩 그룹, AI 정리 카드, 제출 가능 여부 규칙
     my-requests/  내 요청 화면: 진행 상황 요약 카드, 요청 카드, 진행률·문구 규칙
     merchant-explore/  사장님 탐색 화면: 반경 칩 옵션, 동네 행, 문구 규칙, 데이터 훅
-    founder-explore/  예비 창업자 입지 찾기 화면: 순위 행 문구·지도 알약 규칙(순수 함수), 데이터 훅
+    founder-explore/  예비 창업자 입지 찾기 화면: 순위 행 문구·지도 알약 규칙(순수 함수, 알약 좌표는 서비스가 준 동네 위경도), 데이터 훅
     founder-report/  창업자 동네 리포트 화면: 요약 카드 문구 규칙, "왜 이 동네인가요?" 카드, 근거 데이터(출처 상수), 데이터 훅
     merchant-area/  사장님 동네 상세 화면: 요약 카드, 막대 행(길이는 데이터에서 계산), 한 줄 요약 카드, 결정 필요 영역, 표시 규칙·데이터 훅
   shared/
-    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, ListRowLink, SelectBox, StatCards, ShareButton, Page, AppBar, Notice, BottomNav, MapPlaceholder, SampleDataBadge)
+    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, ListRowLink, SelectBox, StatCards, ShareButton, Page, AppBar, Notice, BottomNav, MapPlaceholder(자리표시자·폴백), NaverMap(네이버 지도), SampleDataBadge)
     layouts/    MobileLayout(헤더·하단 내비 슬롯), RootLayout·ResidentTabsLayout(라우트용)
     assets/     공통 이미지(로고)
-    lib/        경로 상수, useAsyncData, 방문 시간대 표기, 링크 공유(Web Share → 복사)
+    lib/        경로 상수, useAsyncData, 방문 시간대 표기, 링크 공유(Web Share → 복사), useNaverMapScript(지도 스크립트 한 번만 로드·상태 idle/loading/ready/error)
     styles/     tokens.css(디자인 토큰), fonts.css(@font-face), global.css(reset·전역), fonts/(Pretendard WOFF2·라이선스)
   services/     데이터 접근 인터페이스, 목 구현, 입력 문장 정리(키워드 규칙 목)·요청 제출·내 요청 조회·사장님 탐색·동네 상세·창업자 입지 순위(메모리 목) 인터페이스, 동네 상세 한 줄 요약 문장 생성(템플릿 목)과 AI 설명 생성 인터페이스
   mocks/        목 데이터(동네별 시간대·조건 분포는 사장님 상세와 창업자 리포트가 함께 읽는 한 곳), 메모리 DB(요청 제출 시 인원이 늘어나는 상태. 새로고침하면 시드로 초기화)
@@ -90,7 +92,7 @@ src/
 - iOS safe-area(`env(safe-area-inset-*)`) 대응, 하단 내비게이션 높이만큼 본문 여백 확보.
 - 입력 필드 글자 크기 16px 이상(iOS 포커스 자동 확대 방지), 주요 터치 영역 최소 44px.
 - 한국어 `word-break: keep-all` + 긴 문자열 `overflow-wrap: anywhere`.
-- 지도 영역은 너비에 비례(`aspect-ratio`)하고 마커는 영역 대비 비율로 배치해 너비가 달라져도 위치 관계가 유지됩니다.
+- 지도 영역은 너비에 비례(`aspect-ratio`)하고 마커는 영역 대비 비율로 배치해 너비가 달라져도 위치 관계가 유지됩니다. 주민 탐색(`/resident`)과 창업자 입지 찾기(`/founder`)는 `NaverMap` 을 쓰고, 키가 없거나 스크립트 로드·인증에 실패하면 같은 자리에 `MapPlaceholder` 가 폴백으로 나옵니다.
 - 하단 내비와 그 위에 떠 있는 버튼은 본문 하단 여백을 늘려 마지막 항목을 가리지 않게 합니다.
 - 선택 상태는 색상 외에 체크 표시·라디오 선택(`checked`)·`aria-pressed`·`aria-current`·밑줄·굵은 아이콘으로도 전달합니다.
 

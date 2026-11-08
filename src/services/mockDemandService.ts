@@ -1,7 +1,13 @@
-import { mockCategories, mockMarkerPlacements, mockNeighborhoods } from '@/mocks/demand';
+import {
+  mockCategories,
+  mockMarkerPlacements,
+  mockNeighborhoodCenters,
+  mockNeighborhoods,
+} from '@/mocks/demand';
 import { getDb } from '@/mocks/memoryDb';
-import type { MapMarker, NeighborhoodReport } from '@/types/domain';
+import type { MapMarker, MapPosition, NeighborhoodReport } from '@/types/domain';
 import type { DemandService } from './demandService';
+import { spreadAroundCenter } from './mapCoordinates';
 
 function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodReport | null {
   const neighborhood = mockNeighborhoods.find((n) => n.id === neighborhoodId);
@@ -15,6 +21,12 @@ function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodRe
     : null;
 }
 
+/** 마커의 임시 위도·경도. 동네 중심이 없으면 좌표를 붙이지 않는다(자리표시자 지도만 그린다). */
+function geoOf(neighborhoodId: string, position: MapPosition): { lat?: number; lng?: number } {
+  const center = mockNeighborhoodCenters.find((c) => c.neighborhoodId === neighborhoodId);
+  return center ? spreadAroundCenter(center, position) : {};
+}
+
 /** 위치(placement)에 수요 데이터를 합쳐 마커를 만든다. 조건에 맞지 않으면 null. */
 function buildMarker(
   placement: (typeof mockMarkerPlacements)[number],
@@ -24,7 +36,14 @@ function buildMarker(
   const id = `${neighborhoodId}-${kind}-${categoryId ?? index}`;
 
   if (kind === 'existing') {
-    return { id, kind, categoryId, label: '있는 가게 위치', position };
+    return {
+      id,
+      kind,
+      categoryId,
+      label: '있는 가게 위치',
+      position,
+      ...geoOf(neighborhoodId, position),
+    };
   }
   const report = categoryId ? buildReport(neighborhoodId, categoryId) : null;
   if (!report) return null;
@@ -36,11 +55,19 @@ function buildMarker(
       categoryId,
       label: `${report.category.requestLabel} 요청 ${report.demand.requestCount}`,
       position,
+      ...geoOf(neighborhoodId, position),
     };
   }
   // missing: 주변 같은 업종이 없을 때만 표시한다.
   if (report.demand.nearbySameCategoryCount > 0) return null;
-  return { id, kind, categoryId, label: `X : ${report.category.missingLabel}`, position };
+  return {
+    id,
+    kind,
+    categoryId,
+    label: `X : ${report.category.missingLabel}`,
+    position,
+    ...geoOf(neighborhoodId, position),
+  };
 }
 
 /** 네트워크 없이 목 데이터를 비동기로 돌려주는 구현. */
