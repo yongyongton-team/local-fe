@@ -10,14 +10,17 @@ export interface AreaRowText {
   accessibleName: string;
 }
 
+/** 거리 표기: 소수점 한 자리(예: 2.4km). 필터는 반올림하지 않은 같은 값(distanceKm)으로 비교한다. */
+export const formatDistanceKm = (km: number): string => `${km.toFixed(1)}km`;
+
 /** 동네 행의 문구. 수치는 모두 데이터에서 만든다. 주민이 입력한 원문 문장은 쓰지 않는다. */
 export function describeAreaRow(area: AreaDemand): AreaRowText {
   const name = area.neighborhood.name;
   const phrase = PEAK_TIME_PHRASES[area.peakVisitTime];
   return {
     title: `${name} · 요청 ${area.requestCount}명`,
-    detail: `${area.distanceKm}km · ${phrase} · 근처 같은 업종 ${area.nearbySameCategoryCount}곳`,
-    accessibleName: `${name}, 요청 ${area.requestCount}명, ${area.distanceKm}km, ${phrase}, 근처 같은 업종 ${area.nearbySameCategoryCount}곳`,
+    detail: `${formatDistanceKm(area.distanceKm)} · ${phrase} · 근처 같은 업종 ${area.nearbySameCategoryCount}곳`,
+    accessibleName: `${name}, 요청 ${area.requestCount}명, ${formatDistanceKm(area.distanceKm)}, ${phrase}, 근처 같은 업종 ${area.nearbySameCategoryCount}곳`,
   };
 }
 

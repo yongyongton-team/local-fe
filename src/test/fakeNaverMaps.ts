@@ -9,6 +9,7 @@ export interface FakeMap {
   setZoom: ReturnType<typeof vi.fn>;
   fitBounds: ReturnType<typeof vi.fn>;
   autoResize: ReturnType<typeof vi.fn>;
+  panToBounds: ReturnType<typeof vi.fn>;
 }
 
 export interface FakeMarker {
@@ -20,11 +21,35 @@ export interface FakeMarker {
   /** setMap(null) 로 지도에서 떼어졌는지 */
   removed: boolean;
   setMap: ReturnType<typeof vi.fn>;
+  setPosition: ReturnType<typeof vi.fn>;
+}
+
+export interface FakeCircle {
+  options: {
+    map?: FakeMap;
+    center: { lat: number; lng: number };
+    radius: number;
+    strokeColor: string;
+    strokeStyle: string;
+    strokeWeight: number;
+    fillOpacity: number;
+  };
+  /** 지금 반경(m)과 중심. setRadius·setCenter 로 바뀐다. */
+  radius: number;
+  center: { lat: number; lng: number };
+  removed: boolean;
+  setMap: ReturnType<typeof vi.fn>;
+  setRadius: ReturnType<typeof vi.fn>;
+  setCenter: ReturnType<typeof vi.fn>;
+  getBounds: ReturnType<typeof vi.fn>;
 }
 
 export interface FakeNaver {
   maps: FakeMap[];
   markers: FakeMarker[];
+  circles: FakeCircle[];
+  /** 지금 지도에 붙어 있는 원 */
+  attachedCircles: () => FakeCircle[];
   /** 지금 지도에 붙어 있는 마커 */
   attached: () => FakeMarker[];
 }
@@ -34,6 +59,8 @@ export function installFakeNaver(): FakeNaver {
   const fake: FakeNaver = {
     maps: [],
     markers: [],
+    circles: [],
+    attachedCircles: () => fake.circles.filter((c) => !c.removed),
     attached: () => fake.markers.filter((m) => !m.removed),
   };
 
@@ -72,6 +99,7 @@ export function installFakeNaver(): FakeNaver {
       self.setZoom = vi.fn();
       self.fitBounds = vi.fn();
       self.autoResize = vi.fn();
+      self.panToBounds = vi.fn();
       // 실제 SDK 처럼 컨테이너에 인라인 스타일을 쓴다. (position 을 relative 로 바꾸므로 컨테이너의 크기를
       // absolute/inset 으로 잡으면 높이가 0 이 된다. 이 동작이 회귀 테스트의 전제다.)
       element.style.position = 'relative';
@@ -87,14 +115,37 @@ export function installFakeNaver(): FakeNaver {
       self.setMap = vi.fn((map: FakeMap | null) => {
         if (map === null) self.removed = true;
       });
+      self.setPosition = vi.fn((position: { lat: number; lng: number }) => {
+        self.options.position = position;
+      });
       fake.markers.push(self);
+    }
+  }
+  class Circle {
+    constructor(options: FakeCircle['options']) {
+      const self = this as unknown as FakeCircle;
+      self.options = options;
+      self.radius = options.radius;
+      self.center = options.center;
+      self.removed = false;
+      self.setMap = vi.fn((map: FakeMap | null) => {
+        if (map === null) self.removed = true;
+      });
+      self.setRadius = vi.fn((radius: number) => {
+        self.radius = radius;
+      });
+      self.setCenter = vi.fn((center: { lat: number; lng: number }) => {
+        self.center = center;
+      });
+      self.getBounds = vi.fn(() => ({ sw: self.center, ne: self.center }));
+      fake.circles.push(self);
     }
   }
 
   Object.defineProperty(window, 'naver', {
     configurable: true,
     writable: true,
-    value: { maps: { Map, Marker, LatLng, LatLngBounds, Point } },
+    value: { maps: { Map, Marker, Circle, LatLng, LatLngBounds, Point } },
   });
   return fake;
 }

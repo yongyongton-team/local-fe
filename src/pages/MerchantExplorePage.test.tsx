@@ -50,18 +50,18 @@ describe('렌더링', () => {
     const rows = areaRows();
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent('구성동 · 요청 29명');
-    expect(rows[0]).toHaveTextContent('1.8km · 평일 저녁이 많아요 · 근처 같은 업종 0곳');
+    expect(rows[0]).toHaveTextContent('0.3km · 평일 저녁이 많아요 · 근처 같은 업종 0곳');
     expect(rows[1]).toHaveTextContent('보정동 · 요청 14명');
-    expect(rows[1]).toHaveTextContent('2.6km · 주말이 많아요 · 근처 같은 업종 1곳');
+    expect(rows[1]).toHaveTextContent('2.4km · 주말이 많아요 · 근처 같은 업종 1곳');
     expect(rows[2]).toHaveTextContent('마북동 · 요청 9명');
-    expect(rows[2]).toHaveTextContent('2.9km · 평일 낮이 많아요 · 근처 같은 업종 0곳');
+    expect(rows[2]).toHaveTextContent('1.8km · 평일 낮이 많아요 · 근처 같은 업종 0곳');
   });
 
   it('동네 행 링크는 /merchant/areas/:areaId 를 가리키고 이름이 한 문장으로 읽힌다', async () => {
     await openMerchant();
 
     const link = screen.getByRole('link', {
-      name: '구성동, 요청 29명, 1.8km, 평일 저녁이 많아요, 근처 같은 업종 0곳',
+      name: '구성동, 요청 29명, 0.3km, 평일 저녁이 많아요, 근처 같은 업종 0곳',
     });
     expect(link).toHaveAttribute('href', '/merchant/areas/guseong');
     expect(screen.getByRole('link', { name: /^보정동/ })).toHaveAttribute(

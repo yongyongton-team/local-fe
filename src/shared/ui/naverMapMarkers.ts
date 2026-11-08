@@ -41,7 +41,7 @@ export function buildMarkerElement(marker: MapMarker): HTMLElement {
 }
 
 const signatureOf = (marker: GeoMarker) =>
-  `${marker.kind}|${marker.label}|${marker.lat}|${marker.lng}`;
+  `${marker.kind}|${marker.label}|${marker.lat}|${marker.lng}|${marker.offset?.x ?? 0},${marker.offset?.y ?? 0}`;
 
 export interface MarkerOverlay {
   marker: naver.maps.Marker;
@@ -79,7 +79,9 @@ export function syncMarkers(
           content: buildMarkerElement(marker),
           // 자리표시자 지도와 같이 요소의 왼쪽 위가 좌표다. 자리표시자에서 겹치지 않게 잡은 배치 관계가
           // 그대로 유지된다(가운데 기준으로 두면 넓은 알약이 옆 마커를 덮는다).
-          anchor: new naver.maps.Point(0, 0),
+          // offset 이 있으면 라벨을 그만큼 옮겨 그린다(anchor 는 반대 방향).
+          // (0 - x 로 쓴다: -(0) 은 -0 이 되어 좌표 비교가 어긋난다)
+          anchor: new naver.maps.Point(0 - (marker.offset?.x ?? 0), 0 - (marker.offset?.y ?? 0)),
         },
       }),
     });

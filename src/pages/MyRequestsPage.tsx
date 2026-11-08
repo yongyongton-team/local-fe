@@ -2,8 +2,8 @@ import { MyRequestCard } from '@/features/my-requests/MyRequestCard';
 import { ProgressSummaryCard } from '@/features/my-requests/ProgressSummaryCard';
 import { describeRequestSummary } from '@/features/my-requests/requestProgress';
 import { useMyRequests } from '@/features/my-requests/useMyRequests';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { Notice } from '@/shared/ui/Notice';
 import { SampleDataBadge } from '@/shared/ui/SampleDataBadge';
 import { ShareButton } from '@/shared/ui/ShareButton';
@@ -22,7 +22,7 @@ export function MyRequestsPage() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <div className={styles.titleRow}>
           <Text as="h1" variant="title">
             내 요청

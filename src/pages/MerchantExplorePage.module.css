@@ -17,14 +17,6 @@
   flex-direction: column;
 }
 
-.logo {
-  display: block;
-  width: 129px;
-  max-width: 100%;
-  height: auto;
-  margin-left: var(--header-inset-x);
-}
-
 .headerRow {
   display: flex;
   align-items: center;

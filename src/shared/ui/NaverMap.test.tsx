@@ -454,3 +454,385 @@ describe('refitOnChange(마커 집합이 바뀔 때 다시 맞추기)', () => {
     expect(fake.maps[0]!.fitBounds).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('기준점(중심 핀)과 반경 원', () => {
+  const origin = (radiusKm: number | null, overrides = {}) => ({
+    label: '내 가게 위치',
+    position: { x: 0.5, y: 0.5 },
+    radiusKm,
+    lat: 37.306,
+    lng: 127.0913,
+    ...overrides,
+  });
+
+  it('키가 없으면 SDK 를 쓰지 않고 자리표시자가 핀을 보여준다', () => {
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    expect(fake.maps).toHaveLength(0);
+    expect(fake.circles).toHaveLength(0);
+    expect(screen.getByText('내 가게 위치')).toBeInTheDocument();
+  });
+
+  it('위도·경도가 없는 origin 은 자리표시자를 보여준다(상대좌표만 있는 기존 데이터)', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(
+      <NaverMap
+        markers={[A]}
+        origin={origin(3, { lat: undefined, lng: undefined })}
+        label="지도"
+      />,
+    );
+
+    expect(fake.maps).toHaveLength(0);
+    expect(screen.getByText('내 가게 위치')).toBeInTheDocument();
+  });
+
+  it('원은 반경(km)을 미터로 바꿔 만들고 점선·채움 없음·클릭 불가이며 색은 토큰(CSS 변수)에서 읽는다', () => {
+    useKey();
+    document.documentElement.style.setProperty('--color-black', 'rgb(1, 2, 3)');
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    expect(fake.attachedCircles()).toHaveLength(1);
+    const [circle] = fake.circles;
+    expect(circle!.options).toMatchObject({
+      radius: 3000,
+      center: { lat: 37.306, lng: 127.0913 },
+      strokeStyle: 'shortdash',
+      strokeWeight: 1,
+      strokeColor: 'rgb(1, 2, 3)',
+      fillOpacity: 0,
+      clickable: false,
+    });
+    document.documentElement.style.removeProperty('--color-black');
+  });
+
+  it('토큰 값이 없으면 이름 있는 색으로 대신한다(코드에 HEX 를 두지 않는다)', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    expect(fake.circles[0]!.options.strokeColor).toBe('black');
+  });
+
+  it('중심 핀은 지정한 좌표에 놓이고 핀 그림의 중심이 좌표에 오며 이름을 가진다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    const pin = fake.markers.find(
+      (m) => m.options.icon.content.getAttribute('aria-label') === '내 가게 위치',
+    );
+    expect(pin).toBeDefined();
+    expect(pin!.options.position).toMatchObject({ lat: 37.306, lng: 127.0913 });
+    expect(pin!.options.icon.anchor).toMatchObject({ x: 8.5, y: 10.5 });
+    expect(pin!.options.icon.content.querySelector('svg')).not.toBeNull();
+  });
+
+  it('반경이 바뀌면 원 반경만 바꾸고 지도·원·핀을 다시 만들지 않으며 시점은 부드럽게 맞춘다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+    const [map] = fake.maps;
+    const markerCount = fake.markers.length;
+    expect(map!.fitBounds).toHaveBeenCalledTimes(1);
+
+    rerender(<NaverMap markers={[A]} origin={origin(5)} label="지도" />);
+
+    expect(fake.maps).toHaveLength(1);
+    expect(fake.circles).toHaveLength(1);
+    expect(fake.markers).toHaveLength(markerCount);
+    expect(fake.circles[0]!.setRadius).toHaveBeenCalledWith(5000);
+    expect(fake.circles[0]!.radius).toBe(5000);
+    expect(map!.destroy).not.toHaveBeenCalled();
+    // 원 전체가 보이게 다시 맞추되 바로 맞추지 않고 부드럽게(panToBounds) 이동한다.
+    expect(map!.fitBounds).toHaveBeenCalledTimes(1);
+    expect(map!.panToBounds).toHaveBeenCalledTimes(1);
+    const [bounds] = map!.panToBounds.mock.calls[0] as [
+      { sw: { lat: number }; ne: { lat: number } },
+    ];
+    expect(bounds.ne.lat - 37.306).toBeCloseTo(5 / 111.32, 3);
+  });
+
+  it('처음 시점은 원 전체와 마커를 감싼다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    const [bounds] = fake.maps[0]!.fitBounds.mock.calls[0] as [
+      { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+    ];
+    expect(37.306 - bounds.sw.lat).toBeGreaterThanOrEqual(3 / 111.32 - 1e-6);
+    expect(bounds.ne.lat - 37.306).toBeGreaterThanOrEqual(3 / 111.32 - 1e-6);
+    expect(bounds.sw.lng).toBeLessThan(127.0913);
+    expect(bounds.ne.lng).toBeGreaterThan(127.0913);
+  });
+
+  it('반경 제한이 없으면(null) 원을 만들지 않고 핀과 마커 전체가 보이게 맞춘다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A, B]} origin={origin(null)} label="지도" />);
+
+    expect(fake.circles).toHaveLength(0);
+    expect(
+      fake
+        .attached()
+        .some((m) => m.options.icon.content.getAttribute('aria-label') === '내 가게 위치'),
+    ).toBe(true);
+    const [bounds] = fake.maps[0]!.fitBounds.mock.calls[0] as [
+      { sw: { lat: number }; ne: { lat: number } },
+    ];
+    // 핀(37.306)과 마커(37.298·37.3)를 모두 감싼다. 원이 없으니 3km 만큼 넓지 않다.
+    expect(bounds.sw.lat).toBeCloseTo(37.298, 5);
+    expect(bounds.ne.lat).toBeCloseTo(37.306, 5);
+  });
+
+  it('반경이 숫자에서 null 이 되면 원을 지우고, 다시 숫자가 되면 새로 만든다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    rerender(<NaverMap markers={[A]} origin={origin(null)} label="지도" />);
+    expect(fake.attachedCircles()).toHaveLength(0);
+    expect(fake.circles[0]!.removed).toBe(true);
+    expect(fake.maps).toHaveLength(1);
+
+    rerender(<NaverMap markers={[A]} origin={origin(5)} label="지도" />);
+    expect(fake.attachedCircles()).toHaveLength(1);
+    expect(fake.circles).toHaveLength(2);
+    expect(fake.circles[1]!.options.radius).toBe(5000);
+  });
+
+  it('값이 같은 origin 을 새 객체로 다시 받아도 아무것도 갱신하지 않는다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    rerender(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    expect(fake.circles[0]!.setRadius).not.toHaveBeenCalled();
+    expect(fake.maps[0]!.panToBounds).not.toHaveBeenCalled();
+    expect(fake.maps[0]!.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it('핀 좌표가 바뀌면 핀과 원 중심만 옮긴다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    rerender(
+      <NaverMap markers={[A]} origin={origin(3, { lat: 37.31, lng: 127.09 })} label="지도" />,
+    );
+
+    expect(fake.circles[0]!.setCenter).toHaveBeenCalledWith(
+      expect.objectContaining({ lat: 37.31, lng: 127.09 }),
+    );
+    expect(fake.circles).toHaveLength(1);
+    expect(fake.maps).toHaveLength(1);
+  });
+
+  it('마커가 늦게 도착하면(처음 생길 때) 마커까지 보이게 한 번 다시 맞춘다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[]} origin={origin(null)} label="지도" />);
+    expect(fake.maps[0]!.setCenter).toHaveBeenCalledTimes(1); // 점 하나: 고정 줌
+
+    rerender(<NaverMap markers={[A, B]} origin={origin(null)} label="지도" />);
+
+    expect(fake.maps[0]!.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it('언마운트하면 원과 핀과 마커를 지도에서 떼고 지도를 정리한다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { unmount } = render(<NaverMap markers={[A, B]} origin={origin(3)} label="지도" />);
+    expect(fake.attachedCircles()).toHaveLength(1);
+
+    unmount();
+
+    expect(fake.attachedCircles()).toHaveLength(0);
+    expect(fake.attached()).toHaveLength(0);
+    expect(fake.maps[0]!.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('StrictMode 에서도 살아 있는 원은 하나, 핀은 하나다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(
+      <StrictMode>
+        <NaverMap markers={[A]} origin={origin(3)} label="지도" />
+      </StrictMode>,
+    );
+
+    expect(fake.attachedCircles()).toHaveLength(1);
+    expect(
+      fake
+        .attached()
+        .filter((m) => m.options.icon.content.getAttribute('aria-label') === '내 가게 위치'),
+    ).toHaveLength(1);
+  });
+
+  it('원 생성이 예외를 던지면 앱을 멈추지 않고 폴백 문구와 자리표시자를 보여준다', () => {
+    useKey();
+    installFakeNaver();
+    vi.spyOn(window.naver.maps, 'Circle').mockImplementation(() => {
+      throw new Error('circle broken');
+    });
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    expect(screen.getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.getByText('내 가게 위치')).toBeInTheDocument();
+  });
+
+  it('반경을 바꾸다 원 갱신이 예외를 던져도 폴백으로 바꾸고 정리 중 예외는 무시한다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+    fake.circles[0]!.setRadius.mockImplementation(() => {
+      throw new Error('setRadius broken');
+    });
+    fake.circles[0]!.setMap.mockImplementation(() => {
+      throw new TypeError("Cannot read properties of null (reading 'capitalize')");
+    });
+
+    expect(() =>
+      rerender(<NaverMap markers={[A]} origin={origin(5)} label="지도" />),
+    ).not.toThrow();
+
+    expect(screen.getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+  });
+
+  it('인증 실패에서도 폴백을 보여주고 원·핀 정리가 예외를 던져도 앱은 멈추지 않는다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+    fake.circles[0]!.setMap.mockImplementation(() => {
+      throw new TypeError('broken after auth failure');
+    });
+
+    expect(() =>
+      act(() => {
+        window.navermap_authFailure?.();
+      }),
+    ).not.toThrow();
+
+    expect(screen.getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.getByText('내 가게 위치')).toBeInTheDocument();
+  });
+});
+
+describe('반경 제한 없음 + 보여줄 범위(areaBounds, 예: 기흥구 전체)', () => {
+  const AREA = { sw: { lat: 37.21, lng: 127.055 }, ne: { lat: 37.335, lng: 127.17 } };
+  const origin = (radiusKm: number | null, overrides = {}) => ({
+    label: '내 가게 위치',
+    position: { x: 0.5, y: 0.5 },
+    radiusKm,
+    lat: 37.2985,
+    lng: 127.1085,
+    areaBounds: AREA,
+    ...overrides,
+  });
+  type Bounds = { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
+
+  it('처음부터 반경 제한이 없으면 원 없이 범위 전체로 맞춘다(라벨용 여백 없음)', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A, B]} origin={origin(null)} label="지도" />);
+
+    expect(fake.circles).toHaveLength(0);
+    const [bounds, options] = fake.maps[0]!.fitBounds.mock.calls[0] as [Bounds, { right: number }];
+    expect(bounds.sw).toMatchObject(AREA.sw);
+    expect(bounds.ne).toMatchObject(AREA.ne);
+    expect(options.right).toBe(16);
+  });
+
+  it('반경 칩에서 제한 없음으로 바꾸면 원을 지우고 범위 전체로 부드럽게 이동한다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+
+    rerender(<NaverMap markers={[A]} origin={origin(null)} label="지도" />);
+
+    expect(fake.attachedCircles()).toHaveLength(0);
+    expect(fake.maps).toHaveLength(1);
+    expect(fake.maps[0]!.fitBounds).toHaveBeenCalledTimes(1); // 처음 한 번(3km 원)
+    expect(fake.maps[0]!.panToBounds).toHaveBeenCalledTimes(1);
+    const [bounds] = fake.maps[0]!.panToBounds.mock.calls[0] as [Bounds];
+    expect(bounds.sw).toMatchObject(AREA.sw);
+    expect(bounds.ne).toMatchObject(AREA.ne);
+  });
+
+  it('범위가 있어도 3km·5km 는 기존대로 원과 원 전체 시점이다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+    const [first] = fake.maps[0]!.fitBounds.mock.calls[0] as [Bounds];
+    expect(first.ne.lat - 37.2985).toBeCloseTo(3 / 111.32, 3);
+    expect(fake.circles[0]!.options.radius).toBe(3000);
+
+    rerender(<NaverMap markers={[A]} origin={origin(5)} label="지도" />);
+    expect(fake.circles[0]!.setRadius).toHaveBeenCalledWith(5000);
+    const [toFive] = fake.maps[0]!.panToBounds.mock.calls[0] as [Bounds];
+    expect(toFive.ne.lat - 37.2985).toBeCloseTo(5 / 111.32, 3);
+    // 5km 원은 범위(기흥구)보다 좁다: 범위로 맞추지 않았다.
+    expect(toFive.ne.lat).toBeLessThan(AREA.ne.lat + 1);
+    expect(toFive.sw.lat).toBeGreaterThan(AREA.sw.lat);
+
+    // 제한 없음 → 다시 3km: 원을 새로 만들고 원 전체로 이동한다.
+    rerender(<NaverMap markers={[A]} origin={origin(null)} label="지도" />);
+    rerender(<NaverMap markers={[A]} origin={origin(3)} label="지도" />);
+    expect(fake.attachedCircles()).toHaveLength(1);
+    expect(fake.attachedCircles()[0]!.options.radius).toBe(3000);
+    const calls = fake.maps[0]!.panToBounds.mock.calls;
+    const [backToThree] = calls[calls.length - 1] as [Bounds];
+    expect(backToThree.ne.lat - 37.2985).toBeCloseTo(3 / 111.32, 3);
+  });
+
+  it('핀이나 마커가 범위 밖이면 그것까지 함께 감싼다(범위 값이 틀려도 핀·마커는 보인다)', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const outside = marker('out', { lat: 37.4, lng: 127.3 });
+    render(<NaverMap markers={[A, outside]} origin={origin(null)} label="지도" />);
+
+    const [bounds] = fake.maps[0]!.fitBounds.mock.calls[0] as [Bounds];
+    expect(bounds.sw).toMatchObject(AREA.sw);
+    expect(bounds.ne).toMatchObject({ lat: 37.4, lng: 127.3 });
+  });
+
+  it('값이 같은 범위를 새 객체로 다시 받아도 시점을 다시 맞추지 않는다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[A]} origin={origin(null)} label="지도" />);
+
+    rerender(
+      <NaverMap
+        markers={[A]}
+        origin={origin(null, { areaBounds: { sw: { ...AREA.sw }, ne: { ...AREA.ne } } })}
+        label="지도"
+      />,
+    );
+
+    expect(fake.maps[0]!.fitBounds).toHaveBeenCalledTimes(1);
+    expect(fake.maps[0]!.panToBounds).not.toHaveBeenCalled();
+  });
+
+  it('범위 값이 숫자가 아니면 범위 없이(핀·마커 전체) 맞춘다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(
+      <NaverMap
+        markers={[A, B]}
+        origin={origin(null, { areaBounds: { sw: { lat: Number.NaN, lng: 127 }, ne: AREA.ne } })}
+        label="지도"
+      />,
+    );
+
+    const [bounds, options] = fake.maps[0]!.fitBounds.mock.calls[0] as [Bounds, { right: number }];
+    // 핀(37.2985)과 마커(37.298·37.3)만 감싼다: 기흥구 범위(37.335)까지 넓히지 않는다.
+    expect(bounds.ne.lat).toBeCloseTo(37.3, 5);
+    expect(bounds.sw.lat).toBeCloseTo(37.298, 5);
+    expect(options.right).toBe(16 + 140);
+  });
+});

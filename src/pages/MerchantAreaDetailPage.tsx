@@ -8,8 +8,8 @@ import { BarSection } from '@/features/merchant-area/BarSection';
 import { DecisionCallout } from '@/features/merchant-area/DecisionCallout';
 import { OneLineSummary } from '@/features/merchant-area/OneLineSummary';
 import { useAreaDetail } from '@/features/merchant-area/useAreaDetail';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
 import { Notice } from '@/shared/ui/Notice';
 import { StatCards } from '@/shared/ui/StatCards';
@@ -33,7 +33,7 @@ export function MerchantAreaDetailPage() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <AppBar title={title} fallbackTo={paths.merchant} />
       </header>
 

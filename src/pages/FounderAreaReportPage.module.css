@@ -19,14 +19,6 @@
   margin-bottom: var(--detail-gap-header);
 }
 
-.logo {
-  display: block;
-  width: 129px;
-  max-width: 100%;
-  height: auto;
-  margin-left: var(--header-inset-x);
-}
-
 /* 요약 카드 둘씩 두 줄: 줄 사이 12px, 라벨은 12px */
 .stats {
   --stat-label-size: var(--font-size-chip);

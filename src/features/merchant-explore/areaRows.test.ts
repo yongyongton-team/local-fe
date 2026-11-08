@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AreaDemand } from '@/types/domain';
-import { buildRadiusSummary, buildSubtitle, describeAreaRow } from './areaRows';
+import { buildRadiusSummary, buildSubtitle, describeAreaRow, formatDistanceKm } from './areaRows';
 import { RADIUS_OPTIONS } from './constants';
 
 const area = (overrides: Partial<AreaDemand> = {}): AreaDemand => ({
@@ -62,5 +62,22 @@ describe('RADIUS_OPTIONS', () => {
       ['5km 안', 5],
       ['기흥구 전체', null],
     ]);
+  });
+});
+
+describe('거리 문구는 계산값을 소수점 한 자리로 보여준다', () => {
+  it('formatDistanceKm 은 반올림해 한 자리로 표기한다', () => {
+    expect(formatDistanceKm(0.2816)).toBe('0.3km');
+    expect(formatDistanceKm(2.411)).toBe('2.4km');
+    expect(formatDistanceKm(1.8)).toBe('1.8km');
+    expect(formatDistanceKm(3)).toBe('3.0km');
+  });
+
+  it('행의 둘째 줄과 링크 이름이 계산한 거리(반올림하지 않은 값)를 한 자리로 표기한다', () => {
+    const text = describeAreaRow(area({ distanceKm: 2.4112345 }));
+
+    expect(text.detail).toContain('2.4km · ');
+    expect(text.accessibleName).toContain(', 2.4km, ');
+    expect(text.detail).not.toContain('2.4112');
   });
 });

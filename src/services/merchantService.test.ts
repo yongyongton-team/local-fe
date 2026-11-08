@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { mockNeighborhoodCenters } from '@/mocks/demand';
 import { merchantService, requestSubmitter } from '.';
+import { haversineKm } from './geo';
 
 const FRUIT = 'fruit-vegetable';
 const summarize = async (radiusKm: number | null) =>
@@ -29,10 +31,13 @@ describe('사장님 목 서비스', () => {
   it('각 동네의 거리, 가장 많은 시간대, 근처 같은 업종 수를 담는다', async () => {
     const areas = await merchantService.listAreaDemands({ categoryId: FRUIT, radiusKm: null });
 
-    expect(areas.map((a) => [a.distanceKm, a.peakVisitTime, a.nearbySameCategoryCount])).toEqual([
-      [1.8, 'weekday-evening', 0],
-      [2.6, 'weekend', 1],
-      [2.9, 'weekday-day', 0],
+    // 거리는 가게 좌표와 동네 중심 좌표의 직선거리다(소수점 한 자리: 0.3 / 2.4 / 1.8km).
+    expect(
+      areas.map((a) => [a.distanceKm.toFixed(1), a.peakVisitTime, a.nearbySameCategoryCount]),
+    ).toEqual([
+      ['0.3', 'weekday-evening', 0],
+      ['2.4', 'weekend', 1],
+      ['1.8', 'weekday-day', 0],
     ]);
   });
 
@@ -43,13 +48,19 @@ describe('사장님 목 서비스', () => {
     expect(await summarize(5)).toEqual(all);
   });
 
-  it('반경을 줄이면 먼 동네가 빠진다(2km → 구성동만, 1km → 없음)', async () => {
-    expect(await summarize(2)).toEqual([['구성동', 29]]);
-    expect(await summarize(2.6)).toEqual([
+  it('반경을 줄이면 먼 동네가 빠진다(2.5km → 셋, 2km → 구성동·마북동, 1km → 구성동만, 0.2km → 없음)', async () => {
+    // 계산 거리: 구성동 0.28km, 마북동 1.82km, 보정동 2.41km
+    expect(await summarize(2.5)).toEqual([
       ['구성동', 29],
       ['보정동', 14],
+      ['마북동', 9],
     ]);
-    expect(await summarize(1)).toEqual([]);
+    expect(await summarize(2)).toEqual([
+      ['구성동', 29],
+      ['마북동', 9],
+    ]);
+    expect(await summarize(1)).toEqual([['구성동', 29]]);
+    expect(await summarize(0.2)).toEqual([]);
   });
 
   it('내 업종이 아닌 업종으로 조회하면 그 업종의 인원을 돌려준다', async () => {
@@ -186,5 +197,119 @@ describe('사장님 동네 상세 목 서비스', () => {
     });
 
     expect(JSON.stringify(await detailOf('guseong'))).not.toContain('비밀 문장');
+  });
+});
+
+describe('사장님 지도 좌표(서비스 계층)', () => {
+  it('중심 핀(가게 위치)과 마커에 위도·경도가 내려온다', async () => {
+    const { markers, origin } = await merchantService.getMapData();
+
+    expect(origin).toMatchObject({ label: '내 가게 위치', lat: 37.2985, lng: 127.1085 });
+    expect(origin.position.x).toBeGreaterThan(0);
+    expect(markers).toHaveLength(3);
+    for (const marker of markers) {
+      expect(marker.lat).toBeGreaterThan(37.2);
+      expect(marker.lat).toBeLessThan(37.4);
+      expect(marker.lng).toBeGreaterThan(127.0);
+      expect(marker.lng).toBeLessThan(127.2);
+    }
+  });
+
+  it('가게 임시 좌표는 구성동 중심에서 0.5km 안이다(기흥구 안인지는 코드로 검증할 수 없다)', async () => {
+    const { origin } = await merchantService.getMapData();
+    const guseong = mockNeighborhoodCenters.find((c) => c.neighborhoodId === 'guseong')!;
+
+    expect(haversineKm({ lat: origin.lat!, lng: origin.lng! }, guseong)).toBeLessThan(0.5);
+  });
+});
+
+describe('동네 거리는 좌표에서 계산한다(목록 문구·필터·지도 원의 같은 기준)', () => {
+  const list = (radiusKm: number | null) =>
+    merchantService.listAreaDemands({ categoryId: FRUIT, radiusKm });
+  const expectedKm = async () => {
+    const { origin } = await merchantService.getMapData();
+    const shop = { lat: origin.lat!, lng: origin.lng! };
+    return Object.fromEntries(
+      mockNeighborhoodCenters.map((c) => [c.neighborhoodId, haversineKm(shop, c)]),
+    );
+  };
+
+  it('각 동네의 distanceKm 은 가게 좌표와 동네 중심 좌표의 haversineKm 이다(반올림하지 않은 값)', async () => {
+    const km = await expectedKm();
+    const areas = await list(null);
+
+    for (const area of areas) {
+      expect(area.distanceKm).toBe(km[area.neighborhood.id]);
+    }
+    expect(areas.map((a) => a.distanceKm.toFixed(1))).toEqual(['0.3', '2.4', '1.8']);
+  });
+
+  it('칩 필터는 계산 거리 이하(≤)만 남긴다: 계산 거리와 같은 반경은 포함, 조금 작으면 제외', async () => {
+    const km = await expectedKm();
+
+    // 보정동 중심 거리와 정확히 같은 반경 → 포함
+    expect((await list(km.bojeong!)).map((a) => a.neighborhood.name)).toContain('보정동');
+    // 그보다 아주 조금 작은 반경 → 제외
+    expect((await list(km.bojeong! - 1e-9)).map((a) => a.neighborhood.name)).not.toContain(
+      '보정동',
+    );
+    // 마북동도 같다
+    expect((await list(km.mabuk!)).map((a) => a.neighborhood.name)).toContain('마북동');
+    expect((await list(km.mabuk! - 1e-9)).map((a) => a.neighborhood.name)).not.toContain('마북동');
+  });
+
+  it('목록에 나온 동네는 모두 지도 원(가게 좌표, 반경 km) 안에 중심이 있다', async () => {
+    const km = await expectedKm();
+    for (const radiusKm of [3, 5]) {
+      for (const area of await list(radiusKm)) {
+        expect(km[area.neighborhood.id]).toBeLessThanOrEqual(radiusKm);
+      }
+    }
+  });
+
+  it('3km·5km 칩에서 세 동네가 모두 보인다(세 동네 중심이 가게에서 2.5km 안에 있다)', async () => {
+    const names = (areas: Awaited<ReturnType<typeof list>>) =>
+      areas.map((a) => a.neighborhood.name);
+
+    expect(names(await list(3))).toEqual(['구성동', '보정동', '마북동']);
+    expect(names(await list(5))).toEqual(['구성동', '보정동', '마북동']);
+    expect(names(await list(null))).toEqual(['구성동', '보정동', '마북동']);
+  });
+
+  it('요청 인원과 시간대는 거리와 무관하게 그대로다', async () => {
+    const areas = await list(null);
+
+    expect(areas.map((a) => [a.requestCount, a.peakVisitTime])).toEqual([
+      [29, 'weekday-evening'],
+      [14, 'weekend'],
+      [9, 'weekday-day'],
+    ]);
+  });
+});
+
+describe('"기흥구 전체"에 보여줄 범위(서비스 계층)', () => {
+  const inside = (
+    p: { lat: number; lng: number },
+    b: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  ) => p.lat >= b.sw.lat && p.lat <= b.ne.lat && p.lng >= b.sw.lng && p.lng <= b.ne.lng;
+
+  it('지도 기준점에 가게가 있는 구(기흥구)를 대략 감싸는 사각형이 내려온다', async () => {
+    const { origin } = await merchantService.getMapData();
+
+    expect(origin.areaBounds).toEqual({
+      sw: { lat: 37.21, lng: 127.055 },
+      ne: { lat: 37.335, lng: 127.17 },
+    });
+    expect(origin.areaBounds!.sw.lat).toBeLessThan(origin.areaBounds!.ne.lat);
+    expect(origin.areaBounds!.sw.lng).toBeLessThan(origin.areaBounds!.ne.lng);
+  });
+
+  it('가게 핀, 지도 마커, 세 동네 중심이 모두 그 범위 안에 있다', async () => {
+    const { origin, markers } = await merchantService.getMapData();
+    const bounds = origin.areaBounds!;
+
+    expect(inside({ lat: origin.lat!, lng: origin.lng! }, bounds)).toBe(true);
+    for (const m of markers) expect(inside({ lat: m.lat!, lng: m.lng! }, bounds)).toBe(true);
+    for (const c of mockNeighborhoodCenters) expect(inside(c, bounds)).toBe(true);
   });
 });

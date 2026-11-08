@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNaverMapScript } from '@/shared/lib/useNaverMapScript';
 import { MapPlaceholder, type MapPlaceholderProps } from './MapPlaceholder';
 import {
@@ -8,6 +8,14 @@ import {
   type GeoMarker,
   type MarkerOverlay,
 } from './naverMapMarkers';
+import {
+  fitToOrigin,
+  toGeoOrigin,
+  removeOrigin,
+  syncOrigin,
+  type GeoOrigin,
+  type OriginOverlay,
+} from './naverMapOrigin';
 import styles from './NaverMap.module.css';
 
 /** [임의] 마커가 없을 때의 지도 중심(용인시 기흥구 부근)과 줌 */
@@ -27,11 +35,12 @@ export interface NaverMapProps extends MapPlaceholderProps {
 
 /**
  * 네이버 지도. MapPlaceholder 와 같은 props(markers, label, summary)를 받는다.
+ * origin(내 가게 중심 핀·반경)이 위도·경도와 함께 오면 핀과 실제 반경(km → m) 원을 지도에 그린다.
  * 아래 경우에는 MapPlaceholder 를 폴백으로 보여준다.
  *  - 스크립트가 아직 준비되지 않았다(불러오는 중 포함)
  *  - 키가 없다: 문구 없이 기존 자리표시자 그대로(개발 환경), 테스트 환경도 키가 없어 여기에 해당한다
  *  - 스크립트 로드 실패 또는 인증 실패: "지도를 불러오지 못했어요" 문구와 함께
- *  - origin(기준 핀·반경)이 있다: 아직 실제 지도에서 그리지 않는다(사장님 지도는 후속 작업)
+ *  - origin(기준 핀·반경)이 있는데 위도·경도가 없다
  *  - 마커는 있지만 위도·경도가 하나도 없다
  *  - SDK 호출이 예외를 던졌다(예: 인증 실패 직후 SDK 내부 상태가 깨진 경우). 앱 전체가 멈추지 않게 폴백으로 바꾼다.
  */
@@ -43,7 +52,40 @@ export function NaverMap({ refitOnChange = false, ...props }: NaverMapProps) {
   const { markers = [], origin, label = '지도 영역', summary } = props;
 
   const geoMarkers = markers.filter(hasCoordinates);
-  const unsupported = origin !== undefined || (markers.length > 0 && geoMarkers.length === 0);
+  // origin 은 렌더링마다 새 객체로 올 수 있어, 값(라벨·좌표·반경)이 같으면 같은 참조를 유지한다(불필요한 지도 갱신 방지).
+  const [oLabel, oLat, oLng, oRadius] = [origin?.label, origin?.lat, origin?.lng, origin?.radiusKm];
+  const [aSwLat, aSwLng, aNeLat, aNeLng] = [
+    origin?.areaBounds?.sw.lat,
+    origin?.areaBounds?.sw.lng,
+    origin?.areaBounds?.ne.lat,
+    origin?.areaBounds?.ne.lng,
+  ];
+  const hasOrigin = origin !== undefined;
+  const geoOrigin = useMemo(
+    () =>
+      hasOrigin
+        ? toGeoOrigin({
+            label: oLabel ?? '',
+            position: { x: 0, y: 0 },
+            radiusKm: oRadius ?? null,
+            lat: oLat,
+            lng: oLng,
+            ...(aSwLat !== undefined &&
+              aSwLng !== undefined &&
+              aNeLat !== undefined &&
+              aNeLng !== undefined && {
+                areaBounds: {
+                  sw: { lat: aSwLat, lng: aSwLng },
+                  ne: { lat: aNeLat, lng: aNeLng },
+                },
+              }),
+          })
+        : undefined,
+    [hasOrigin, oLabel, oLat, oLng, oRadius, aSwLat, aSwLng, aNeLat, aNeLng],
+  );
+  const unsupported =
+    (origin !== undefined && geoOrigin === undefined) ||
+    (markers.length > 0 && geoMarkers.length === 0);
 
   if (status !== 'ready' || unsupported || crashed) {
     const failed = crashed || (status === 'error' && reason !== 'no-key');
@@ -52,6 +94,7 @@ export function NaverMap({ refitOnChange = false, ...props }: NaverMapProps) {
   return (
     <MapCanvas
       markers={geoMarkers}
+      origin={geoOrigin}
       label={label}
       summary={summary}
       refitOnChange={refitOnChange}
@@ -62,6 +105,7 @@ export function NaverMap({ refitOnChange = false, ...props }: NaverMapProps) {
 
 interface MapCanvasProps {
   markers: readonly GeoMarker[];
+  origin?: GeoOrigin;
   label: string;
   summary?: string;
   refitOnChange: boolean;
@@ -78,12 +122,15 @@ function safely(action: () => void) {
   }
 }
 
-function MapCanvas({ markers, label, summary, refitOnChange, onError }: MapCanvasProps) {
+function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: MapCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const overlaysRef = useRef(new Map<string, MarkerOverlay>());
   // 마지막으로 맞춘 마커 집합의 식별자(마커 id 목록). 아직 맞추지 않았으면 null.
   const fittedKeyRef = useRef<string | null>(null);
+  // 기준점(핀·원)과 시점 상태. origin 이 있을 때만 쓴다.
+  const originRef = useRef<OriginOverlay | null>(null);
+  const originViewRef = useRef<{ radiusKey: string; markerCount: number } | null>(null);
 
   // 지도 인스턴스는 마운트할 때 한 번만 만들고, 언마운트(또는 StrictMode 의 재실행)에서 마커까지 정리한다.
   useEffect(() => {
@@ -118,15 +165,21 @@ function MapCanvas({ markers, label, summary, refitOnChange, onError }: MapCanva
       observer?.disconnect();
       overlays.forEach(({ marker }) => safely(() => marker.setMap(null)));
       overlays.clear();
+      const originOverlay = originRef.current;
+      if (originOverlay) safely(() => removeOrigin(originOverlay));
+      originRef.current = null;
+      originViewRef.current = null;
       safely(() => map.destroy());
       mapRef.current = null;
       fittedKeyRef.current = null;
     };
   }, [onError]);
 
-  // 마커가 바뀌면(칩 필터 등) 지도를 다시 만들지 않고 마커만 갱신한다.
-  // 처음 마커가 생길 때 전체가 보이게 맞춘다. 이후에는 refitOnChange 일 때만, 마커 집합(id)이 바뀐 경우에 다시 맞춘다.
-  // 라벨·좌표만 바뀐 경우(요청 인원 변화 등)와 refitOnChange 가 아닌 화면의 필터 변경에는 지도를 움직이지 않는다.
+  // 마커·기준점이 바뀌면 지도를 다시 만들지 않고 겹쳐 그린 것만 갱신한다.
+  // 시점(기준점이 없는 화면): 처음 마커가 생길 때 전체가 보이게 맞추고, 이후에는 refitOnChange 일 때만 마커 집합(id)이 바뀐 경우에 다시 맞춘다.
+  //   라벨·좌표만 바뀐 경우(요청 인원 변화 등)와 refitOnChange 가 아닌 화면의 필터 변경에는 지도를 움직이지 않는다.
+  // 시점(기준점이 있는 화면): 처음(또는 마커가 처음 생길 때)과 반경이 바뀔 때 원 전체와 마커가 보이게 맞춘다.
+  //   반경이 바뀔 때는 지도가 튀지 않게 부드럽게 이동한다. 반경 제한이 없으면 원 없이 핀과 마커 전체에 맞춘다.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -136,6 +189,30 @@ function MapCanvas({ markers, label, summary, refitOnChange, onError }: MapCanva
         .map((m) => m.id)
         .sort()
         .join('|');
+
+      if (origin) {
+        originRef.current = syncOrigin(map, originRef.current, origin);
+        const area = origin.areaBounds;
+        const areaKey = area ? `${area.sw.lat},${area.sw.lng},${area.ne.lat},${area.ne.lng}` : '';
+        const radiusKey = `${origin.radiusKm}|${origin.lat}|${origin.lng}|${areaKey}`;
+        const previous = originViewRef.current;
+        if (previous === null || (previous.markerCount === 0 && markers.length > 0)) {
+          fitToOrigin(map, origin, markers, false);
+        } else if (previous.radiusKey !== radiusKey) {
+          fitToOrigin(map, origin, markers, true);
+        } else if (refitOnChange && fittedKeyRef.current !== key) {
+          fitToOrigin(map, origin, markers, false);
+        }
+        originViewRef.current = { radiusKey, markerCount: markers.length };
+        fittedKeyRef.current = key;
+        return;
+      }
+
+      if (originRef.current) {
+        removeOrigin(originRef.current);
+        originRef.current = null;
+        originViewRef.current = null;
+      }
       const shouldFit =
         markers.length > 0 &&
         (fittedKeyRef.current === null || (refitOnChange && fittedKeyRef.current !== key));
@@ -146,7 +223,7 @@ function MapCanvas({ markers, label, summary, refitOnChange, onError }: MapCanva
     } catch {
       onError();
     }
-  }, [markers, refitOnChange, onError]);
+  }, [markers, origin, refitOnChange, onError]);
 
   return (
     // 마커는 키보드 탐색 대상이 아니다. 같은 정보가 지도 아래 목록·요약(aria-live)에 있다.

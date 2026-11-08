@@ -22,3 +22,25 @@ export function spreadAroundCenter(
     lng: center.lng + (position.x - 0.5) * GEO_SPREAD.lng,
   };
 }
+
+/** [임의] 라벨 간격을 풀 때 쓰는 기준 지도 크기(px). Figma 사장님 지도 영역 402×288 이다. */
+const OFFSET_REFERENCE = { width: 402, height: 288 } as const;
+/** [임의] 기준 크기에서 실제 픽셀 간격으로 줄이는 비율. 라벨(알약 약 85×26px)이 서로 겹치지 않도록 정했다. */
+const OFFSET_SCALE = 0.45;
+
+/**
+ * 같은 동의 여러 마커 라벨이 지도에서 서로 덮이지 않도록 라벨의 화면 픽셀 보정값을 만든다.
+ * 자리표시자 지도의 상대좌표 배치(겹치지 않게 잡은 모양)를 마커들의 평균 위치 기준으로 옮겨 그대로 쓴다.
+ * 좌표(lat, lng)는 바꾸지 않는다. 마커가 하나면 보정이 없다(0, 0). 입력은 바꾸지 않는다.
+ */
+export function declutterOffsets(positions: readonly MapPosition[]): { x: number; y: number }[] {
+  if (positions.length === 0) return [];
+  const mean = {
+    x: positions.reduce((sum, p) => sum + p.x, 0) / positions.length,
+    y: positions.reduce((sum, p) => sum + p.y, 0) / positions.length,
+  };
+  return positions.map((p) => ({
+    x: Math.round((p.x - mean.x) * OFFSET_REFERENCE.width * OFFSET_SCALE),
+    y: Math.round((p.y - mean.y) * OFFSET_REFERENCE.height * OFFSET_SCALE),
+  }));
+}
