@@ -181,3 +181,20 @@ export interface AreaDetail {
   conditions: AreaCondition[];
   visitTimes: AreaVisitTime[];
 }
+
+/**
+ * 예비 창업자용 입지 순위의 한 줄: 선택한 업종에 대한 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다.
+ * position 은 동네의 지도상 위치(지금은 자리표시자 지도 대비 상대좌표)라 업종이 바뀌어도 같다.
+ */
+export interface LocationRank {
+  /** 1부터 시작하는 순위 */
+  rank: number;
+  neighborhood: Neighborhood;
+  /** 요청한 주민 수 */
+  requestCount: number;
+  /** 주변 같은 업종 가게 수 */
+  nearbySameCategoryCount: number;
+  /** 가장 가까운 대형마트까지의 거리(km). 값이 없으면 화면에 표시하지 않는다. */
+  nearestHypermarketKm?: number;
+  position: MapPosition;
+}

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { demandService } from '@/services';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
 import { Button } from '@/shared/ui/Button';
-import { CheckCircleIcon, ChevronDownIcon } from '@/shared/ui/icons';
+import { CheckCircleIcon } from '@/shared/ui/icons';
+import { SelectBox } from '@/shared/ui/SelectBox';
 import type { UserRole } from '@/types/domain';
 import characters from './assets/role-characters.png';
 import { ROLE_OPTIONS } from './roles';
@@ -112,30 +113,24 @@ export function RoleSelectForm() {
         >
           내 동네
         </label>
-        <div className={styles.selectWrap}>
-          <select
-            id="neighborhood"
-            className={styles.select}
-            value={neighborhoodId}
-            onChange={(event) => setChosenNeighborhoodId(event.target.value)}
-            disabled={neighborhoods.status !== 'success'}
-          >
-            {neighborhoods.status === 'success' ? (
-              list.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.district} {n.name}
-                </option>
-              ))
-            ) : (
-              <option value="">
-                {neighborhoods.status === 'loading' ? '불러오는 중이에요' : '불러오지 못했어요'}
+        <SelectBox
+          id="neighborhood"
+          value={neighborhoodId}
+          onChange={(event) => setChosenNeighborhoodId(event.target.value)}
+          disabled={neighborhoods.status !== 'success'}
+        >
+          {neighborhoods.status === 'success' ? (
+            list.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.district} {n.name}
               </option>
-            )}
-          </select>
-          <span className={styles.chevron} aria-hidden="true">
-            <ChevronDownIcon />
-          </span>
-        </div>
+            ))
+          ) : (
+            <option value="">
+              {neighborhoods.status === 'loading' ? '불러오는 중이에요' : '불러오지 못했어요'}
+            </option>
+          )}
+        </SelectBox>
         {neighborhoods.status === 'error' && (
           <p role="alert" className={styles.error}>
             동네 목록을 불러오지 못했어요. 새로고침해 주세요.

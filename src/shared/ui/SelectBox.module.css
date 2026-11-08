@@ -1,0 +1,31 @@
+.wrap {
+  position: relative;
+}
+
+.select {
+  width: 100%;
+  min-height: var(--select-min-height, var(--button-height-large));
+  padding: 0 56px 0 var(--select-pad-left, 39px);
+  border: var(--select-border, 0);
+  border-radius: var(--radius-field);
+  background-color: var(--select-bg, var(--color-surface-field));
+  font: var(--font-contents);
+  font-weight: var(--select-font-weight, var(--font-weight-medium));
+  font-size: max(16px, 1rem);
+  appearance: none;
+  cursor: pointer;
+}
+
+.select:disabled {
+  cursor: progress;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--select-chevron-right, 24px);
+  display: inline-flex;
+  color: var(--color-text-primary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}

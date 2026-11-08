@@ -49,6 +49,10 @@ export const mockDemandService: DemandService = {
     return mockNeighborhoods;
   },
 
+  async listCategories() {
+    return mockCategories;
+  },
+
   async listReports(categoryId) {
     return mockNeighborhoods
       .map((n) => buildReport(n.id, categoryId))

@@ -132,37 +132,6 @@
   flex-direction: column;
 }
 
-.selectWrap {
-  position: relative;
-}
-
-.select {
-  width: 100%;
-  min-height: var(--button-height-large);
-  padding: 0 56px 0 39px;
-  border: 0;
-  border-radius: var(--radius-field);
-  background-color: var(--color-surface-field);
-  font: var(--font-contents);
-  font-size: max(16px, 1rem);
-  appearance: none;
-  cursor: pointer;
-}
-
-.select:disabled {
-  cursor: progress;
-}
-
-.chevron {
-  position: absolute;
-  top: 50%;
-  right: 24px;
-  display: inline-flex;
-  color: var(--color-text-primary);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
 .error {
   margin-top: var(--space-2);
   margin-left: 16px;
