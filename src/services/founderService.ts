@@ -1,4 +1,10 @@
-import type { LocationRank } from '@/types/domain';
+import type { AreaReport, LocationRank } from '@/types/domain';
+
+export interface AreaReportQuery {
+  /** 라우트의 :areaId (동네 id) */
+  areaId: string;
+  categoryId: string;
+}
 
 /**
  * 예비 창업자 입지 탐색 데이터 접근 인터페이스. 현재 구현은 메모리의 목이고 네트워크 호출은 없다.
@@ -7,4 +13,6 @@ import type { LocationRank } from '@/types/domain';
 export interface FounderService {
   /** 업종에 대한 동네 입지 순위. 그 업종의 수요 데이터가 있는 동네만, 순위 순. 없으면 빈 배열 */
   listLocationRanks(categoryId: string): Promise<LocationRank[]>;
+  /** 한 동네·업종의 리포트 수치. 없는 동네이거나 그 업종의 수요 데이터가 없으면 null */
+  getAreaReport(query: AreaReportQuery): Promise<AreaReport | null>;
 }

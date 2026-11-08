@@ -1,7 +1,7 @@
 import { mockCategories, mockNeighborhoods } from '@/mocks/demand';
 import { getDb } from '@/mocks/memoryDb';
+import { mockAreaInsights } from '@/mocks/areaInsights';
 import {
-  mockAreaInsights,
   mockAreaProfiles,
   mockMerchantMarkerPlacements,
   mockMerchantOrigin,

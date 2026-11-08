@@ -7,12 +7,12 @@ import {
 import { BarSection } from '@/features/merchant-area/BarSection';
 import { DecisionCallout } from '@/features/merchant-area/DecisionCallout';
 import { OneLineSummary } from '@/features/merchant-area/OneLineSummary';
-import { SummaryStats } from '@/features/merchant-area/SummaryStats';
 import { useAreaDetail } from '@/features/merchant-area/useAreaDetail';
 import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
 import { AppBar } from '@/shared/ui/AppBar';
 import { Notice } from '@/shared/ui/Notice';
+import { StatCards } from '@/shared/ui/StatCards';
 import styles from './MerchantAreaDetailPage.module.css';
 
 /** 로딩·오류·찾을 수 없음 화면의 앱바 제목 */
@@ -51,9 +51,14 @@ export function MerchantAreaDetailPage() {
       )}
       {state.status === 'success' && state.data && (
         <>
-          <SummaryStats
-            requestCount={state.data.detail.requestCount}
-            nearbySameCategoryCount={state.data.detail.nearbySameCategoryCount}
+          <StatCards
+            items={[
+              { label: '요청한 주민', value: `${state.data.detail.requestCount}명` },
+              {
+                label: '근처 같은 업종',
+                value: `${state.data.detail.nearbySameCategoryCount}곳`,
+              },
+            ]}
           />
           <div className={styles.sections}>
             <BarSection title="주민이 원하는 조건" rows={buildConditionRows(state.data.detail)} />

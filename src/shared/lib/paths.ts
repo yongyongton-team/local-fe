@@ -7,6 +7,9 @@ export const paths = {
   merchant: '/merchant',
   merchantArea: (areaId: string) => `/merchant/areas/${encodeURIComponent(areaId)}`,
   founder: '/founder',
+  /** 입지 찾기. categoryId 가 있으면 ?category= 로 선택한 업종을 유지한다. */
+  founderExplore: (categoryId?: string) =>
+    `/founder${categoryId ? `?category=${encodeURIComponent(categoryId)}` : ''}`,
   /** 리포트는 업종별이라 categoryId 가 있으면 ?category= 로 전달한다. */
   founderAreaReport: (areaId: string, categoryId?: string) =>
     `/founder/areas/${encodeURIComponent(areaId)}/report` +

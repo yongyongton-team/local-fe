@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { useSearchParams } from 'react-router';
+import { CATEGORY_PARAM } from '@/features/founder-explore/constants';
 import {
   buildMapSummary,
   buildRankMarkers,
@@ -19,9 +20,6 @@ import { SelectBox } from '@/shared/ui/SelectBox';
 import { Text } from '@/shared/ui/Text';
 import type { StoreCategory } from '@/types/domain';
 import styles from './FounderExplorePage.module.css';
-
-/** 선택한 업종을 보관하는 URL 쿼리 이름 */
-const CATEGORY_PARAM = 'category';
 
 /**
  * 예비 창업자용 입지 찾기 (Figma node 2:1903).
