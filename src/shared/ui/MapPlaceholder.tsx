@@ -1,11 +1,16 @@
 import type { CSSProperties } from 'react';
-import type { MapMarker } from '@/types/domain';
+import type { MapMarker, MapOrigin } from '@/types/domain';
 import { PinIcon } from './icons';
 import styles from './MapPlaceholder.module.css';
 
 interface MapPlaceholderProps {
   /** 지금 보여줄 마커(필터를 적용한 결과). 위치는 지도 영역 대비 상대좌표다. */
   markers?: readonly MapMarker[];
+  /**
+   * 기준점(내 가게 위치) 핀과 반경. 핀은 보이지 않는 텍스트로 읽히고, 점선 원은 장식이라 숨긴다.
+   * 자리표시자는 원 크기를 고정해서 그린다. 반경(km)은 지도 연동 때 실제 반경으로 그리도록 data 로만 남긴다.
+   */
+  origin?: MapOrigin;
   /** 지도 영역의 접근 가능한 이름 */
   label?: string;
   /** 보이지 않는 aria-live 요약. 필터가 바뀔 때 보조 기술에 알린다. */
@@ -19,11 +24,29 @@ interface MapPlaceholderProps {
  */
 export function MapPlaceholder({
   markers = [],
+  origin,
   label = '지도 영역',
   summary,
 }: MapPlaceholderProps) {
   return (
     <section className={styles.map} aria-label={label}>
+      {origin && (
+        <>
+          <span
+            aria-hidden="true"
+            className={styles.ring}
+            data-radius-km={origin.radiusKm ?? 'none'}
+            style={{ '--x': origin.position.x, '--y': origin.position.y } as CSSProperties}
+          />
+          <span
+            className={styles.origin}
+            style={{ '--x': origin.position.x, '--y': origin.position.y } as CSSProperties}
+          >
+            <PinIcon />
+            <span className="visually-hidden">{origin.label}</span>
+          </span>
+        </>
+      )}
       <ul className={styles.markers}>
         {markers.map((marker) => (
           <li

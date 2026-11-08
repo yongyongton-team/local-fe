@@ -44,7 +44,7 @@ describe('첫 화면', () => {
 
   it.each([
     { role: /^주민/, title: '동네 탐색' },
-    { role: /^사장님/, title: '수요 동네 탐색' },
+    { role: /^사장님/, title: '내 업종을 원하는 동네' },
     { role: /^예비 창업자/, title: '입지 찾기' },
   ])('역할($role)을 고르고 시작하면 해당 기본 페이지로 이동한다', async ({ role, title }) => {
     const user = userEvent.setup();
@@ -110,7 +110,7 @@ describe('URL 직접 진입', () => {
   it.each([
     ['/resident/requests', '내 요청'],
     ['/resident/requests/new', '가게 요청하기'],
-    ['/merchant', '수요 동네 탐색'],
+    ['/merchant', '내 업종을 원하는 동네'],
     ['/founder', '입지 찾기'],
   ])('%s 는 %s 제목으로 렌더링된다', async (path, title) => {
     renderApp([path]);

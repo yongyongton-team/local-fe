@@ -29,6 +29,10 @@ export function Card({ as: Tag = 'div', tone = 'default', className: extra, ...p
 /**
  * 카드 전체가 하나의 링크인 카드. 내부에 버튼이나 다른 링크를 넣지 않는다(중첩 인터랙티브 금지).
  */
-export function CardLink({ tone = 'default', ...props }: LinkProps & { tone?: Tone }) {
-  return <Link className={className(tone, true)} {...props} />;
+export function CardLink({
+  tone = 'default',
+  className: extra,
+  ...props
+}: LinkProps & { tone?: Tone }) {
+  return <Link className={[className(tone, true), extra].filter(Boolean).join(' ')} {...props} />;
 }
