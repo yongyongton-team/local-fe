@@ -101,6 +101,20 @@ export interface MockMarkerPlacement {
   position: MapPosition;
 }
 
+/**
+ * [임의] 동네 중심 좌표(위도·경도, 용인시 기흥구). 정확한 값이 아니라 대략적인 값이다.
+ * 백엔드 좌표가 연동되면 그 값으로 교체한다. 지도 마커는 이 중심에서 자리표시자의 상대좌표만큼 흩어 놓는다.
+ */
+export const mockNeighborhoodCenters: readonly {
+  neighborhoodId: string;
+  lat: number;
+  lng: number;
+}[] = [
+  { neighborhoodId: 'guseong', lat: 37.2979, lng: 127.1054 },
+  { neighborhoodId: 'bojeong', lat: 37.32, lng: 127.112 },
+  { neighborhoodId: 'mabuk', lat: 37.3036, lng: 127.128 },
+];
+
 /** Figma 지도 영역(402×288)의 좌상단 px 좌표를 0~1 상대좌표로 바꾼다. */
 const at = (x: number, y: number): MapPosition => ({ x: x / 402, y: y / 288 });
 

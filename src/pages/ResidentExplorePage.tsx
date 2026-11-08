@@ -18,7 +18,7 @@ import { LinkButton } from '@/shared/ui/Button';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
 import { ChevronDownIcon, PeopleIcon, SearchIcon } from '@/shared/ui/icons';
-import { MapPlaceholder } from '@/shared/ui/MapPlaceholder';
+import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
 import { Text } from '@/shared/ui/Text';
@@ -90,7 +90,7 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
         <Notice title="지도 마커를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
       )}
       <div className={styles.mapBleed}>
-        <MapPlaceholder markers={visibleMarkers} label="동네 지도(예시)" summary={summary} />
+        <NaverMap markers={visibleMarkers} label="동네 지도(예시)" summary={summary} />
       </div>
 
       <section aria-labelledby="missing-stores" className={styles.listSection}>

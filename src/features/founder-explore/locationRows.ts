@@ -31,7 +31,7 @@ export function describeLocationRow(item: LocationRank): LocationRowText {
   };
 }
 
-/** 지도 알약. 새 마커 종류 없이 어두운 알약 모양의 기존 "요청" 마커를 쓴다. 라벨과 위치는 순위 데이터에서 온다. */
+/** 지도 알약. 새 마커 종류 없이 어두운 알약 모양의 기존 "요청" 마커를 쓴다. 라벨과 위치·좌표는 순위 데이터에서 온다. */
 export function buildRankMarkers(items: readonly LocationRank[], categoryId: string): MapMarker[] {
   return items.map((item) => ({
     id: `founder-${item.neighborhood.id}-${categoryId}`,
@@ -39,6 +39,8 @@ export function buildRankMarkers(items: readonly LocationRank[], categoryId: str
     categoryId,
     label: rankLabel(item),
     position: item.position,
+    // 실제 지도용 좌표(서비스 계층이 준 값). 없으면 자리표시자 지도만 이 마커를 그린다.
+    ...(item.lat !== undefined && item.lng !== undefined && { lat: item.lat, lng: item.lng }),
   }));
 }
 

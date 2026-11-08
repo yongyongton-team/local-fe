@@ -123,15 +123,58 @@ export function PeopleIcon() {
   );
 }
 
+/*
+ * 있는 가게 위치 핀의 도형. React 컴포넌트(PinIcon)와 네이버 지도 마커용 DOM(buildPinSvg)이 같은 값을 쓴다.
+ * (지도 마커는 React 밖의 HTML 아이콘이라 react-dom/server 를 번들에 넣지 않으려고 DOM 으로 직접 만든다.)
+ */
+const PIN = {
+  width: 17,
+  height: 21,
+  headFill: 'currentColor',
+  holeFill: 'var(--color-surface)',
+  stem: 'M8.5 13.5v6.5',
+} as const;
+
 /** 있는 가게 위치 핀 */
 export function PinIcon() {
   return (
-    <svg width="17" height="21" viewBox="0 0 17 21" {...svgBase}>
-      <circle cx="8.5" cy="7" r="6.5" fill="currentColor" />
-      <circle cx="8.5" cy="7" r="2.2" style={{ fill: 'var(--color-surface)' }} />
-      <path d="M8.5 13.5v6.5" {...ink} strokeWidth="1.8" />
+    <svg width={PIN.width} height={PIN.height} viewBox="0 0 17 21" {...svgBase}>
+      <circle cx="8.5" cy="7" r="6.5" fill={PIN.headFill} />
+      <circle cx="8.5" cy="7" r="2.2" style={{ fill: PIN.holeFill }} />
+      <path d={PIN.stem} {...ink} strokeWidth="1.8" />
     </svg>
   );
+}
+
+/** PinIcon 과 같은 모양의 SVG DOM. React 밖(네이버 지도 HTML 마커)에서 쓴다. 장식이라 보조 기술에는 숨긴다. */
+export function buildPinSvg(): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('width', String(PIN.width));
+  svg.setAttribute('height', String(PIN.height));
+  svg.setAttribute('viewBox', '0 0 17 21');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+
+  const head = document.createElementNS(ns, 'circle');
+  head.setAttribute('cx', '8.5');
+  head.setAttribute('cy', '7');
+  head.setAttribute('r', '6.5');
+  head.setAttribute('fill', PIN.headFill);
+  const hole = document.createElementNS(ns, 'circle');
+  hole.setAttribute('cx', '8.5');
+  hole.setAttribute('cy', '7');
+  hole.setAttribute('r', '2.2');
+  hole.style.fill = PIN.holeFill;
+  const stem = document.createElementNS(ns, 'path');
+  stem.setAttribute('d', PIN.stem);
+  stem.setAttribute('stroke', 'currentColor');
+  stem.setAttribute('stroke-linecap', 'round');
+  stem.setAttribute('stroke-linejoin', 'round');
+  stem.setAttribute('stroke-width', '1.8');
+  svg.append(head, hole, stem);
+  return svg;
 }
 
 /** 하단 내비 아이콘. active 이면 선이 굵어진다(색 외의 선택 단서). */

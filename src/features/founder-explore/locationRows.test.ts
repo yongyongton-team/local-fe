@@ -65,6 +65,21 @@ describe('buildRankMarkers', () => {
   });
 });
 
+describe('buildRankMarkers 좌표', () => {
+  it('순위 데이터의 위도·경도를 마커로 그대로 전달한다', () => {
+    const [marker] = buildRankMarkers([rank({ lat: 37.2979, lng: 127.1054 })], 'fruit-vegetable');
+
+    expect(marker).toMatchObject({ lat: 37.2979, lng: 127.1054 });
+  });
+
+  it('좌표가 없으면 lat·lng 를 만들지 않는다(자리표시자 지도만 이 마커를 그린다)', () => {
+    const [marker] = buildRankMarkers([rank()], 'fruit-vegetable');
+
+    expect('lat' in marker!).toBe(false);
+    expect('lng' in marker!).toBe(false);
+  });
+});
+
 describe('buildMapSummary / resolveCategoryId', () => {
   it('요약은 업종 카드 제목과 동네 수로 만든다', () => {
     expect(buildMapSummary(category('f', '과일 / 채소 가게'), 3)).toBe(
