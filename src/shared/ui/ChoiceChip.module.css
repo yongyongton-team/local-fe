@@ -12,6 +12,8 @@
 .chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: var(--chip-min-width, 0);
   gap: var(--space-1);
   min-height: var(--chip-height);
   padding: var(--space-1) var(--chip-padding-x);

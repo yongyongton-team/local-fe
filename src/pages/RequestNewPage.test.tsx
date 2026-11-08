@@ -394,7 +394,7 @@ describe('뒤로가기', () => {
     await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: '수요 동네 탐색' }),
+      await screen.findByRole('heading', { level: 1, name: '내 업종을 원하는 동네' }),
     ).toBeInTheDocument();
   });
 

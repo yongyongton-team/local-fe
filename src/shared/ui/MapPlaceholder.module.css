@@ -57,6 +57,28 @@
   color: var(--color-black);
 }
 
+/* 기준점 핀: 좌상단을 지도 영역 대비 비율 위치에 둔다(마커와 같은 방식). */
+.origin {
+  position: absolute;
+  left: calc(var(--x) * 100%);
+  top: calc(var(--y) * 100%);
+  display: inline-flex;
+  color: var(--color-black);
+}
+
+/* 반경 점선 원: 핀 중심에 맞추고 지름은 지도 너비에 비례한다(고정 크기). 핀·마커 아래에 깔린다. */
+.ring {
+  position: absolute;
+  left: calc(var(--x) * 100% + var(--pin-half-width));
+  top: calc(var(--y) * 100% + var(--pin-half-height));
+  width: calc(var(--map-ring-ratio) * 100%);
+  aspect-ratio: 1;
+  border: 1px dashed var(--color-black);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .notice {
   position: absolute;
   bottom: var(--space-2);

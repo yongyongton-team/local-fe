@@ -1,14 +1,17 @@
 import type { DemandService } from './demandService';
 import { mockDemandService } from './mockDemandService';
+import { mockMerchantService } from './mockMerchantService';
 import { mockMyRequestService } from './mockMyRequestService';
 import { mockRequestSubmitter } from './mockRequestSubmitter';
 import { mockRequestSummarizer } from './mockRequestSummarizer';
+import type { MerchantService } from './merchantService';
 import type { MyRequestService } from './myRequestService';
 import type { RequestSubmitter } from './requestSubmitter';
 import type { RequestSummarizer } from './requestSummarizer';
 
 export { DEFAULT_CATEGORY_ID } from './demandService';
 export type { DemandService } from './demandService';
+export type { AreaDemandQuery, MerchantMapData, MerchantService } from './merchantService';
 export type { MyRequestService } from './myRequestService';
 export type { ReportDescriptionGenerator } from './reportDescription';
 export type { RequestSubmitter } from './requestSubmitter';
@@ -25,3 +28,6 @@ export const requestSubmitter: RequestSubmitter = mockRequestSubmitter;
 
 /** 내가 보낸 요청 조회(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
 export const myRequestService: MyRequestService = mockMyRequestService;
+
+/** 사장님 탐색 데이터(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
+export const merchantService: MerchantService = mockMerchantService;

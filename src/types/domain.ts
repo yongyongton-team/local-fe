@@ -112,3 +112,40 @@ export interface MapMarker {
   label: string;
   position: MapPosition;
 }
+
+/** 사장님 프로필. 로그인과 가게 등록이 없어 목 데이터로만 존재한다. */
+export interface MerchantProfile {
+  shopName: string;
+  /** 사장님의 업종. "내 업종"은 이 업종이다. */
+  categoryId: string;
+  /** 화면에 보여줄 업종 이름. 예: 과일·채소 (서비스가 업종 데이터에서 채운다) */
+  categoryName: string;
+  /** 예: 기흥구 */
+  district: string;
+}
+
+/** 사장님 탐색 화면의 동네 한 줄: 내 업종을 원하는 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다. */
+export interface AreaDemand {
+  neighborhood: Neighborhood;
+  /** 해당 동네에서 내 업종을 원하는 요청 인원(수요 데이터에서 계산) */
+  requestCount: number;
+  /** 내 가게로부터 동네까지의 거리(km) */
+  distanceKm: number;
+  /** 요청이 가장 많은 방문 시간대 */
+  peakVisitTime: VisitTime;
+  /** 근처 같은 업종 가게 수(수요 데이터) */
+  nearbySameCategoryCount: number;
+}
+
+/**
+ * 지도의 기준점(내 가게 위치)과 탐색 반경. 지도 위에서는 중심 핀과 점선 원으로 그린다.
+ * 자리표시자 지도는 원 크기를 고정해서 그리지만, 반경 값(km)은 네이버 지도 연동 때 실제 반경으로 쓰도록 남겨 둔다.
+ */
+export interface MapOrigin {
+  /** 보이지 않는 텍스트로 읽히는 이름. 예: 내 가게 위치 */
+  label: string;
+  /** 핀의 좌상단 위치(지도 영역 대비 상대좌표 0~1) */
+  position: MapPosition;
+  /** 탐색 반경(km). 제한이 없으면 null */
+  radiusKm: number | null;
+}

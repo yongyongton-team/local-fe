@@ -228,3 +228,12 @@ export function PersonCirclePlusIcon() {
 export function PersonCircleCheckIcon() {
   return <PersonCircle filled badge="check" />;
 }
+
+/** 목록 행 오른쪽의 화살표. SF Symbols(chevron.right)를 복사하지 않고 직접 그렸다. 장식이다. */
+export function ChevronRightIcon() {
+  return (
+    <svg width="14" height="21" viewBox="0 0 14 21" {...svgBase}>
+      <path d="M3.5 3.5l7 7-7 7" {...ink} strokeWidth="2" />
+    </svg>
+  );
+}

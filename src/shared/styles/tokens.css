@@ -167,4 +167,13 @@
   /* [화면] "결정 필요" 알약. 글자는 Figma 변수 Accents/Red, 배경은 rgba(255,0,0,0.12) */
   --color-decision-text: #ff383c;
   --color-decision-bg: rgb(255 0 0 / 12%);
+
+  /* 사장님 탐색 화면(/merchant) 전용 */
+  /* [화면] 반경 칩 폭. Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다 */
+  --merchant-chip-width: 80px;
+  /* [화면] 지도 점선 원 지름 / 지도 너비 = 230px / 402px. 너비에 비례해 위치 관계를 유지한다 */
+  --map-ring-ratio: 0.572;
+  /* [화면] 지도 중심 핀(17×21)의 절반. 핀 좌상단 기준 좌표에서 핀 중심을 구할 때 쓴다 */
+  --pin-half-width: 8.5px;
+  --pin-half-height: 10.5px;
 }

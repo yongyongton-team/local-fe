@@ -1,0 +1,77 @@
+/*
+ * 사장님 탐색 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
+ * 402×874 는 참고 크기라 높이를 고정하지 않는다. 하단 내비게이션이 없으므로 하단 여백은
+ * RootLayout(MobileLayout)의 safe-area-inset-bottom + 기본 여백이면 된다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+/* 헤더: 로고, 가게 정보, 아이콘 버튼. 본문보다 6px 안쪽에 놓인다. */
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: block;
+  width: 129px;
+  max-width: 100%;
+  height: auto;
+  margin-left: var(--header-inset-x);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+}
+
+/* [화면] 가게 정보: SemiBold 16px */
+.shop {
+  min-width: 0;
+  padding-left: var(--header-inset-x);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+  color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+}
+
+/* 반경 칩: Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다. */
+.filters {
+  --chip-padding-x: var(--space-3);
+  --chip-min-width: var(--merchant-chip-width);
+}
+
+/* 지도는 화면 전체 너비: 본문 좌우 여백(+safe-area)만큼 바깥으로 넓힌다. */
+.mapBleed {
+  --map-radius: 0;
+  margin-right: calc(-1 * max(var(--space-page), env(safe-area-inset-right)));
+  margin-left: calc(-1 * max(var(--space-page), env(safe-area-inset-left)));
+}
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+}
+
+.areaList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--compact-card-gap);
+  margin-top: var(--space-2);
+}

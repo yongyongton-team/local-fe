@@ -1,0 +1,37 @@
+/* 동네 행 (Figma 2:1712): 높이 약 54px, 글자 시작 x=24(카드 안쪽), 오른쪽 화살표 */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  /* Card 의 투명 테두리 1px 를 뺀 값: 위아래 9px, 왼쪽 23px, 오른쪽 21px */
+  padding: 9px 21px 9px 23px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* [화면] 제목 SemiBold 14px, 둘째 줄 12px (원본은 Regular, 포함한 최소 굵기인 Medium 사용) */
+.title {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
+}
+
+.detail {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-description);
+  font-weight: var(--font-weight-medium);
+  line-height: 16px;
+  color: var(--color-text-on-card-muted);
+}
+
+.chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-on-accent);
+}
