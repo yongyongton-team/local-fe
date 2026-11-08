@@ -18,8 +18,8 @@ import { useRequestSummary } from '@/features/store-request/useRequestSummary';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
 import { requestSubmitter } from '@/services';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
 import { Button } from '@/shared/ui/Button';
 import { Page } from '@/shared/ui/Page';
@@ -102,7 +102,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <AppBar title="가게 요청하기" fallbackTo={paths.resident} />
       </header>
 

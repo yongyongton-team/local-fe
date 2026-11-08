@@ -8,8 +8,8 @@ import { SourcesSection } from '@/features/founder-report/SourcesSection';
 import { useAreaReport, useReportSentence } from '@/features/founder-report/useAreaReport';
 import { WhyCard } from '@/features/founder-report/WhyCard';
 import { DEFAULT_CATEGORY_ID } from '@/services';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
 import { Notice } from '@/shared/ui/Notice';
 import { ShareButton } from '@/shared/ui/ShareButton';
@@ -128,7 +128,7 @@ function Shell({
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <AppBar title={title} fallbackTo={backTo} />
       </header>
       {children}

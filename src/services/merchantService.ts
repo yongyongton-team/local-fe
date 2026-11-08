@@ -1,5 +1,6 @@
 import type {
   AreaDemand,
+  GeoBounds,
   AreaDetail,
   MapMarker,
   MapPosition,
@@ -23,7 +24,14 @@ export interface AreaDetailQuery {
 /** 사장님 지도 화면 데이터: 요청 마커와 기준점(내 가게 위치). 반경은 화면의 선택값이라 포함하지 않는다. */
 export interface MerchantMapData {
   markers: MapMarker[];
-  origin: { label: string; position: MapPosition };
+  origin: {
+    label: string;
+    position: MapPosition;
+    lat?: number;
+    lng?: number;
+    /** 반경 제한이 없을 때("기흥구 전체") 실제 지도에 보여줄 범위. 가게가 있는 구를 대략 감싼다. */
+    areaBounds?: GeoBounds;
+  };
 }
 
 /**

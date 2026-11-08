@@ -11,12 +11,12 @@ import {
   useMerchantMapData,
   useMerchantProfile,
 } from '@/features/merchant-explore/useMerchantExplore';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
 import { PeopleIcon, SearchIcon } from '@/shared/ui/icons';
-import { MapPlaceholder } from '@/shared/ui/MapPlaceholder';
+import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Text } from '@/shared/ui/Text';
 import styles from './MerchantExplorePage.module.css';
@@ -39,7 +39,7 @@ export function MerchantExplorePage() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <div className={styles.headerRow}>
           {/* 사장님 가게 정보(보조 텍스트). 로그인과 가게 등록이 없어 목 프로필이다. */}
           <p className={styles.shop}>
@@ -65,7 +65,7 @@ export function MerchantExplorePage() {
       </div>
 
       <div className={styles.mapBleed}>
-        <MapPlaceholder
+        <NaverMap
           label="수요 지도(예시)"
           markers={map.status === 'success' ? map.data.markers : []}
           origin={

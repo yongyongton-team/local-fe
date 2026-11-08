@@ -72,7 +72,7 @@ src/
     founder-report/  창업자 동네 리포트 화면: 요약 카드 문구 규칙, "왜 이 동네인가요?" 카드, 근거 데이터(출처 상수), 데이터 훅
     merchant-area/  사장님 동네 상세 화면: 요약 카드, 막대 행(길이는 데이터에서 계산), 한 줄 요약 카드, 결정 필요 영역, 표시 규칙·데이터 훅
   shared/
-    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, ListRowLink, SelectBox, StatCards, ShareButton, Page, AppBar, Notice, BottomNav, MapPlaceholder(자리표시자·폴백), NaverMap(네이버 지도), SampleDataBadge)
+    ui/         공통 UI (Text, Button, IconButton, ChoiceChip, ChipGroup, TextArea, Card, ListRowLink, SelectBox, StatCards, ShareButton, Page, AppBar, Notice, BottomNav, MapPlaceholder(자리표시자·폴백), NaverMap(네이버 지도: 마커·중심 핀·반경 원), LogoLink(로고 → 메인 `/`), SampleDataBadge)
     layouts/    MobileLayout(헤더·하단 내비 슬롯), RootLayout·ResidentTabsLayout(라우트용)
     assets/     공통 이미지(로고)
     lib/        경로 상수, useAsyncData, 방문 시간대 표기, 링크 공유(Web Share → 복사), useNaverMapScript(지도 스크립트 한 번만 로드·상태 idle/loading/ready/error)
@@ -92,7 +92,7 @@ src/
 - iOS safe-area(`env(safe-area-inset-*)`) 대응, 하단 내비게이션 높이만큼 본문 여백 확보.
 - 입력 필드 글자 크기 16px 이상(iOS 포커스 자동 확대 방지), 주요 터치 영역 최소 44px.
 - 한국어 `word-break: keep-all` + 긴 문자열 `overflow-wrap: anywhere`.
-- 지도 영역은 너비에 비례(`aspect-ratio`)하고 마커는 영역 대비 비율로 배치해 너비가 달라져도 위치 관계가 유지됩니다. 주민 탐색(`/resident`)과 창업자 입지 찾기(`/founder`)는 `NaverMap` 을 쓰고, 키가 없거나 스크립트 로드·인증에 실패하면 같은 자리에 `MapPlaceholder` 가 폴백으로 나옵니다.
+- 지도 영역은 너비에 비례(`aspect-ratio`)하고 마커는 영역 대비 비율로 배치해 너비가 달라져도 위치 관계가 유지됩니다. 주민 탐색(`/resident`), 사장님 탐색(`/merchant`), 창업자 입지 찾기(`/founder`)는 `NaverMap` 을 쓰고(사장님 지도는 중심 핀과 실제 반경 원을 함께 그립니다), 키가 없거나 스크립트 로드·인증에 실패하면 같은 자리에 `MapPlaceholder` 가 폴백으로 나옵니다.
 - 하단 내비와 그 위에 떠 있는 버튼은 본문 하단 여백을 늘려 마지막 항목을 가리지 않게 합니다.
 - 선택 상태는 색상 외에 체크 표시·라디오 선택(`checked`)·`aria-pressed`·`aria-current`·밑줄·굵은 아이콘으로도 전달합니다.
 

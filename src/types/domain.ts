@@ -128,6 +128,11 @@ export interface MapMarker {
    */
   lat?: number;
   lng?: number;
+  /**
+   * 실제 지도에서 마커 라벨을 좌표에서 화면 픽셀만큼 옮겨 그리는 값(같은 동의 여러 마커 라벨이 겹쳐 읽히지 않을 때).
+   * 좌표 자체는 그대로이고, 줌이 달라져도 라벨 간격이 유지된다. 선택이라 없으면 좌표에 그린다.
+   */
+  offset?: { x: number; y: number };
 }
 
 /** 사장님 프로필. 로그인과 가게 등록이 없어 목 데이터로만 존재한다. */
@@ -146,7 +151,7 @@ export interface AreaDemand {
   neighborhood: Neighborhood;
   /** 해당 동네에서 내 업종을 원하는 요청 인원(수요 데이터에서 계산) */
   requestCount: number;
-  /** 내 가게로부터 동네까지의 거리(km) */
+  /** 내 가게에서 동네 중심까지의 직선거리(km, 반올림하지 않은 값). 목록 문구·반경 필터·지도 원이 같은 기준을 쓴다. */
   distanceKm: number;
   /** 요청이 가장 많은 방문 시간대 */
   peakVisitTime: VisitTime;
@@ -165,6 +170,23 @@ export interface MapOrigin {
   position: MapPosition;
   /** 탐색 반경(km). 제한이 없으면 null */
   radiusKm: number | null;
+  /**
+   * 실제 지도(NaverMap)가 쓰는 기준점의 위도·경도. 백엔드 가게 위치 연동 전에는 목 데이터의 임시 값이다.
+   * 선택이라 없으면 자리표시자 지도만 이 기준점을 그린다.
+   */
+  lat?: number;
+  lng?: number;
+  /**
+   * 반경 제한이 없을 때(radiusKm === null) 실제 지도에 보여줄 범위(남서·북동 모서리).
+   * 예: "기흥구 전체" 칩에서 기흥구를 대략 감싸는 사각형. 없으면 핀과 마커 전체에 맞춘다.
+   */
+  areaBounds?: GeoBounds;
+}
+
+/** 위경도 사각형(남서·북동 모서리) */
+export interface GeoBounds {
+  sw: { lat: number; lng: number };
+  ne: { lat: number; lng: number };
 }
 
 /** 동네 상세의 조건 한 줄: 그 조건을 원한 주민 수. 문장 원문은 담지 않는다. */

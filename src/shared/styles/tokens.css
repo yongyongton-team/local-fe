@@ -102,6 +102,7 @@
   --button-height-small: 36px; /* [화면] "+가게 요청하기" (시각적 높이) */
   --chip-height: 26px; /* [화면] 칩의 시각적 높이 */
   --tap-target-min: 44px; /* 터치 영역 최소 크기 */
+  --logo-height: 43px; /* [화면] 서비스 로고 높이(너비 129px) */
   --bottom-nav-height: 66px; /* [화면] */
   --bottom-nav-gap: 12px; /* [임시] */
   --layout-max-width: 430px; /* [임시] 화면 기준 402px 안팎. 고정 크기가 아님 */

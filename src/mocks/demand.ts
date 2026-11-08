@@ -1,5 +1,6 @@
 import type {
   DemandSummary,
+  GeoBounds,
   MapMarkerKind,
   MapPosition,
   MerchantResponse,
@@ -113,6 +114,21 @@ export const mockNeighborhoodCenters: readonly {
   { neighborhoodId: 'guseong', lat: 37.2979, lng: 127.1054 },
   { neighborhoodId: 'bojeong', lat: 37.32, lng: 127.112 },
   { neighborhoodId: 'mabuk', lat: 37.3036, lng: 127.128 },
+];
+
+/**
+ * [임의] 구(區)를 대략 감싸는 위경도 사각형. 행정구역 경계 데이터가 없어 대략적인 값이며,
+ * 백엔드가 기흥구 동별 좌표(또는 경계)를 주면 그 값으로 교체한다.
+ * 기흥구: 북쪽 보정동(죽전역 부근, 약 37.33°)부터 남쪽 고매동·농서동(약 37.21°)까지,
+ * 서쪽 영덕동·서천동(약 127.055°)부터 동쪽 동백동·중동(약 127.17°)까지를 감싼다.
+ * 실제 경계는 사각형이 아니므로 이 사각형에는 이웃 구(수지구·영통구·처인구·화성시)의 일부가 들어가고,
+ * 기흥구의 튀어나온 가장자리는 1~2km 정도 빠질 수 있다. 코드로는 경계를 검증할 수 없다.
+ */
+export const mockDistrictBounds: readonly { district: string; bounds: GeoBounds }[] = [
+  {
+    district: '기흥구',
+    bounds: { sw: { lat: 37.21, lng: 127.055 }, ne: { lat: 37.335, lng: 127.17 } },
+  },
 ];
 
 /** Figma 지도 영역(402×288)의 좌상단 px 좌표를 0~1 상대좌표로 바꾼다. */

@@ -9,8 +9,8 @@ import {
 } from '@/features/founder-explore/locationRows';
 import { useCategories, useLocationRanks } from '@/features/founder-explore/useFounderExplore';
 import { DEFAULT_CATEGORY_ID } from '@/services';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import { IconButton } from '@/shared/ui/IconButton';
 import { PeopleIcon } from '@/shared/ui/icons';
 import { ListRowLink } from '@/shared/ui/ListRowLink';
@@ -33,7 +33,7 @@ export function FounderExplorePage() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <div className={styles.headerRow}>
           <Text as="h1" variant="title">
             입지 찾기

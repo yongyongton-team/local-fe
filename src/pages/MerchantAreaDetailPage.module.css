@@ -25,14 +25,6 @@
   margin-bottom: var(--detail-gap-header);
 }
 
-.logo {
-  display: block;
-  width: 129px;
-  max-width: 100%;
-  height: auto;
-  margin-left: var(--header-inset-x);
-}
-
 /* 요약 카드 아래: 조건 → 시간 섹션 간격은 16px */
 .sections {
   display: flex;

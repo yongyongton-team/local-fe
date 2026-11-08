@@ -16,14 +16,6 @@
   flex-direction: column;
 }
 
-.logo {
-  display: block;
-  width: 129px;
-  max-width: 100%;
-  height: auto;
-  margin-left: var(--header-inset-x);
-}
-
 /* 제목은 본문 왼쪽 끝(x=20)에서 시작하고, 사람들 아이콘 버튼이 오른쪽 끝에 있다. */
 .headerRow {
   display: flex;

@@ -11,8 +11,8 @@ import { StoreRequestCard } from '@/features/resident-map/StoreRequestCard';
 import { useResidentExplore } from '@/features/resident-map/useResidentExplore';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
-import logo from '@/shared/assets/logo.png';
 import { paths } from '@/shared/lib/paths';
+import { LogoLink } from '@/shared/ui/LogoLink';
 import type { AsyncState } from '@/shared/lib/useAsyncData';
 import { LinkButton } from '@/shared/ui/Button';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
@@ -59,7 +59,7 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
       <h1 className="visually-hidden">동네 탐색</h1>
 
       <header className={styles.header}>
-        <img src={logo} alt="생기면 갈게요" width={129} height={43} className={styles.logo} />
+        <LogoLink />
         <div className={styles.headerRow}>
           {/* 동네 변경 동작은 디자인에서 확인되지 않아 임시로 첫 화면으로 이동한다. */}
           <Link to={paths.home} className={styles.neighborhood}>

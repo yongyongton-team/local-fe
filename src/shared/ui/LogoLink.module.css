@@ -1,0 +1,21 @@
+/* 이전 각 화면의 .logo 와 같은 크기·위치: 129px 너비, 본문보다 6px 안쪽. */
+.link {
+  position: relative;
+  display: block;
+  width: 129px;
+  max-width: 100%;
+  margin-left: var(--header-inset-x);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 시각적 크기(높이 43px)는 그대로 두고 터치 영역만 44px 이상으로 넓힌다. */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--logo-height) - var(--tap-target-min)) / 2) 0;
+}

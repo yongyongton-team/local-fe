@@ -127,9 +127,12 @@ export function PeopleIcon() {
  * 있는 가게 위치 핀의 도형. React 컴포넌트(PinIcon)와 네이버 지도 마커용 DOM(buildPinSvg)이 같은 값을 쓴다.
  * (지도 마커는 React 밖의 HTML 아이콘이라 react-dom/server 를 번들에 넣지 않으려고 DOM 으로 직접 만든다.)
  */
+/** 핀 그림의 크기(px). 지도 위에서 핀 중심을 좌표에 맞출 때 쓴다. */
+export const PIN_SIZE = { width: 17, height: 21 } as const;
+
 const PIN = {
-  width: 17,
-  height: 21,
+  width: PIN_SIZE.width,
+  height: PIN_SIZE.height,
   headFill: 'currentColor',
   holeFill: 'var(--color-surface)',
   stem: 'M8.5 13.5v6.5',
