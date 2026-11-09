@@ -60,3 +60,32 @@ export interface CategoryDto {
   name?: Nullable<string>;
   martCheck?: Nullable<boolean>;
 }
+
+/** GET /dongs/{dongId}/gaps 의 항목 */
+export interface GapDto {
+  categoryId?: Nullable<number>;
+  name?: Nullable<string>;
+  /** 값의 종류와 뜻이 명세에 없다(gapStatus.ts) */
+  status?: Nullable<string>;
+  requestCount?: Nullable<number>;
+  /** 없을 수 있다(null) */
+  nearestMart?: Nullable<{ name?: Nullable<string>; km?: Nullable<number> }>;
+  myRequested?: Nullable<boolean>;
+}
+
+/** GET /dongs/{dongId}/map 의 가게. 좌표는 lat·lon 이다. */
+export interface MapStoreDto {
+  id?: Nullable<number>;
+  name?: Nullable<string>;
+  categoryId?: Nullable<number>;
+  lat?: Nullable<number>;
+  lon?: Nullable<number>;
+}
+
+/**
+ * GET /dongs/{dongId}/map. 마커로 쓰는 것은 stores 뿐이다.
+ * requests·gaps 는 좌표가 없고(명세와 실제 응답 모두), marts 는 쓰지 않는다.
+ */
+export interface DongMapDto {
+  stores?: Nullable<MapStoreDto[]>;
+}

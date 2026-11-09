@@ -98,7 +98,7 @@ describe('mock 모드(기본)', () => {
 });
 
 describe('api 모드', () => {
-  it('인증·me·동네/업종 목록만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
+  it('인증·me·동네/업종 목록·주민 조회만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
     const { services, mocks } = await loadServices({ source: 'api', base: 'https://api.test' });
 
     expect(services.authService).not.toBe(mocks.auth);
@@ -107,10 +107,12 @@ describe('api 모드', () => {
     expect(services.demandService).not.toBe(mocks.demand);
     expect(services.demandService.listNeighborhoods).not.toBe(mocks.demand.listNeighborhoods);
     expect(services.demandService.listCategories).not.toBe(mocks.demand.listCategories);
-    expect(services.demandService.listReportsByNeighborhood).toBe(
+    // 주민 조회(동네별 리포트·지도 마커)와 기본 업종도 API 이다(3단계).
+    expect(services.demandService.listReportsByNeighborhood).not.toBe(
       mocks.demand.listReportsByNeighborhood,
     );
-    expect(services.demandService.listMapMarkers).toBe(mocks.demand.listMapMarkers);
+    expect(services.demandService.listMapMarkers).not.toBe(mocks.demand.listMapMarkers);
+    expect(services.demandService.getDefaultCategoryId).not.toBe(mocks.demand.getDefaultCategoryId);
     expect(services.demandService.listReports).toBe(mocks.demand.listReports);
     expect(services.demandService.getReport).toBe(mocks.demand.getReport);
     expect(services.merchantService).toBe(mocks.merchant);
