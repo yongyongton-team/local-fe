@@ -138,7 +138,33 @@ export interface CreateResponseDto {
   notifiedOwnerCount?: Nullable<number>;
 }
 
-/** GET /me/requests 의 항목. offers(제안·주문)는 이번 단계 범위 밖이라 타입에 두지 않는다. */
+/** GET /me/requests 의 제안 myOrder. 이 화면은 쓰지 않는다. */
+export interface OrderDto {
+  id?: Nullable<number>;
+  offerId?: Nullable<number>;
+  quantity?: Nullable<number>;
+  status?: Nullable<string>;
+}
+
+/**
+ * GET /me/requests 항목의 제안. 실서버에서 제안을 본 적이 없어 모양은 명세 기준이다(미확인).
+ * 이 화면이 쓰는 것은 status·shopName·title 뿐이다.
+ */
+export interface OfferDto {
+  id?: Nullable<number>;
+  shopName?: Nullable<string>;
+  title?: Nullable<string>;
+  price?: Nullable<number>;
+  pickupAt?: Nullable<string>;
+  pickupPlace?: Nullable<string>;
+  minOrders?: Nullable<number>;
+  orderCount?: Nullable<number>;
+  deadlineAt?: Nullable<string>;
+  status?: Nullable<string>;
+  myOrder?: Nullable<OrderDto>;
+}
+
+/** GET /me/requests 의 항목. */
 export interface MyRequestDto {
   id?: Nullable<number>;
   dong?: Nullable<IdNameDto>;
@@ -147,6 +173,7 @@ export interface MyRequestDto {
   timeSlots?: Nullable<string[]>;
   frequency?: Nullable<string>;
   createdAt?: Nullable<string>;
+  offers?: Nullable<OfferDto[]>;
 }
 
 /** GET /founder/rankings 의 항목. 구(gu)와 좌표는 없다. score 는 서버가 순위를 매기는 값이라 화면이 쓰지 않는다. */

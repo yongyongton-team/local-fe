@@ -11,6 +11,7 @@ import type {
   MyRequest,
   LocationRank,
   MapPosition,
+  MerchantResponse,
   Neighborhood,
   NeighborhoodReport,
   NewStoreRequest,
@@ -37,6 +38,7 @@ import type {
   HealthResponseDto,
   MeResponseDto,
   MyRequestDto,
+  OfferDto,
   OwnerDemandDto,
   OwnerDetailDto,
   ParseResponseDto,
@@ -44,6 +46,7 @@ import type {
 } from './dto';
 import { isNoStoreGap } from './gapStatus';
 import { toDomainId, toServerId } from './ids';
+import { isShownOfferStatus } from './offerStatus';
 import {
   CONDITION_LABELS_BY_CODE,
   FREQUENCY_CODES,
@@ -359,9 +362,31 @@ export function parseIsoDate(value: unknown): Date | undefined {
 }
 
 /**
+ * 요청의 제안(offers[]) → "사장님 응답". 서버가 준 순서에서 보여줄 수 있는 첫 제안 하나를 쓴다.
+ * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이나 제목(title)이 없는 것
+ *   (없는 값을 지어내지 않으므로 "업체(지역): 제목" 한 줄을 만들 수 없다).
+ * - 매핑: shopName → merchantName, 요청의 동네 이름 → areaName, title → message.
+ * 가격·수령 시각과 장소·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
+ * 제안이 없거나 배열이 아니면 undefined 다.
+ */
+export function selectOfferResponse(
+  offers: OfferDto[] | null | undefined,
+  areaName: string,
+): MerchantResponse | undefined {
+  for (const offer of Array.isArray(offers) ? offers : []) {
+    if (!isObject(offer) || !isShownOfferStatus(offer.status)) continue;
+    const merchantName = asString(offer.shopName);
+    const message = asString(offer.title);
+    if (merchantName === '' || message === '') continue;
+    return { merchantName, areaName, message };
+  }
+  return undefined;
+}
+
+/**
  * GET /me/requests 응답 → 도메인 MyRequest[]. 서버가 준 순서를 그대로 둔다.
- * 서버에 없는 값은 만들지 않고 비워 둔다: 입력 문장(detail)은 빈 문자열, conditions 는 빈 배열, 동네의 구(district)는 빈 문자열,
- * 사장님 응답(response)은 없음. 인원은 count(없으면 0), 시각은 ISO 8601 로 파싱한 createdAt(올바르지 않으면 없음).
+ * 서버에 없는 값은 만들지 않고 비워 둔다: 입력 문장(detail)은 빈 문자열, conditions 는 빈 배열, 동네의 구(district)는 빈 문자열.
+ * 사장님 응답(response)은 제안(offers[])에서 selectOfferResponse 로 만들고, 보여줄 제안이 없으면 없음. 인원은 count(없으면 0), 시각은 ISO 8601 로 파싱한 createdAt(올바르지 않으면 없음).
  * 알 수 없는 시간대·빈도 값은 건너뛴다. id 가 양의 정수가 아닌 항목이 있으면 INVALID_ID 오류, 응답이 배열이 아니면 parse 오류.
  */
 export function mapMyRequests(
@@ -382,6 +407,7 @@ export function mapMyRequests(
     ) satisfies VisitTime[];
     const visitFrequency: VisitFrequency | undefined = toVisitFrequency(item.frequency);
     const createdAt = parseIsoDate(item.createdAt);
+    const response = selectOfferResponse(item.offers, asString(dong.name));
 
     return {
       request: {
@@ -397,6 +423,7 @@ export function mapMyRequests(
       category: categoryOf(categoryId, asString(category.name), categories),
       requestCount: Math.max(0, asNumber(item.count) ?? 0),
       ...(createdAt !== undefined && { createdAt }),
+      ...(response !== undefined && { response }),
     };
   });
 }
