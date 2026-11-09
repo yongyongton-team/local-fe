@@ -377,6 +377,7 @@ function categoryOf(id: string, name: string, categories: readonly StoreCategory
  * - categoryId: 응답의 업종 id 를 문자열로 바꾸되, 업종 목록에 없거나 id 가 올바르지 않으면 null(선택 없음)이다.
  * - conditions: 서버가 준 label 을 쓴다(label 이 없으면 code). label → code 쌍을 conditionCodes 에 기록해
  *   요청 생성 때 code 로 되돌린다(서버 enum 이라 화면 문구와 따로 관리하지 않는다).
+ * - alreadyRequested: boolean true 일 때만 true, 없거나 boolean 이 아니면 false.
  * 응답이 객체가 아니면 parse 오류.
  */
 export function mapParseResponse(
@@ -397,7 +398,7 @@ export function mapParseResponse(
     conditionCodes.set(label, code);
     conditions.push(label);
   }
-  return { categoryId, conditions };
+  return { categoryId, conditions, alreadyRequested: dto.alreadyRequested === true };
 }
 
 /**

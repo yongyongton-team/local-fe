@@ -67,7 +67,11 @@ describe('요청 정리(requestSummarizer)', () => {
       neighborhoodId: '1',
     });
 
-    expect(summary).toEqual({ categoryId: '33', conditions: ['늦게까지 영업'] });
+    expect(summary).toEqual({
+      categoryId: '33',
+      conditions: ['늦게까지 영업'],
+      alreadyRequested: false,
+    });
     const [call] = callsTo(calls, '/api/v1/requests/parse');
     expect(call?.method).toBe('POST');
     expect(call?.authorization).toBe('Bearer tok-1');
@@ -87,7 +91,7 @@ describe('요청 정리(requestSummarizer)', () => {
 
     await expect(
       newServices().requestSummarizer.summarize('문장', { neighborhoodId: '1' }),
-    ).resolves.toEqual({ categoryId: null, conditions: [] });
+    ).resolves.toEqual({ categoryId: null, conditions: [], alreadyRequested: false });
   });
 
   it('AI_UNAVAILABLE(502)이면 code 를 가진 ApiError 로 던진다', async () => {

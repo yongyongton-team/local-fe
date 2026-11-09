@@ -151,10 +151,15 @@ describe('api 모드의 요청 작성', () => {
     expect(app.within(card).getByText('늦게까지 영업')).toBeInTheDocument();
     expect(app.within(card).queryByRole('radio')).not.toBeInTheDocument();
 
-    // 서버는 시간대(1개 이상)와 빈도를 필수로 받으므로 고르기 전에는 보낼 수 없다.
-    expect(submitButton(app)).toBeDisabled();
-    await chooseVisit(app);
+    // 서버는 시간대(1개 이상)와 빈도를 필수로 받는다. 고르지 않고 누르면 요청 없이 안내만 보이고(버튼은 막지 않는다), 고르면 안내가 사라진다.
     expect(submitButton(app)).toBeEnabled();
+    await app.user.click(submitButton(app));
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '방문 시간대와 빈도를 골라 주세요.',
+    );
+    expect(posts(calls)).toHaveLength(0);
+    await chooseVisit(app);
+    expect(app.screen.queryByRole('alert')).not.toBeInTheDocument();
     await app.user.click(submitButton(app));
 
     expect(
@@ -304,7 +309,7 @@ describe('api 모드의 내 요청', () => {
 });
 
 describe('mock 모드', () => {
-  it('요청 작성은 네트워크 없이 기존 목 동작(예시 정리, 시간대·빈도 선택 사항)이다', async () => {
+  it('요청 작성은 네트워크 없이 기존 목 동작(예시 정리)이고 시간대·빈도 필수 규칙은 같다', async () => {
     const { fn } = stubFetch(() => jsonResponse(500, {}));
     const app = await loadApp('mock');
     app.renderApp(['/']);
@@ -320,8 +325,13 @@ describe('mock 모드', () => {
     );
     const card = await app.screen.findByRole('region', { name: '요청 정리 결과' });
     expect(app.within(card).getByText('예시 정리 · AI 연동 예정')).toBeInTheDocument();
-    // 시간대·빈도를 고르지 않아도 보낼 수 있다.
+    // 시간대·빈도는 목 모드에서도 필수다: 고르지 않고 누르면 이동하지 않고 안내가 보인다.
     expect(submitButton(app)).toBeEnabled();
+    await app.user.click(submitButton(app));
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '방문 시간대와 빈도를 골라 주세요.',
+    );
+    await chooseVisit(app);
     await app.user.click(submitButton(app));
 
     expect(

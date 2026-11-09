@@ -47,7 +47,11 @@ describe('useRequestSummary 의 동네 id·취소·실패 처리', () => {
 
     await advanceDebounce();
 
-    expect(result.current.summary).toEqual({ categoryId: null, conditions: [] });
+    expect(result.current.summary).toEqual({
+      categoryId: null,
+      conditions: [],
+      alreadyRequested: false,
+    });
     expect(result.current.isCurrent).toBe(true);
     expect(result.current.error).toBe('요청 내용을 정리하지 못했어요. 업종을 직접 골라 주세요.');
   });

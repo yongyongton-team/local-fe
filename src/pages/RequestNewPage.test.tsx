@@ -49,6 +49,12 @@ const textbox = () => screen.getByRole('textbox', { name: '어떤 가게가 생�
 const sendButton = () => screen.getByRole('button', { name: /요청 보내기/ });
 const summaryCard = () => screen.queryByRole('region', { name: '요청 정리 결과' });
 
+/** 시간대와 빈도를 고른다(둘 다 필수). */
+async function chooseVisit(user: ReturnType<typeof setup>) {
+  await user.click(screen.getByRole('button', { name: '평일 저녁' }));
+  await user.click(screen.getByRole('radio', { name: '주 1번 이상' }));
+}
+
 async function typeAndSummarize(user: ReturnType<typeof setup>, text: string) {
   await user.type(textbox(), text);
   await flushSummary();
@@ -282,17 +288,51 @@ describe('요청 보내기', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '내 요청' })).toBeInTheDocument();
   });
 
-  it('시간대와 빈도를 고르지 않아도 제출할 수 있다', async () => {
+  it('시간대와 빈도를 고르지 않고 보내면 서비스를 부르지 않고 안내를 보여준다(버튼은 막지 않는다)', async () => {
     const user = setup();
     const submit = vi.spyOn(requestSubmitter, 'submit').mockResolvedValue(saved);
     renderRequestPage();
     await typeAndSummarize(user, EXAMPLE);
 
+    expect(sendButton()).toBeEnabled();
     await user.click(sendButton());
 
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('방문 시간대와 빈도를 골라 주세요.');
+    expect(screen.getByRole('heading', { level: 1, name: '가게 요청하기' })).toBeInTheDocument();
+  });
+
+  it('하나만 골라서는 안내가 남고, 둘 다 고르면 사라지며 제출된다', async () => {
+    const user = setup();
+    const submit = vi.spyOn(requestSubmitter, 'submit').mockResolvedValue(saved);
+    renderRequestPage();
+    await typeAndSummarize(user, EXAMPLE);
+    await user.click(sendButton());
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '평일 저녁' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('방문 시간대와 빈도를 골라 주세요.');
+
+    await user.click(screen.getByRole('radio', { name: '주 1번 이상' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.click(sendButton());
     expect(submit).toHaveBeenCalledWith(
-      expect.objectContaining({ visitTimes: [], visitFrequency: undefined }),
+      expect.objectContaining({ visitTimes: ['weekday-evening'], visitFrequency: 'weekly' }),
     );
+  });
+
+  it('빈도만 고르고 시간대를 비워도 안내가 보인다', async () => {
+    const user = setup();
+    const submit = vi.spyOn(requestSubmitter, 'submit').mockResolvedValue(saved);
+    renderRequestPage();
+    await typeAndSummarize(user, EXAMPLE);
+    await user.click(screen.getByRole('radio', { name: '주 1번 이상' }));
+
+    await user.click(sendButton());
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('방문 시간대와 빈도를 골라 주세요.');
   });
 
   it('제출 중에는 loading 상태가 되어 중복 제출되지 않는다', async () => {
@@ -306,6 +346,7 @@ describe('요청 보내기', () => {
     );
     renderRequestPage();
     await typeAndSummarize(user, EXAMPLE);
+    await chooseVisit(user);
 
     await user.click(sendButton());
     await user.click(sendButton());
@@ -323,6 +364,7 @@ describe('요청 보내기', () => {
     vi.spyOn(requestSubmitter, 'submit').mockRejectedValueOnce(new Error('network'));
     renderRequestPage();
     await typeAndSummarize(user, EXAMPLE);
+    await chooseVisit(user);
 
     await user.click(sendButton());
 
@@ -338,6 +380,7 @@ describe('요청 보내기', () => {
     vi.spyOn(requestSubmitter, 'submit').mockRejectedValueOnce(new Error('network'));
     renderRequestPage();
     await typeAndSummarize(user, EXAMPLE);
+    await chooseVisit(user);
     await user.click(sendButton());
     expect(await screen.findByRole('alert')).toBeInTheDocument();
 

@@ -4,6 +4,11 @@ export interface RequestSummary {
   categoryId: string | null;
   /** 문장에서 찾은 조건. 예: 늦게까지 영업, 낱개 구매. 없으면 빈 배열 */
   conditions: string[];
+  /**
+   * 이 동네에 같은 업종을 이미 요청했는지(서버가 parse 응답으로 알려 준다). 없거나 boolean 이 아니면 false 로 본다.
+   * categoryId 가 정해진 업종에 대한 값이다.
+   */
+  alreadyRequested?: boolean;
 }
 
 /**

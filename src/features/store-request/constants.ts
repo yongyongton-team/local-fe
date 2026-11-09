@@ -29,5 +29,11 @@ export const REQUEST_PLACEHOLDER = '원하는 가게와 조건을 자유롭게 �
 /** [임시] 입력 최대 길이. 디자인에서 확인되지 않아 약 200자로 정했다. */
 export const REQUEST_MAX_LENGTH = 200;
 
-/** [임시] 입력이 멈춘 뒤 문장을 정리하기까지의 지연(ms). */
-export const SUMMARY_DEBOUNCE_MS = 400;
+/**
+ * 입력이 멈춘 뒤 문장 정리(POST /requests/parse)를 부르기까지의 지연(ms). 백엔드 명세: "입력이 0.8초 멈추면 한 번만 부른다".
+ * 글자를 칠 때마다 부르지 않는다(AI 호출이라 느리고 비싸다).
+ */
+export const PARSE_DEBOUNCE_MS = 800;
+
+/** 이전 이름. 같은 값이다(PARSE_DEBOUNCE_MS 를 쓴다). */
+export const SUMMARY_DEBOUNCE_MS = PARSE_DEBOUNCE_MS;

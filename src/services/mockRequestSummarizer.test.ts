@@ -8,6 +8,7 @@ describe('summarizeByKeywords', () => {
     ).toEqual({
       categoryId: 'fruit-vegetable',
       conditions: ['늦게까지 영업', '낱개 구매'],
+      alreadyRequested: false,
     });
   });
 
@@ -51,6 +52,7 @@ describe('mockRequestSummarizer', () => {
     await expect(mockRequestSummarizer.summarize('빵집 낱개')).resolves.toEqual({
       categoryId: 'bakery',
       conditions: ['낱개 구매'],
+      alreadyRequested: false,
     });
   });
 });
