@@ -1,7 +1,7 @@
 import { VISIT_TIME_LABELS } from '@/shared/lib/visitTime';
 import type { StatItem } from '@/shared/ui/StatCards';
 import type { AreaReport } from '@/types/domain';
-import { NO_HYPERMARKET_VALUE } from './constants';
+import { NO_HYPERMARKET_VALUE, NO_PEAK_TIME_VALUE } from './constants';
 
 /** 리포트 제목. 예: 구성동 / 과일 가게 (업종 표기는 업종 데이터의 titleLabel) */
 export function buildReportTitle({ neighborhood, category }: AreaReport): string {
@@ -20,6 +20,9 @@ export function buildReportStats({ demand, peakVisitTime }: AreaReport): StatIte
           ? NO_HYPERMARKET_VALUE
           : `${demand.nearestHypermarketKm}km`,
     },
-    { label: '많이 원하는 시간', value: VISIT_TIME_LABELS[peakVisitTime] },
+    {
+      label: '많이 원하는 시간',
+      value: peakVisitTime === undefined ? NO_PEAK_TIME_VALUE : VISIT_TIME_LABELS[peakVisitTime],
+    },
   ];
 }

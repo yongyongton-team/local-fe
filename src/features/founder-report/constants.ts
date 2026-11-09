@@ -15,3 +15,6 @@ export const SAMPLE_DATA_NOTICE =
 
 /** 대형마트 거리 데이터가 없을 때 카드에 보여주는 값. [임시] 디자인에 없는 경우다. */
 export const NO_HYPERMARKET_VALUE = '정보 없음';
+
+/** 요청이 없어 서버가 많이 원하는 시간대를 주지 않을 때 카드에 보여주는 값. [임시] 디자인에 없는 경우다. */
+export const NO_PEAK_TIME_VALUE = '정보 없음';

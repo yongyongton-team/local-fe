@@ -3,10 +3,11 @@ import { founderService, reportDescriptionGenerator } from '@/services';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
 import type { AreaReport } from '@/types/domain';
 
-/** 한 동네·업종의 리포트 수치. 없는 동네·업종이면 data 가 null 이다. */
+/** 한 동네·업종의 리포트 수치. 없는 동네·업종이면 data 가 null 이다. 동네·업종이 바뀌면 이전 요청은 취소한다. */
 export function useAreaReport(areaId: string | undefined, categoryId: string) {
   const load = useCallback(
-    () => (areaId ? founderService.getAreaReport({ areaId, categoryId }) : Promise.resolve(null)),
+    (signal: AbortSignal) =>
+      areaId ? founderService.getAreaReport({ areaId, categoryId }, signal) : Promise.resolve(null),
     [areaId, categoryId],
   );
   return useAsyncData(load);

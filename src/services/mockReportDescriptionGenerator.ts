@@ -16,10 +16,14 @@ export const mockReportDescriptionGenerator: ReportDescriptionGenerator = {
       demand.nearestHypermarketKm === undefined
         ? '에요.'
         : `고, 가장 가까운 대형마트는 ${demand.nearestHypermarketKm}km 떨어져 있어요.`;
+    // 많이 원하는 시간대가 없으면(목에서는 항상 있다) 그 문장을 뺀다.
+    const peak =
+      peakVisitTime === undefined
+        ? ''
+        : ` 요청은 ${VISIT_TIME_LABELS[peakVisitTime]}에 몰려 있어요.`;
     return (
       `${neighborhood.name}은 주민 ${demand.requestCount}명이 ${category.objectPhrase} 원해요. ` +
-      `걸어서 15분 안에 같은 업종은 ${demand.nearbySameCategoryCount}곳이${hypermarket} ` +
-      `요청은 ${VISIT_TIME_LABELS[peakVisitTime]}에 몰려 있어요.`
+      `걸어서 15분 안에 같은 업종은 ${demand.nearbySameCategoryCount}곳이${hypermarket}${peak}`
     );
   },
 };

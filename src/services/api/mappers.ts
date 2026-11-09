@@ -1,9 +1,11 @@
 import type {
+  AreaReport,
   Health,
   MapMarker,
   Me,
   MeShop,
   MyRequest,
+  LocationRank,
   Neighborhood,
   NeighborhoodReport,
   NewStoreRequest,
@@ -23,6 +25,8 @@ import type {
   DongDto,
   DongMapDto,
   GapDto,
+  FounderRankingDto,
+  FounderReportDto,
   HealthResponseDto,
   MeResponseDto,
   MyRequestDto,
@@ -380,4 +384,95 @@ export function mapMyRequests(
       ...(createdAt !== undefined && { createdAt }),
     };
   });
+}
+
+/**
+ * 순위에 올릴지 정하는 규칙(한 곳). 서버 순위는 요청이 0명인 동네까지 전부 준다(동 39곳).
+ * false 이면 서버가 준 목록을 그대로 보여주고, true 로 바꾸면 요청이 1명 이상인 동네만 남긴다(순위 번호는 서버 값 그대로).
+ */
+export const HIDE_ZERO_REQUEST_RANKS = false;
+
+const requiredCount = (value: unknown, what: string): number => {
+  const count = asNumber(value);
+  if (count === undefined || count < 0) throw parseError(`${what} 가 숫자가 아니에요.`);
+  return count;
+};
+
+/**
+ * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서와 순위(rank)를 그대로 쓴다(rank 가 없으면 서버 순서의 번호).
+ * - 동네 id 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 이름이 없으면 parse 오류.
+ *   서버 순위에는 구(gu)가 없어 district 는 빈 문자열이다.
+ * - requestCount·sameCategoryStoreCount 가 숫자가 아니면 parse 오류다(지어내지 않는다). nearestMartKm 이 없으면 비운다.
+ * - 서버 순위에는 좌표가 없어 lat·lng·position 을 만들어 넣지 않는다. score 는 쓰지 않는다.
+ * 응답이 객체가 아니거나 items 가 배열이 아니면 parse 오류.
+ */
+export function mapRankings(
+  dto: FounderRankingDto | undefined,
+  /** 테스트용으로 규칙을 바꿔 끼울 수 있다. 기본은 HIDE_ZERO_REQUEST_RANKS */
+  hideZeroRequests: boolean = HIDE_ZERO_REQUEST_RANKS,
+): LocationRank[] {
+  if (!isObject(dto) || !Array.isArray(dto.items)) {
+    throw parseError('GET /founder/rankings 응답에 items 가 없어요.');
+  }
+  const ranks = dto.items.map((raw, index): LocationRank => {
+    const item = isObject(raw) ? raw : {};
+    const name = asString(item.name);
+    if (name === '') throw parseError('GET /founder/rankings 항목에 이름이 없어요.');
+    const km = asNumber(item.nearestMartKm);
+    return {
+      rank: asNumber(item.rank) ?? index + 1,
+      neighborhood: { id: toDomainId(item.dongId), district: '', name },
+      requestCount: requiredCount(item.requestCount, 'requestCount'),
+      nearbySameCategoryCount: requiredCount(item.sameCategoryStoreCount, 'sameCategoryStoreCount'),
+      ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
+    };
+  });
+  return hideZeroRequests ? ranks.filter((item) => item.requestCount > 0) : ranks;
+}
+
+/**
+ * GET /founder/report 응답 → 도메인 AreaReport.
+ * - stats.requestCount·walkStoreCount(반경 walkRadiusM 안 같은 업종 가게 수)는 숫자가 아니면 parse 오류.
+ * - nearestMart 가 없으면 거리를 비우고, topTimeSlot 이 null(요청 없음)이거나 알 수 없는 값이면 peakVisitTime 을 비운다.
+ * - 설명 문장(explanation)과 근거(sources)는 서버가 준 것만 담고, 없으면 비운다.
+ * - 동네는 응답의 dong(구 gu 포함)으로, 업종은 업종 목록에서 찾고 없으면 응답의 이름으로 만든다.
+ *   dong.id 가 없으면 요청한 동네 id 를 쓴다.
+ * topConditions·offers·walkRadiusM 은 아직 화면이 쓰지 않아 담지 않는다.
+ */
+export function mapFounderReport(
+  dto: FounderReportDto | undefined,
+  context: { neighborhoodId: string; categoryId: string; categories: readonly StoreCategory[] },
+): AreaReport {
+  if (!isObject(dto) || !isObject(dto.stats)) {
+    throw parseError('GET /founder/report 응답에 stats 가 없어요.');
+  }
+  const stats = dto.stats;
+  const dong = isObject(dto.dong) ? dto.dong : {};
+  const category = isObject(dto.category) ? dto.category : {};
+  const neighborhoodId = safeDomainId(dong.id) ?? context.neighborhoodId;
+  const km = isObject(stats.nearestMart) ? asNumber(stats.nearestMart.km) : undefined;
+  const peakVisitTime = toVisitTime(stats.topTimeSlot);
+  const explanation = isObject(dto.explanation) ? asString(dto.explanation.text) : '';
+  const by = isObject(dto.explanation) ? asString(dto.explanation.by) : '';
+  const sources = (Array.isArray(dto.sources) ? dto.sources : []).flatMap((source) => {
+    const name = isObject(source) ? asString(source.name) : '';
+    if (name === '') return [];
+    const asOf = isObject(source) ? asString(source.asOf) : '';
+    return [{ name, ...(asOf !== '' && { asOf }) }];
+  });
+
+  return {
+    neighborhood: { id: neighborhoodId, district: asString(dong.gu), name: asString(dong.name) },
+    category: categoryOf(context.categoryId, asString(category.name), context.categories),
+    demand: {
+      neighborhoodId,
+      categoryId: context.categoryId,
+      requestCount: requiredCount(stats.requestCount, 'stats.requestCount'),
+      nearbySameCategoryCount: requiredCount(stats.walkStoreCount, 'stats.walkStoreCount'),
+      ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
+    },
+    ...(peakVisitTime !== undefined && { peakVisitTime }),
+    ...(explanation !== '' && { explanation: { text: explanation, ...(by !== '' && { by }) } }),
+    ...(sources.length > 0 && { sources }),
+  };
 }

@@ -8,6 +8,7 @@ import { rankVisitTimes } from './areaDetail';
 import { rankLocations } from './locationRank';
 
 export const mockFounderService: FounderService = {
+  remote: false,
   async listLocationRanks(categoryId) {
     // 인원·같은 업종 수·대형마트 거리는 주민 화면들과 같은 메모리 DB 의 수요 데이터를 읽는다.
     // 주민이 요청을 보내면 이 화면도 같은 값과 순위로 갱신된다.

@@ -1,5 +1,6 @@
 import { createApiAuthService } from './api/apiAuthService';
 import { createApiDemandService } from './api/apiDemandService';
+import { createApiFounderService } from './api/apiFounderService';
 import { createApiMeService } from './api/apiMeService';
 import { createApiRequestServices } from './api/apiRequestServices';
 import { resolveDataSource } from './api/config';
@@ -41,7 +42,8 @@ export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
  * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 서비스의 구현을 고른다.
  * 부분 연결 상태다: api 모드에서 실제 서버를 쓰는 것은 인증(authService), 내 정보·역할 저장(meService),
  * 동네·업종 목록과 주민 조회(demandService 의 listNeighborhoods·listCategories·getDefaultCategoryId·
- * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService)뿐이다. 나머지 서비스와 메서드는
+ * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService),
+ * 예비 창업자(founderService·reportDescriptionGenerator)뿐이다. 나머지 서비스와 메서드는
  * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
  */
 const dataSource = resolveDataSource(
@@ -83,12 +85,19 @@ export const merchantService: MerchantService = mockMerchantService;
 /** 동네 상세 "한 줄 요약" 문장 생성(템플릿 목). 실제 AI 구현이 생기면 여기서 교체한다. */
 export const areaDescriptionGenerator: AreaDescriptionGenerator = mockAreaDescriptionGenerator;
 
-/** 예비 창업자 입지 순위(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
-export const founderService: FounderService = mockFounderService;
+/** 예비 창업자 순위·리포트와 리포트 설명. api 모드는 GET /founder/*(설명은 리포트 응답의 문장), mock 은 메모리 목·템플릿. */
+const apiFounderServices =
+  dataSource === 'api'
+    ? createApiFounderService({ listCategories: () => demandService.listCategories() })
+    : null;
 
-/** 창업자 동네 리포트 "왜 이 동네인가요?" 문장 생성(템플릿 목). 실제 AI 구현이 생기면 여기서 교체한다. */
+/** 예비 창업자 입지 순위·리포트 수치. */
+export const founderService: FounderService =
+  apiFounderServices?.founderService ?? mockFounderService;
+
+/** 창업자 동네 리포트 "왜 이 동네인가요?" 문장. api 모드는 서버가 쓴 문장, mock 은 템플릿 목. */
 export const reportDescriptionGenerator: ReportDescriptionGenerator =
-  mockReportDescriptionGenerator;
+  apiFounderServices?.reportDescriptionGenerator ?? mockReportDescriptionGenerator;
 
 export const authService: AuthService =
   dataSource === 'api' ? createApiAuthService() : mockAuthService;

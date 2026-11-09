@@ -8,7 +8,7 @@ import {
   resolveCategoryId,
 } from '@/features/founder-explore/locationRows';
 import { useCategories, useLocationRanks } from '@/features/founder-explore/useFounderExplore';
-import { DEFAULT_CATEGORY_ID } from '@/services';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { IconButton } from '@/shared/ui/IconButton';
@@ -45,17 +45,28 @@ export function FounderExplorePage() {
 
       {categories.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
       {categories.status === 'error' && (
-        <Notice title="업종을 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="업종을 가져오지 못했어요">{describeLoadError(categories.error)}</Notice>
       )}
-      {categories.status === 'success' && <Explorer categories={categories.data} />}
+      {categories.status === 'success' && (
+        <Explorer
+          categories={categories.data.categories}
+          defaultCategoryId={categories.data.defaultCategoryId}
+        />
+      )}
     </div>
   );
 }
 
-function Explorer({ categories }: { categories: readonly StoreCategory[] }) {
+function Explorer({
+  categories,
+  defaultCategoryId,
+}: {
+  categories: readonly StoreCategory[];
+  defaultCategoryId: string;
+}) {
   const selectId = useId();
   const [params, setParams] = useSearchParams();
-  const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, DEFAULT_CATEGORY_ID);
+  const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, defaultCategoryId);
   const category = categories.find((c) => c.id === categoryId);
   const ranks = useLocationRanks(categoryId);
 
@@ -65,6 +76,8 @@ function Explorer({ categories }: { categories: readonly StoreCategory[] }) {
   }
 
   const items = ranks.status === 'success' ? ranks.data : [];
+  // 위치 정보가 없는 순위(서버 순위에는 좌표가 없다)는 지도에 마커를 만들지 않는다. 목록은 그대로 보여준다.
+  const markers = buildRankMarkers(items, categoryId);
 
   return (
     <>
@@ -94,7 +107,7 @@ function Explorer({ categories }: { categories: readonly StoreCategory[] }) {
         <Text variant="caption">용인시 행정동 순위</Text>
         {ranks.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
         {ranks.status === 'error' && (
-          <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+          <Notice title="데이터를 가져오지 못했어요">{describeLoadError(ranks.error)}</Notice>
         )}
         {ranks.status === 'success' &&
           (items.length === 0 ? (
@@ -123,10 +136,10 @@ function Explorer({ categories }: { categories: readonly StoreCategory[] }) {
         <NaverMap
           refitOnChange
           label="입지 후보 지도(예시)"
-          markers={buildRankMarkers(items, categoryId)}
+          markers={markers}
           summary={
             ranks.status === 'success' && category
-              ? buildMapSummary(category, items.length)
+              ? buildMapSummary(category, markers.length)
               : undefined
           }
         />
