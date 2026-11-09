@@ -36,6 +36,8 @@ export interface GuestSession {
   invalidate(token: string): void;
   /** 저장된 토큰을 지운다. */
   clear(): void;
+  /** 만료되지 않은 토큰이 저장돼 있는지. 로그인도 요청도 일으키지 않는다. */
+  hasSession(): boolean;
 }
 
 interface GuestSessionOptions {
@@ -83,6 +85,9 @@ export function createGuestSession({
     },
     clear() {
       store.clear();
+    },
+    hasSession() {
+      return store.read(now()) !== null;
     },
   };
 }

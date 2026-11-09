@@ -26,13 +26,16 @@ const CHARACTER_CROP: Record<UserRole, { width: number; imageWidth: string; imag
 /**
  * 역할과 동네를 고르고 시작하는 폼. 역할 선택 차이는 별도 페이지가 아니라 이 폼의 상태다.
  * Figma 첫 상태처럼 역할은 아무것도 선택하지 않은 채 시작하고, 동네는 목록의 첫 항목이 기본 선택된다.
+ * 서버에서 복원된 선택(새로고침 뒤)이 있으면 그 값으로 미리 채운다. 자동으로 이동하지 않고, 사용자가 이미 고른 값은 덮어쓰지 않는다.
  */
 export function RoleSelectForm() {
   const navigate = useNavigate();
   const selection = useSelection();
   const neighborhoods = useAsyncData(loadNeighborhoods);
 
-  const [role, setRole] = useState<UserRole | null>(selection.role);
+  // 사용자가 직접 고른 역할. 고르기 전에는 선택 Context(서버에서 복원된 값 포함)의 역할을 보여준다.
+  const [chosenRole, setChosenRole] = useState<UserRole | null>(null);
+  const role = chosenRole ?? selection.role;
   const [chosenNeighborhoodId, setChosenNeighborhoodId] = useState<string | null>(null);
   const [roleError, setRoleError] = useState(false);
   // 역할·동네 저장(PUT /me) 진행 중 여부와 실패 안내. 서버 message 가 아니라 오류 종류·코드로 정한 문구다.
@@ -42,8 +45,11 @@ export function RoleSelectForm() {
   const firstRadioRef = useRef<HTMLInputElement>(null);
 
   const list = neighborhoods.status === 'success' ? neighborhoods.data : [];
-  // 사용자가 고르기 전에는 이전 선택, 없으면 목록의 첫 동네를 보여준다.
-  const neighborhoodId = chosenNeighborhoodId ?? selection.neighborhood?.id ?? list[0]?.id ?? '';
+  // 사용자가 고르기 전에는 이전 선택(서버에서 복원된 값 포함), 없거나 목록에 없으면 목록의 첫 동네를 보여준다.
+  const preferredId = chosenNeighborhoodId ?? selection.neighborhood?.id;
+  const neighborhoodId = list.some((n) => n.id === preferredId)
+    ? (preferredId ?? '')
+    : (list[0]?.id ?? '');
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -94,7 +100,7 @@ export function RoleSelectForm() {
                 value={option.role}
                 checked={checked}
                 onChange={() => {
-                  setRole(option.role);
+                  setChosenRole(option.role);
                   setRoleError(false);
                   setSubmitError(null);
                 }}

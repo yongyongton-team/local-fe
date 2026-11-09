@@ -32,8 +32,16 @@ import styles from './ResidentExplorePage.module.css';
  * 상태 표시줄과 홈 인디케이터는 구현하지 않는다.
  */
 export function ResidentExplorePage() {
-  const { neighborhood } = useSelection();
+  const { neighborhood, restoring } = useSelection();
 
+  // 새로고침 뒤 서버에 저장된 선택을 불러오는 동안은 "먼저 선택해 주세요" 안내를 보여주지 않는다.
+  if (restoring) {
+    return (
+      <Page title="동네 탐색">
+        <p role="status">불러오는 중이에요.</p>
+      </Page>
+    );
+  }
   if (!neighborhood) {
     return (
       <Page title="동네 탐색">

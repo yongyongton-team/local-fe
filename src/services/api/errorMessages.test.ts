@@ -50,9 +50,17 @@ describe('describeApiError', () => {
     expect(ERROR_MESSAGES_BY_CODE[code]).toBe(expected);
   });
 
-  it('FORBIDDEN 과 문구가 아직 없는 코드는 마지막 문구다', () => {
+  it('FORBIDDEN 은 역할 재선택 안내 문구다', () => {
+    const expected =
+      '이 화면을 볼 수 있는 역할이 아니에요. 처음 화면에서 역할을 다시 선택해 주세요.';
+    expect(describeApiError(http(403, 'FORBIDDEN'))).toBe(expected);
+    expect(ERROR_MESSAGES_BY_CODE.FORBIDDEN).toBe(expected);
+    // 서버가 보낸 message 는 쓰지 않는다.
+    expect(describeApiError(http(403, 'FORBIDDEN', '서버 원문'))).toBe(expected);
+  });
+
+  it('문구가 아직 없는 코드는 마지막 문구다', () => {
     for (const [status, code] of [
-      [403, 'FORBIDDEN'],
       [409, 'ALREADY_REQUESTED'],
       [409, 'ALREADY_ORDERED'],
       [409, 'OFFER_CLOSED'],
@@ -71,6 +79,7 @@ describe('describeApiError', () => {
     expect(describeApiError(http(500, 'VALIDATION_ERROR'))).toBe(FALLBACK_ERROR_MESSAGE);
     expect(describeApiError(http(502, 'AI_UNAVAILABLE'))).toBe(FALLBACK_ERROR_MESSAGE);
     expect(describeApiError(http(503))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(500, 'FORBIDDEN'))).toBe(FALLBACK_ERROR_MESSAGE);
   });
 
   it('본문에 code 가 없으면(게이트웨이 HTML 등) 400·401·404 는 상태 코드로 문구를 고른다', () => {
