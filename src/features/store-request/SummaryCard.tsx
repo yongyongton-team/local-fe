@@ -44,6 +44,13 @@ export function SummaryCard({
         <h2 className={styles.title}>이렇게 정리했어요</h2>
       </div>
 
+      {/* 실패 안내는 업종 칩 목록 위(카드 맨 위)에 둬서 처음 화면에서 보이게 한다. */}
+      {error && (
+        <p className={styles.notice} role="status">
+          {error}
+        </p>
+      )}
+
       <dl className={styles.rows}>
         <div className={styles.row}>
           <dt>업종</dt>
@@ -70,11 +77,6 @@ export function SummaryCard({
         </div>
       )}
 
-      {error && (
-        <p className={styles.notice} role="status">
-          {error}
-        </p>
-      )}
       <p className={styles.notice}>
         {needsChoice ? '가장 가까운 업종을 선택해 주세요!' : '문장을 바꾸면 다시 정리해요!'}
       </p>

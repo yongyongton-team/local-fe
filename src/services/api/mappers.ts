@@ -240,13 +240,35 @@ export function mapGaps(dtos: GapDto[] | undefined, context: GapContext): Neighb
   return reports;
 }
 
+/** 요청·부족 가게 알약이 쌓이는 배치(자리표시자 지도용 상대좌표)의 세로 간격. 알약 높이(약 26px)보다 크게 잡았다. [임의] */
+const PILL_STACK_STEP = 0.26;
+
 /**
- * GET /dongs/{dongId}/map 응답 → 지도 마커. 좌표가 있는 stores 만 'existing' 마커로 만든다(lat, lon → lat, lng).
- * 좌표가 없거나 숫자가 아닌 가게, id 가 없는 가게는 빼고, 요청·없는 가게는 좌표가 없어 마커로 만들지 않는다
- * (동네 중심 등으로 좌표를 만들어 넣지 않는다). stores 가 없으면 빈 배열, 응답이 객체가 아니면 parse 오류.
- * position(자리표시자 지도용 상대좌표)은 마커 좌표의 범위 안에서 계산한 값이다(북쪽이 위).
+ * 유효한 동 중심 좌표({lat, lon}). 둘 다 유한한 숫자이고 위도 -90~90, 경도 -180~180 이어야 한다. 아니면 undefined.
+ * OpenAPI 에 없는 필드라 없을 수 있고, 없으면 알약을 만들지 않는다(좌표를 만들어 넣지 않는다).
  */
-export function mapMapMarkers(dto: DongMapDto | undefined): MapMarker[] {
+function validCenter(dong: unknown): { lat: number; lng: number } | undefined {
+  const center = isObject(dong) && isObject(dong.center) ? dong.center : null;
+  const lat = center ? asNumber(center.lat) : undefined;
+  const lng = center ? asNumber(center.lon) : undefined;
+  if (lat === undefined || lng === undefined) return undefined;
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 ? { lat, lng } : undefined;
+}
+
+/**
+ * GET /dongs/{dongId}/map 응답 → 지도 마커.
+ * - stores: 좌표가 있는 가게를 'existing' 핀으로 만든다(lat, lon → lat, lng). 좌표가 없는 가게는 뺀다.
+ * - requests: "{업종} 요청 {인원}" 알약('request'), gaps: "X : {업종}" 알약('missing'). 항목에 좌표가 없어서
+ *   모두 dong.center 에 놓는다(위경도는 전부 같고, 흩뿌리지 않는다). dong.center 가 없거나 유효하지 않으면 알약은 없다.
+ *   업종은 업종 목록에서 찾고, 없으면 항목의 이름을 쓴다. 업종 id 가 올바르지 않거나 requests 의 인원이 숫자가 아니면 그 항목은 뺀다.
+ * - 같은 위치의 알약은 declutterOffsets(픽셀 오프셋)로만 푼다: 알약마다 세로로 쌓은 배치(좌표 아님)를 주고 그 오프셋을 받는다.
+ * position(자리표시자 지도용 상대좌표)은 가게는 가게 좌표 범위 안에서, 알약은 쌓은 배치 그대로다.
+ * 응답이 객체가 아니면 parse 오류, stores 가 없으면 가게는 없다.
+ */
+export function mapMapMarkers(
+  dto: DongMapDto | undefined,
+  categories: readonly StoreCategory[] = [],
+): MapMarker[] {
   if (!isObject(dto)) throw parseError('GET /dongs/{id}/map 응답이 비어 있어요.');
   const stores = Array.isArray(dto.stores) ? dto.stores : [];
 
@@ -259,30 +281,85 @@ export function mapMapMarkers(dto: DongMapDto | undefined): MapMarker[] {
     const categoryId = asNumber(store.categoryId);
     return [{ id, lat, lng, name: asString(store.name), categoryId }];
   });
-  if (located.length === 0) return [];
 
-  const lats = located.map((s) => s.lat);
-  const lngs = located.map((s) => s.lng);
-  const [minLat, maxLat, minLng, maxLng] = [
-    Math.min(...lats),
-    Math.max(...lats),
-    Math.min(...lngs),
-    Math.max(...lngs),
-  ];
-  const ratio = (value: number, min: number, max: number) =>
-    max > min ? (value - min) / (max - min) : 0.5;
+  let pins: MapMarker[] = [];
+  if (located.length > 0) {
+    const lats = located.map((s) => s.lat);
+    const lngs = located.map((s) => s.lng);
+    const [minLat, maxLat, minLng, maxLng] = [
+      Math.min(...lats),
+      Math.max(...lats),
+      Math.min(...lngs),
+      Math.max(...lngs),
+    ];
+    const ratio = (value: number, min: number, max: number) =>
+      max > min ? (value - min) / (max - min) : 0.5;
 
-  return located.map(({ id, lat, lng, name, categoryId }) => ({
-    id: `store-${id}`,
-    kind: 'existing' as const,
-    ...(categoryId !== undefined && Number.isSafeInteger(categoryId) && categoryId > 0
-      ? { categoryId: String(categoryId) }
-      : {}),
-    label: name,
-    position: { x: ratio(lng, minLng, maxLng), y: 1 - ratio(lat, minLat, maxLat) },
-    lat,
-    lng,
+    pins = located.map(({ id, lat, lng, name, categoryId }) => ({
+      id: `store-${id}`,
+      kind: 'existing' as const,
+      ...(categoryId !== undefined && Number.isSafeInteger(categoryId) && categoryId > 0
+        ? { categoryId: String(categoryId) }
+        : {}),
+      label: name,
+      position: { x: ratio(lng, minLng, maxLng), y: 1 - ratio(lat, minLat, maxLat) },
+      lat,
+      lng,
+    }));
+  }
+
+  const center = validCenter(dto.dong);
+  if (center === undefined) return pins;
+
+  const pills: {
+    id: string;
+    kind: 'request' | 'missing';
+    category: StoreCategory;
+    label: string;
+  }[] = [];
+  for (const raw of Array.isArray(dto.requests) ? dto.requests : []) {
+    const item = isObject(raw) ? raw : {};
+    const categoryId = safeDomainId(item.categoryId);
+    const count = asNumber(item.count);
+    if (categoryId === undefined || count === undefined || count < 0) continue;
+    const category = categoryOf(categoryId, asString(item.name), categories);
+    pills.push({
+      id: `request-${categoryId}`,
+      kind: 'request',
+      category,
+      label: `${category.requestLabel} 요청 ${count}`,
+    });
+  }
+  for (const raw of Array.isArray(dto.gaps) ? dto.gaps : []) {
+    const item = isObject(raw) ? raw : {};
+    const categoryId = safeDomainId(item.categoryId);
+    if (categoryId === undefined) continue;
+    const category = categoryOf(categoryId, asString(item.name), categories);
+    pills.push({
+      id: `missing-${categoryId}`,
+      kind: 'missing',
+      category,
+      label: `X : ${category.missingLabel}`,
+    });
+  }
+
+  // 알약마다 세로로 쌓은 배치(좌표가 아니라 겹침을 풀기 위한 표시용 배치)를 만들고 그 오프셋을 받는다.
+  const layout: MapPosition[] = pills.map((_, index) => ({
+    x: 0.5,
+    y: 0.5 + (index - (pills.length - 1) / 2) * PILL_STACK_STEP,
   }));
+  const offsets = declutterOffsets(layout);
+  const demandPills = pills.map(({ id, kind, category, label }, index): MapMarker => ({
+    id,
+    kind,
+    categoryId: category.id,
+    label,
+    position: layout[index] ?? { x: 0.5, y: 0.5 },
+    lat: center.lat,
+    lng: center.lng,
+    ...(offsets[index] && { offset: offsets[index] }),
+  }));
+  return [...pins, ...demandPills];
 }
 
 /** 서버 id 가 양의 정수면 문자열 id, 아니면 undefined(예외를 던지지 않는다). */
@@ -385,13 +462,15 @@ export function selectOfferResponse(
 
 /**
  * GET /me/requests 응답 → 도메인 MyRequest[]. 서버가 준 순서를 그대로 둔다.
- * 서버에 없는 값은 만들지 않고 비워 둔다: 입력 문장(detail)은 빈 문자열, conditions 는 빈 배열, 동네의 구(district)는 빈 문자열.
+ * 서버에 없는 값은 만들지 않고 비워 둔다: 입력 문장(detail)은 빈 문자열, conditions 는 빈 배열.
+ * 동네의 구(district)는 동네 목록(neighborhoods)에서 동 id 로 찾고, 없으면 빈 문자열.
  * 사장님 응답(response)은 제안(offers[])에서 selectOfferResponse 로 만들고, 보여줄 제안이 없으면 없음. 인원은 count(없으면 0), 시각은 ISO 8601 로 파싱한 createdAt(올바르지 않으면 없음).
  * 알 수 없는 시간대·빈도 값은 건너뛴다. id 가 양의 정수가 아닌 항목이 있으면 INVALID_ID 오류, 응답이 배열이 아니면 parse 오류.
  */
 export function mapMyRequests(
   dtos: MyRequestDto[] | undefined,
   categories: readonly StoreCategory[],
+  neighborhoods: readonly Neighborhood[] = [],
 ): MyRequest[] {
   if (!Array.isArray(dtos)) throw parseError('GET /me/requests 응답이 배열이 아니에요.');
   return dtos.map((dto) => {
@@ -419,7 +498,12 @@ export function mapMyRequests(
         visitTimes,
         ...(visitFrequency !== undefined && { visitFrequency }),
       },
-      neighborhood: { id: neighborhoodId, district: '', name: asString(dong.name) },
+      neighborhood: {
+        id: neighborhoodId,
+        // 서버 요청의 동네에는 구(gu)가 없어서 동네 목록에서 찾는다. 못 찾으면 빈 문자열이다.
+        district: neighborhoods.find((n) => n.id === neighborhoodId)?.district ?? '',
+        name: asString(dong.name),
+      },
       category: categoryOf(categoryId, asString(category.name), categories),
       requestCount: Math.max(0, asNumber(item.count) ?? 0),
       ...(createdAt !== undefined && { createdAt }),
@@ -430,9 +514,11 @@ export function mapMyRequests(
 
 /**
  * 순위에 올릴지 정하는 규칙(한 곳). 서버 순위는 요청이 0명인 동네까지 전부 준다(동 39곳).
- * false 이면 서버가 준 목록을 그대로 보여주고, true 로 바꾸면 요청이 1명 이상인 동네만 남긴다(순위 번호는 서버 값 그대로).
+ * true(현재)이면 요청이 1명 이상인 동네만 남기고 순위 번호를 보이는 행 기준으로 1부터 다시 매긴다
+ * (서버 rank 는 score 순서라 0명 동네가 빠지면 번호가 건너뛴다. 예: 반찬은 요청 있는 동네가 서버 3위 하나뿐이라 1위가 된다).
+ * false 이면 서버가 준 목록과 순위를 그대로 보여준다.
  */
-export const HIDE_ZERO_REQUEST_RANKS = false;
+export const HIDE_ZERO_REQUEST_RANKS = true;
 
 const requiredCount = (value: unknown, what: string): number => {
   const count = asNumber(value);
@@ -441,7 +527,8 @@ const requiredCount = (value: unknown, what: string): number => {
 };
 
 /**
- * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서와 순위(rank)를 그대로 쓴다(rank 가 없으면 서버 순서의 번호).
+ * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서를 그대로 쓰고, 순위(rank)는 서버 값을 쓴다(없으면 서버 순서의 번호).
+ * 요청 0명 동네를 숨기면(HIDE_ZERO_REQUEST_RANKS) 순위는 보이는 행 기준으로 다시 매긴다.
  * - 동네 id 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 이름이 없으면 parse 오류.
  *   서버 순위에는 구(gu)가 없어 district 는 빈 문자열이다.
  * - requestCount·sameCategoryStoreCount 가 숫자가 아니면 parse 오류다(지어내지 않는다). nearestMartKm 이 없으면 비운다.
@@ -469,7 +556,10 @@ export function mapRankings(
       ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
     };
   });
-  return hideZeroRequests ? ranks.filter((item) => item.requestCount > 0) : ranks;
+  if (!hideZeroRequests) return ranks;
+  return ranks
+    .filter((item) => item.requestCount > 0)
+    .map((item, index) => ({ ...item, rank: index + 1 }));
 }
 
 /**
