@@ -38,7 +38,12 @@ export function createApiClient({
   now = Date.now,
 }: ApiClientOptions): ApiClient {
   const root = `${baseUrl}${API_BASE_PATH}`;
-  const session = createGuestSession({ loginUrl: `${root}/auth/guest`, store, now });
+  const session = createGuestSession({
+    loginUrl: `${root}/auth/guest`,
+    demoLoginUrl: `${root}/auth/demo`,
+    store,
+    now,
+  });
 
   const isUnauthorized = (error: unknown) =>
     isApiError(error) && error.kind === 'http' && error.status === 401;

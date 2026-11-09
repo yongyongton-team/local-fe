@@ -20,6 +20,7 @@ import type {
   VisitFrequency,
   VisitTime,
 } from '@/types/domain';
+import { declutterOffsets } from '../mapCoordinates';
 import type { MerchantMapData } from '../merchantService';
 import type { RequestSummary } from '../requestSummarizer';
 import { ApiError } from './apiError';
@@ -551,6 +552,25 @@ export function mapOwnerAreas(
   });
 }
 
+/**
+ * 라벨 오프셋을 줄이는 비율(0~1). [임의] 서버 좌표는 이미 실제 거리만큼 떨어져 있어서 목 모드의 오프셋(같은 동 안에서 라벨을 풀려고 만든 값)을
+ * 그대로 쓰면 알약이 지도 가장자리 밖으로 밀려 잘린다. 겹치지 않으면서 가장자리에서 덜 잘리도록 실제 지도(320·390px)로 확인해 정했다.
+ */
+export const OFFSET_DAMPING = 0.5;
+
+/** 점들을 평균 위치 쪽으로 factor 만큼 모은다(factor 1 이면 그대로). 입력은 바꾸지 않는다. */
+function dampenAroundMean(points: readonly MapPosition[], factor: number): MapPosition[] {
+  if (points.length === 0) return [];
+  const mean = {
+    x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+    y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+  };
+  return points.map((p) => ({
+    x: mean.x + (p.x - mean.x) * factor,
+    y: mean.y + (p.y - mean.y) * factor,
+  }));
+}
+
 /** 지도 기준점(내 가게 위치 핀)의 접근 가능한 이름. 목과 같은 문구다. */
 export const MERCHANT_ORIGIN_LABEL = '내 가게 위치';
 
@@ -610,6 +630,9 @@ export function mapOwnerMapData(
 
   const positions = relativePositions([{ lat: shop.lat, lng: shop.lng }, ...located]);
   const [originPosition = { x: 0.5, y: 0.5 }, ...markerPositions] = positions;
+  // 가까운 동네의 알약 라벨이 겹쳐 읽히지 않게 라벨의 화면 픽셀 보정값을 만든다(목 모드와 같은 함수).
+  // 좌표(lat, lng)는 서버 center 그대로이고 바꾸지 않는다. 보정은 표시 방식일 뿐이다.
+  const offsets = declutterOffsets(dampenAroundMean(markerPositions, OFFSET_DAMPING));
   return {
     markers: located.map(({ id, lat, lng, count }, index) => ({
       id: `merchant-${id}-${context.category.id}`,
@@ -619,6 +642,7 @@ export function mapOwnerMapData(
       position: markerPositions[index] ?? originPosition,
       lat,
       lng,
+      ...(offsets[index] && { offset: offsets[index] }),
     })),
     origin: {
       label: MERCHANT_ORIGIN_LABEL,

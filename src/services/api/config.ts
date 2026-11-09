@@ -38,3 +38,11 @@ export function readApiBaseUrl(
   }
   return value;
 }
+
+/**
+ * 시연용 데모 진입을 켤지. API 모드이고 VITE_ENABLE_DEMO_LOGIN 이 정확히 "true" 일 때만 true 다(기본 꺼짐).
+ * 꺼져 있으면 화면은 demo 쿼리 파라미터를 완전히 무시한다.
+ */
+export function isDemoLoginEnabled(dataSource: DataSource, raw: string | undefined): boolean {
+  return dataSource === 'api' && raw?.trim() === 'true';
+}

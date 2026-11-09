@@ -1,6 +1,12 @@
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { demandService, describeApiError, meService } from '@/services';
+import {
+  DEMO_WRITE_BLOCKED_MESSAGE,
+  authService,
+  demandService,
+  describeApiError,
+  meService,
+} from '@/services';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
 import { Button } from '@/shared/ui/Button';
 import { CheckCircleIcon } from '@/shared/ui/icons';
@@ -9,6 +15,7 @@ import type { UserRole } from '@/types/domain';
 import characters from './assets/role-characters.png';
 import { ROLE_OPTIONS } from './roles';
 import { useSelection } from './SelectionContext';
+import { useDemoEntry } from './useDemoEntry';
 import styles from './RoleSelectForm.module.css';
 
 const loadNeighborhoods = () => demandService.listNeighborhoods();
@@ -42,6 +49,8 @@ export function RoleSelectForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submittingRef = useRef(false);
+  // 시연용 데모 진입(/?demo=owner). 꺼져 있으면 아무 일도 하지 않는다.
+  const { entering } = useDemoEntry(setSubmitError);
   const firstRadioRef = useRef<HTMLInputElement>(null);
 
   const list = neighborhoods.status === 'success' ? neighborhoods.data : [];
@@ -63,8 +72,15 @@ export function RoleSelectForm() {
     const neighborhood = list.find((n) => n.id === neighborhoodId);
     if (!neighborhood) return;
 
+    // 데모 세션(공유 계정)은 역할·동네를 서버에 저장하지 않는다(PUT /me 없음). 사장님만 서버 호출 없이 이동한다.
+    const demo = authService.isDemoSession();
+    if (demo && role !== 'merchant') {
+      setSubmitError(DEMO_WRITE_BLOCKED_MESSAGE);
+      return;
+    }
+
     // mock 모드는 서버에 저장하지 않으므로 기다리지 않고 바로 이동한다(기존 동작 그대로, 네트워크 없음).
-    if (meService.savesRemotely) {
+    if (meService.savesRemotely && !demo) {
       submittingRef.current = true;
       setSubmitting(true);
       setSubmitError(null);
@@ -83,6 +99,9 @@ export function RoleSelectForm() {
     const target = ROLE_OPTIONS.find((option) => option.role === role);
     if (target) void navigate(target.homePath);
   }
+
+  // 데모 로그인을 기다리는 동안은 폼 대신 기존 로딩 표시를 보인다.
+  if (entering) return <p role="status">불러오는 중이에요.</p>;
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>

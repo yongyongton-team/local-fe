@@ -5,6 +5,7 @@ import type { RequestSummarizer } from '../requestSummarizer';
 import type { ApiClient } from './apiClient';
 import { getApiClient } from './defaultClient';
 import type { CreateResponseDto, MyRequestDto, ParseResponseDto } from './dto';
+import { assertNotDemoSession } from './demoGuard';
 import { toServerId } from './ids';
 import {
   buildCreateRequestBody,
@@ -48,6 +49,8 @@ export function createApiRequestServices({ listCategories, getClient = getApiCli
   const requestSubmitter: RequestSubmitter = {
     remote: true,
     async submit(input) {
+      // 공유 데모 계정으로 요청을 만들지 않는다.
+      assertNotDemoSession(getClient().session);
       const body = buildCreateRequestBody(input, conditionCodes);
       const dto = await getClient().request<CreateResponseDto>('/requests', {
         method: 'POST',

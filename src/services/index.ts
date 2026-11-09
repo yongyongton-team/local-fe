@@ -4,7 +4,7 @@ import { createApiFounderService } from './api/apiFounderService';
 import { createApiMerchantService } from './api/apiMerchantService';
 import { createApiMeService } from './api/apiMeService';
 import { createApiRequestServices } from './api/apiRequestServices';
-import { resolveDataSource } from './api/config';
+import { isDemoLoginEnabled, resolveDataSource } from './api/config';
 import type { AuthService } from './authService';
 import type { DemandService } from './demandService';
 import { mockAuthService } from './mockAuthService';
@@ -113,10 +113,16 @@ export const founderService: FounderService =
 export const reportDescriptionGenerator: ReportDescriptionGenerator =
   apiFounderServices?.reportDescriptionGenerator ?? mockReportDescriptionGenerator;
 
+/** 인증. api 모드는 게스트 로그인(+ 플래그가 켜진 경우 사장님 데모 로그인), mock 은 아무것도 하지 않는다. */
 export const authService: AuthService =
-  dataSource === 'api' ? createApiAuthService() : mockAuthService;
+  dataSource === 'api'
+    ? createApiAuthService(
+        undefined,
+        isDemoLoginEnabled(dataSource, import.meta.env.VITE_ENABLE_DEMO_LOGIN),
+      )
+    : mockAuthService;
 
 export const meService: MeService = dataSource === 'api' ? createApiMeService() : mockMeService;
 
 export { isApiError } from './api/apiError';
-export { describeApiError } from './api/errorMessages';
+export { DEMO_WRITE_BLOCKED_MESSAGE, describeApiError } from './api/errorMessages';

@@ -3,6 +3,7 @@ import type { ApiClient } from './apiClient';
 import { getApiClient } from './defaultClient';
 import type { HealthResponseDto, MeResponseDto } from './dto';
 import { ApiError } from './apiError';
+import { assertNotDemoSession } from './demoGuard';
 import { toDomainId, toServerId } from './ids';
 import { mapHealth, mapMe, toServerRole } from './mappers';
 
@@ -37,6 +38,8 @@ export function createApiMeService(getClient: () => ApiClient = getApiClient): M
       };
     },
     async saveSelection(role, neighborhoodId, signal) {
+      // 데모 계정은 공유 계정이라 역할·동네를 바꾸면 안 된다. PUT /me 는 이 한 곳에서만 부른다.
+      assertNotDemoSession(getClient().session);
       const serverRole = toServerRole(role);
       if (serverRole === null) {
         throw new ApiError({
