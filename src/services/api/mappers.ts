@@ -1,6 +1,8 @@
-import type { Health, Me, MeShop, UserRole } from '@/types/domain';
+import type { Health, Me, MeShop, Neighborhood, StoreCategory, UserRole } from '@/types/domain';
 import { ApiError } from './apiError';
-import type { HealthResponseDto, MeResponseDto, ShopViewDto } from './dto';
+import { labelsFor } from './categoryLabels';
+import type { CategoryDto, DongDto, HealthResponseDto, MeResponseDto, ShopViewDto } from './dto';
+import { toDomainId } from './ids';
 
 const parseError = (message: string) => new ApiError({ kind: 'parse', message });
 
@@ -10,6 +12,23 @@ const asNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** 서버 역할 코드 */
+export type ServerRole = 'RESIDENT' | 'OWNER' | 'FOUNDER';
+
+/** 화면 역할 → 서버 역할 코드. 알 수 없는 값이면 null(호출하는 쪽이 오류로 처리한다). mapRole 의 반대 방향이다. */
+export function toServerRole(role: unknown): ServerRole | null {
+  switch (role) {
+    case 'resident':
+      return 'RESIDENT';
+    case 'merchant':
+      return 'OWNER';
+    case 'founder':
+      return 'FOUNDER';
+    default:
+      return null;
+  }
+}
 
 /** 서버 역할 → 화면 역할. 알 수 없는 값이나 없으면 null. */
 export function mapRole(role: unknown): UserRole | null {
@@ -80,4 +99,40 @@ export function mapHealth(dto: HealthResponseDto | undefined): Health {
     }
   }
   return { details };
+}
+
+/**
+ * GET /dongs 응답 → 도메인 Neighborhood[]. 서버 순서(구 가나다 → 동 가나다)를 그대로 둔다.
+ * id 가 양의 정수가 아니거나 이름이 없는 항목이 있으면 parse 오류다(식별할 수 없는 동네를 고르게 할 수 없다).
+ * 구(gu)가 없으면 district 는 빈 문자열이다. 응답이 배열이 아니면 parse 오류.
+ */
+export function mapDongs(dtos: DongDto[] | undefined): Neighborhood[] {
+  if (!Array.isArray(dtos)) throw parseError('GET /dongs 응답이 배열이 아니에요.');
+  return dtos.map((dto) => {
+    const item: DongDto = isObject(dto) ? dto : {};
+    const name = asString(item.name);
+    if (name === '') throw parseError('GET /dongs 항목에 이름이 없어요.');
+    return { id: toDomainId(item.id), district: asString(item.gu), name };
+  });
+}
+
+/**
+ * GET /categories 응답 → 도메인 StoreCategory[]. id 는 문자열로 바꾼다(양의 정수가 아니면 parse 오류).
+ * 표시용 문구는 code 기준 표(categoryLabels)로 채우고, 표에 없는 code 는 서버 name 으로 대체한다.
+ * name 이 없으면 code 로 대신하고, 둘 다 없으면 parse 오류다. martCheck 가 없으면 false.
+ */
+export function mapCategories(dtos: CategoryDto[] | undefined): StoreCategory[] {
+  if (!Array.isArray(dtos)) throw parseError('GET /categories 응답이 배열이 아니에요.');
+  return dtos.map((dto) => {
+    const item: CategoryDto = isObject(dto) ? dto : {};
+    const code = asString(item.code);
+    const name = asString(item.name) || code;
+    if (name === '') throw parseError('GET /categories 항목에 이름과 code 가 없어요.');
+    return {
+      id: toDomainId(item.id),
+      name,
+      ...labelsFor(code, name),
+      martCheck: item.martCheck === true,
+    };
+  });
 }

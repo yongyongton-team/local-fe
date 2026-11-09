@@ -12,7 +12,10 @@ export interface TokenStore {
   clear(): void;
 }
 
-/** sessionStorage 의 키. 토큰은 탭을 닫으면 사라진다. */
+/**
+ * localStorage 의 키. 게스트는 토큰을 잃으면 새 사용자가 되어 내 요청이 사라진다(서버가 로그인마다 새 사용자를 만든다).
+ * 토큰이 30일이라 탭을 닫아도 남는 localStorage 에 둔다.
+ */
 const STORAGE_KEY = 'yyt.session';
 
 function isStoredSession(value: unknown): value is StoredSession {
@@ -26,12 +29,14 @@ function isStoredSession(value: unknown): value is StoredSession {
 }
 
 /**
- * 토큰 보관소: 메모리가 기준이고 sessionStorage 에도 복사해 새로고침에서 복원한다.
- * sessionStorage 접근이 막혀 있어도(예외) 메모리만으로 동작한다. 저장소 접근은 모두 try/catch 로 감싼다.
- * @param getStorage 테스트에서 저장소를 바꿔 끼우는 용도. 기본은 window.sessionStorage.
+ * 토큰 보관소: 메모리가 기준이고 localStorage 에도 복사해 새로고침·탭을 닫은 뒤에도 복원한다.
+ * localStorage 접근이 막혀 있어도(예외) 메모리만으로 동작한다. 저장소 접근은 모두 try/catch 로 감싼다.
+ * 보안: localStorage 는 같은 출처의 스크립트(XSS)가 읽을 수 있다. 이 앱은 사용자 입력을 HTML 로 렌더링하지 않고 토큰은
+ * 개인 정보가 없는 게스트용이라 이 위험을 받아들인다.
+ * @param getStorage 테스트에서 저장소를 바꿔 끼우는 용도. 기본은 window.localStorage.
  */
 export function createTokenStore(
-  getStorage: () => Storage = () => window.sessionStorage,
+  getStorage: () => Storage = () => window.localStorage,
 ): TokenStore {
   let memory: StoredSession | null = null;
   let restored = false;

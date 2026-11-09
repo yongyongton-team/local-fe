@@ -21,7 +21,10 @@ async function loadServices(env: { source?: string; base?: string } = {}) {
   };
 }
 
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe('mock 모드(기본)', () => {
@@ -44,6 +47,7 @@ describe('mock 모드(기본)', () => {
     await services.requestSummarizer.summarize('과일가게');
 
     expect(fn).not.toHaveBeenCalled();
+    expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -56,6 +60,7 @@ describe('mock 모드(기본)', () => {
     await services.meService.checkHealth();
 
     expect(fn).not.toHaveBeenCalled();
+    expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -93,12 +98,21 @@ describe('mock 모드(기본)', () => {
 });
 
 describe('api 모드', () => {
-  it('인증과 me 만 API 구현이고, 나머지 서비스는 모드와 무관하게 목이다', async () => {
+  it('인증·me·동네/업종 목록만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
     const { services, mocks } = await loadServices({ source: 'api', base: 'https://api.test' });
 
     expect(services.authService).not.toBe(mocks.auth);
     expect(services.meService).not.toBe(mocks.me);
-    expect(services.demandService).toBe(mocks.demand);
+    // 수요 서비스는 동네·업종 목록만 API 이고 나머지 메서드는 목 구현을 그대로 가리킨다.
+    expect(services.demandService).not.toBe(mocks.demand);
+    expect(services.demandService.listNeighborhoods).not.toBe(mocks.demand.listNeighborhoods);
+    expect(services.demandService.listCategories).not.toBe(mocks.demand.listCategories);
+    expect(services.demandService.listReportsByNeighborhood).toBe(
+      mocks.demand.listReportsByNeighborhood,
+    );
+    expect(services.demandService.listMapMarkers).toBe(mocks.demand.listMapMarkers);
+    expect(services.demandService.listReports).toBe(mocks.demand.listReports);
+    expect(services.demandService.getReport).toBe(mocks.demand.getReport);
     expect(services.merchantService).toBe(mocks.merchant);
     expect(services.founderService).toBe(mocks.founder);
     expect(services.myRequestService).toBe(mocks.myRequest);
