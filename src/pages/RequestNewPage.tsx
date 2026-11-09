@@ -12,13 +12,21 @@ import {
   describeSummary,
   getCategoryLabel,
   isBlank,
+  isDuplicateRequest,
+  isVisitInfoMissing,
 } from '@/features/store-request/requestForm';
 import { SummaryCard } from '@/features/store-request/SummaryCard';
 import { useRequestCategoryChoices } from '@/features/store-request/useRequestCategoryChoices';
 import { useRequestSummary } from '@/features/store-request/useRequestSummary';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
-import { describeApiError, isApiError, requestSubmitter, requestSummarizer } from '@/services';
+import {
+  ERROR_MESSAGES_BY_CODE,
+  describeApiError,
+  isApiError,
+  requestSubmitter,
+  requestSummarizer,
+} from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
@@ -60,6 +68,9 @@ const SUBMIT_HINT_ID = 'request-submit-hint';
 /** 목 모드(ApiError 가 아닌 오류)의 기존 제출 실패 문구 */
 const SUBMIT_FAILED_TEXT = '요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.';
 
+/** [임시] 시간대·빈도를 고르지 않고 보내려 할 때 선택 영역 아래에 보이는 안내. 디자인의 필수 오류 상태가 나오면 교체한다. */
+const VISIT_REQUIRED_TEXT = '방문 시간대와 빈도를 골라 주세요.';
+
 function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const navigate = useNavigate();
 
@@ -68,6 +79,8 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const [visitTimes, setVisitTimes] = useState<VisitTime[]>([]);
   const [visitFrequency, setVisitFrequency] = useState<VisitFrequency | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // 시간대·빈도 없이 보내려 한 적이 있는지. 둘 다 고르면 꺼진다(아직 하나만 골랐다면 안내가 남는다).
+  const [visitAttempted, setVisitAttempted] = useState(false);
   // 제출 실패 안내 문구(없으면 null). API 오류는 코드별 문구이고 서버 message 는 쓰지 않는다.
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -85,15 +98,27 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const categoryLabel = getCategoryLabel(categoryId, choices);
   const showCard = summary !== null;
   const needsChoice = showCard && recognizedCategoryId === null;
-  // 서버(API 모드)는 시간대 1개 이상과 빈도를 필수로 받는다. 목 모드는 선택 사항이다.
-  const visitInfoComplete =
-    !requestSubmitter.remote || (visitTimes.length > 0 && visitFrequency !== null);
+  // 서버가 "이미 요청했다"고 알려 준 업종을 지금도 선택하고 있으면 보내기를 막고 기존 ALREADY_REQUESTED 문구를 보여준다.
+  const duplicate = isDuplicateRequest(summary, categoryId);
+  const cardNotice =
+    summaryError ?? (duplicate ? (ERROR_MESSAGES_BY_CODE.ALREADY_REQUESTED ?? null) : null);
   const canSubmit = canSubmitRequest({
     text,
     categoryId,
     summaryIsCurrent: isCurrent,
-    visitInfoComplete,
+    duplicate,
   });
+  const visitMissing = isVisitInfoMissing(visitTimes, visitFrequency);
+
+  function handleVisitTimesChange(next: VisitTime[]) {
+    setVisitTimes(next);
+    if (!isVisitInfoMissing(next, visitFrequency)) setVisitAttempted(false);
+  }
+
+  function handleVisitFrequencyChange(next: VisitFrequency) {
+    setVisitFrequency(next);
+    if (!isVisitInfoMissing(visitTimes, next)) setVisitAttempted(false);
+  }
 
   function handleTextChange(value: string) {
     setText(value);
@@ -105,6 +130,11 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit || submitting || categoryId === null) return;
+    // 서버는 시간대(1개 이상)와 빈도를 필수로 받는다. 비어 있으면 서비스를 부르지 않고 안내만 보여준다(값을 지어내지 않는다).
+    if (visitMissing) {
+      setVisitAttempted(true);
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -162,7 +192,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
               onChooseCategory={setChosenCategoryId}
               choices={choices}
               remote={requestSummarizer.remote}
-              error={summaryError}
+              error={cardNotice}
             />
           </div>
         )}
@@ -178,7 +208,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
             size="large"
             options={VISIT_TIME_OPTIONS}
             values={visitTimes}
-            onChange={setVisitTimes}
+            onChange={handleVisitTimesChange}
           />
           <ChipFieldset
             legend="얼마나 자주요?"
@@ -186,9 +216,14 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
             size="large"
             options={VISIT_FREQUENCY_OPTIONS}
             value={visitFrequency}
-            onChange={setVisitFrequency}
+            onChange={handleVisitFrequencyChange}
           />
         </div>
+        {visitAttempted && visitMissing && (
+          <p role="alert" className={styles.error}>
+            {VISIT_REQUIRED_TEXT}
+          </p>
+        )}
 
         <Text variant="caption" className={styles.location}>
           위치 : {neighborhood.district} {neighborhood.name} (동 단위로만 저장해요)
@@ -212,9 +247,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
           </Button>
           {!canSubmit && (
             <span id={SUBMIT_HINT_ID} className="visually-hidden">
-              {requestSubmitter.remote
-                ? '문장을 입력하고 업종, 시간대, 빈도를 고르면 보낼 수 있어요'
-                : '문장을 입력하고 업종이 정해지면 보낼 수 있어요'}
+              문장을 입력하고 업종이 정해지면 보낼 수 있어요
             </span>
           )}
         </div>

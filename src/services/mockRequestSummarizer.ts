@@ -21,6 +21,8 @@ export function summarizeByKeywords(text: string): RequestSummary {
   return {
     categoryId: matched.length === 1 ? (matched[0]?.categoryId ?? null) : null,
     conditions: CONDITION_RULES.filter((rule) => rule.pattern.test(text)).map((rule) => rule.label),
+    // 목은 요청 기록을 서버처럼 알려 주지 않는다. 항상 false.
+    alreadyRequested: false,
   };
 }
 

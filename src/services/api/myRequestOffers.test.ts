@@ -51,12 +51,12 @@ describe('offerStatus (제안·주문 상태 규칙)', () => {
     expect(toOrderStatus(undefined)).toBeNull();
   });
 
-  it('isShownOfferStatus: 취소와 알 수 없는 값은 보여주지 않고 나머지 알려진 값은 보여준다', () => {
-    expect([...HIDDEN_OFFER_STATUSES]).toEqual(['CANCELLED']);
-    for (const shown of ['OPEN', 'CONFIRMED', 'CLOSED', 'DONE']) {
+  it('isShownOfferStatus: OPEN·CONFIRMED 만 보이고 CLOSED·DONE·CANCELLED·모르는 값은 보이지 않는다(명세 기준)', () => {
+    expect([...HIDDEN_OFFER_STATUSES]).toEqual(['CLOSED', 'CANCELLED', 'DONE']);
+    for (const shown of ['OPEN', 'CONFIRMED']) {
       expect(isShownOfferStatus(shown)).toBe(true);
     }
-    for (const hidden of ['CANCELLED', 'SOMETHING', '', null, undefined, 3]) {
+    for (const hidden of ['CLOSED', 'DONE', 'CANCELLED', 'SOMETHING', '', null, undefined, 3]) {
       expect(isShownOfferStatus(hidden)).toBe(false);
     }
   });
@@ -156,6 +156,41 @@ describe('selectOfferResponse', () => {
       'merchantName',
       'message',
     ]);
+  });
+});
+
+describe('제안 상태별 표시(명세 기준)', () => {
+  it.each([
+    ['OPEN', true],
+    ['CONFIRMED', true],
+    ['CLOSED', false],
+    ['DONE', false],
+    ['CANCELLED', false],
+    ['UNKNOWN', false],
+  ])('상태 %s 의 제안은 보임=%s', (status, shown) => {
+    expect(selectOfferResponse([offer({ status })], '구성동') !== undefined).toBe(shown);
+  });
+
+  it('[CLOSED, CONFIRMED] 면 CONFIRMED 제안을 쓴다(서버 순서에서 첫 번째로 보이는 제안)', () => {
+    const response = selectOfferResponse(
+      [
+        offer({ shopName: '마감가게', status: 'CLOSED' }),
+        offer({ shopName: '확정가게', status: 'CONFIRMED' }),
+        offer({ shopName: '진행가게', status: 'OPEN' }),
+      ],
+      '구성동',
+    );
+
+    expect(response?.merchantName).toBe('확정가게');
+  });
+
+  it('모두 숨김 상태(CLOSED·DONE·CANCELLED)면 제안이 없다', () => {
+    expect(
+      selectOfferResponse(
+        [offer({ status: 'CLOSED' }), offer({ status: 'DONE' }), offer({ status: 'CANCELLED' })],
+        '구성동',
+      ),
+    ).toBeUndefined();
   });
 });
 

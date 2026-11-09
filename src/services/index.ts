@@ -128,4 +128,8 @@ export const authService: AuthService =
 export const meService: MeService = dataSource === 'api' ? createApiMeService() : mockMeService;
 
 export { isApiError } from './api/apiError';
-export { DEMO_WRITE_BLOCKED_MESSAGE, describeApiError } from './api/errorMessages';
+export {
+  DEMO_WRITE_BLOCKED_MESSAGE,
+  ERROR_MESSAGES_BY_CODE,
+  describeApiError,
+} from './api/errorMessages';
