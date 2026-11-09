@@ -11,6 +11,9 @@ import {
   useMerchantMapData,
   useMerchantProfile,
 } from '@/features/merchant-explore/useMerchantExplore';
+import { NoShopNotice } from '@/features/merchant-explore/NoShopNotice';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
+import { isNoShopError } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
@@ -80,9 +83,14 @@ export function MerchantExplorePage() {
         </Text>
         <Text variant="caption">{buildSubtitle(option.label)}</Text>
         {profile.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
-        {profile.status === 'error' && (
-          <Notice title="가게 정보를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
-        )}
+        {profile.status === 'error' &&
+          (isNoShopError(profile.error) ? (
+            <NoShopNotice />
+          ) : (
+            <Notice title="가게 정보를 가져오지 못했어요">
+              {describeLoadError(profile.error)}
+            </Notice>
+          ))}
         {profile.status === 'success' && (
           <AreaList
             categoryId={profile.data.categoryId}
@@ -114,7 +122,7 @@ function AreaList({
       </p>
       {areas.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
       {areas.status === 'error' && (
-        <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="데이터를 가져오지 못했어요">{describeLoadError(areas.error)}</Notice>
       )}
       {areas.status === 'success' &&
         (areas.data.length === 0 ? (

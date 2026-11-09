@@ -1,6 +1,7 @@
 import { createApiAuthService } from './api/apiAuthService';
 import { createApiDemandService } from './api/apiDemandService';
 import { createApiFounderService } from './api/apiFounderService';
+import { createApiMerchantService } from './api/apiMerchantService';
 import { createApiMeService } from './api/apiMeService';
 import { createApiRequestServices } from './api/apiRequestServices';
 import { resolveDataSource } from './api/config';
@@ -34,6 +35,7 @@ export type {
   MerchantService,
 } from './merchantService';
 export type { MyRequestService } from './myRequestService';
+export { isNoShopError, NoShopError } from './merchantService';
 export type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './reportDescription';
 export type { RequestSubmitter } from './requestSubmitter';
 export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
@@ -43,7 +45,8 @@ export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
  * 부분 연결 상태다: api 모드에서 실제 서버를 쓰는 것은 인증(authService), 내 정보·역할 저장(meService),
  * 동네·업종 목록과 주민 조회(demandService 의 listNeighborhoods·listCategories·getDefaultCategoryId·
  * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService),
- * 예비 창업자(founderService·reportDescriptionGenerator)뿐이다. 나머지 서비스와 메서드는
+ * 예비 창업자(founderService·reportDescriptionGenerator),
+ * 사장님(merchantService·areaDescriptionGenerator)뿐이다. 나머지 서비스와 메서드는
  * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
  */
 const dataSource = resolveDataSource(
@@ -79,11 +82,22 @@ export const requestSubmitter: RequestSubmitter =
 export const myRequestService: MyRequestService =
   apiRequestServices?.myRequestService ?? mockMyRequestService;
 
-/** 사장님 탐색 데이터(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
-export const merchantService: MerchantService = mockMerchantService;
+/** 사장님 가게 정보·동네 수요·상세와 한 줄 요약. api 모드는 GET /me 의 shop·GET /owner/demand*, mock 은 메모리 목·템플릿. */
+const apiMerchantServices =
+  dataSource === 'api'
+    ? createApiMerchantService({
+        listCategories: () => demandService.listCategories(),
+        listNeighborhoods: () => demandService.listNeighborhoods(),
+      })
+    : null;
 
-/** 동네 상세 "한 줄 요약" 문장 생성(템플릿 목). 실제 AI 구현이 생기면 여기서 교체한다. */
-export const areaDescriptionGenerator: AreaDescriptionGenerator = mockAreaDescriptionGenerator;
+/** 사장님 탐색 데이터. */
+export const merchantService: MerchantService =
+  apiMerchantServices?.merchantService ?? mockMerchantService;
+
+/** 동네 상세 "한 줄 요약" 문장. api 모드는 서버가 쓴 요약, mock 은 템플릿 목. */
+export const areaDescriptionGenerator: AreaDescriptionGenerator =
+  apiMerchantServices?.areaDescriptionGenerator ?? mockAreaDescriptionGenerator;
 
 /** 예비 창업자 순위·리포트와 리포트 설명. api 모드는 GET /founder/*(설명은 리포트 응답의 문장), mock 은 메모리 목·템플릿. */
 const apiFounderServices =

@@ -20,6 +20,7 @@ import { declutterOffsets, spreadAroundCenter } from './mapCoordinates';
 import type { MerchantService } from './merchantService';
 
 export const mockMerchantService: MerchantService = {
+  remote: false,
   async getProfile() {
     const category = mockCategories.find((c) => c.id === mockMerchantProfile.categoryId);
     return { ...mockMerchantProfile, categoryName: category?.name ?? '' };

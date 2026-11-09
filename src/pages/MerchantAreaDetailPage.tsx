@@ -8,6 +8,9 @@ import { BarSection } from '@/features/merchant-area/BarSection';
 import { DecisionCallout } from '@/features/merchant-area/DecisionCallout';
 import { OneLineSummary } from '@/features/merchant-area/OneLineSummary';
 import { useAreaDetail } from '@/features/merchant-area/useAreaDetail';
+import { NoShopNotice } from '@/features/merchant-explore/NoShopNotice';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
+import { isNoShopError, merchantService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
@@ -38,9 +41,12 @@ export function MerchantAreaDetailPage() {
       </header>
 
       {state.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
-      {state.status === 'error' && (
-        <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
-      )}
+      {state.status === 'error' &&
+        (isNoShopError(state.error) ? (
+          <NoShopNotice />
+        ) : (
+          <Notice title="데이터를 가져오지 못했어요">{describeLoadError(state.error)}</Notice>
+        ))}
       {state.status === 'success' && !state.data && (
         <Notice
           title="찾을 수 없는 동네예요"
@@ -65,7 +71,7 @@ export function MerchantAreaDetailPage() {
             <BarSection title="가기 좋은 시간" rows={buildVisitTimeRows(state.data.detail)} />
           </div>
           <div className={styles.summary}>
-            <OneLineSummary summary={state.data.summary} />
+            <OneLineSummary summary={state.data.summary} remote={merchantService.remote} />
           </div>
           <footer className={styles.footer}>
             <DecisionCallout />
