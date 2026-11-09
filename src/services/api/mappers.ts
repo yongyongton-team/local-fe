@@ -1,11 +1,16 @@
 import type {
+  AreaDemand,
+  AreaDetail,
   AreaReport,
+  GeoBounds,
+  MerchantProfile,
   Health,
   MapMarker,
   Me,
   MeShop,
   MyRequest,
   LocationRank,
+  MapPosition,
   Neighborhood,
   NeighborhoodReport,
   NewStoreRequest,
@@ -15,6 +20,7 @@ import type {
   VisitFrequency,
   VisitTime,
 } from '@/types/domain';
+import type { MerchantMapData } from '../merchantService';
 import type { RequestSummary } from '../requestSummarizer';
 import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
@@ -30,12 +36,20 @@ import type {
   HealthResponseDto,
   MeResponseDto,
   MyRequestDto,
+  OwnerDemandDto,
+  OwnerDetailDto,
   ParseResponseDto,
   ShopViewDto,
 } from './dto';
 import { isNoStoreGap } from './gapStatus';
 import { toDomainId, toServerId } from './ids';
-import { FREQUENCY_CODES, TIME_SLOT_CODES, toVisitFrequency, toVisitTime } from './requestCodes';
+import {
+  CONDITION_LABELS_BY_CODE,
+  FREQUENCY_CODES,
+  TIME_SLOT_CODES,
+  toVisitFrequency,
+  toVisitTime,
+} from './requestCodes';
 
 const parseError = (message: string) => new ApiError({ kind: 'parse', message });
 
@@ -474,5 +488,199 @@ export function mapFounderReport(
     ...(peakVisitTime !== undefined && { peakVisitTime }),
     ...(explanation !== '' && { explanation: { text: explanation, ...(by !== '' && { by }) } }),
     ...(sources.length > 0 && { sources }),
+  };
+}
+
+/**
+ * 서버 시간대 비율 → 화면의 퍼센트. 실서버 확인: ratio 는 0~1 이고 합이 1.0 이다(예: 0.59, 0.31, 0.10).
+ * 서버의 단위가 바뀌면 이 상수만 고친다.
+ */
+export const RATIO_TO_PERCENT = 100;
+export const ratioToPercent = (ratio: number): number => Math.round(ratio * RATIO_TO_PERCENT);
+
+/**
+ * GET /me 의 shop → 사장님 프로필. 가게가 없거나 업종 id 가 없으면 null(호출하는 쪽이 "가게 없음"으로 처리한다).
+ * district(구)는 서버 shop 에 없어서 가게의 동 id 로 동네 목록에서 찾아 넣는다(없으면 빈 문자열).
+ */
+export function mapMerchantProfile(
+  shop: MeShop | null,
+  neighborhoods: readonly Neighborhood[],
+): MerchantProfile | null {
+  if (shop === null || shop.categoryId === undefined) return null;
+  const dong =
+    shop.dongId === undefined ? undefined : neighborhoods.find((n) => n.id === String(shop.dongId));
+  return {
+    shopName: shop.shopName,
+    categoryId: toDomainId(shop.categoryId),
+    categoryName: shop.categoryName,
+    district: dong?.district ?? '',
+  };
+}
+
+/**
+ * GET /owner/demand 응답 → 도메인 AreaDemand[]. 서버 순서(요청 많은 순)와 거리(distanceKm)를 그대로 쓴다.
+ * - 동네 id 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 구(district)는 동네 목록에서 찾고 없으면 빈 문자열.
+ * - requestCount·distanceKm·sameCategoryStoreCount 가 숫자가 아니면 parse 오류다(지어내지 않는다).
+ *   topTimeSlot 이 없거나 알 수 없는 값이면 peakVisitTime 을 비운다.
+ * 응답이 객체가 아니거나 areas 가 배열이 아니면 parse 오류.
+ */
+export function mapOwnerAreas(
+  dto: OwnerDemandDto | undefined,
+  neighborhoods: readonly Neighborhood[],
+): AreaDemand[] {
+  if (!isObject(dto) || !Array.isArray(dto.areas)) {
+    throw parseError('GET /owner/demand 응답에 areas 가 없어요.');
+  }
+  return dto.areas.map((raw) => {
+    const area = isObject(raw) ? raw : {};
+    const id = toDomainId(area.dongId);
+    const name = asString(area.name);
+    if (name === '') throw parseError('GET /owner/demand 항목에 이름이 없어요.');
+    const peakVisitTime = toVisitTime(area.topTimeSlot);
+    return {
+      neighborhood: {
+        id,
+        district: neighborhoods.find((n) => n.id === id)?.district ?? '',
+        name,
+      },
+      requestCount: requiredCount(area.requestCount, 'requestCount'),
+      distanceKm: requiredCount(area.distanceKm, 'distanceKm'),
+      ...(peakVisitTime !== undefined && { peakVisitTime }),
+      nearbySameCategoryCount: requiredCount(area.sameCategoryStoreCount, 'sameCategoryStoreCount'),
+    };
+  });
+}
+
+/** 지도 기준점(내 가게 위치 핀)의 접근 가능한 이름. 목과 같은 문구다. */
+export const MERCHANT_ORIGIN_LABEL = '내 가게 위치';
+
+/**
+ * 가게 위치와 동네 중심 좌표들을 지도 영역 대비 0~1 상대좌표로 바꾼다(자리표시자 지도용, 북쪽이 위).
+ * 입력 좌표의 범위 안에서 계산한 값이라 좌표를 만들어 넣는 것이 아니다. 점이 하나뿐이면 가운데다.
+ */
+function relativePositions(points: readonly { lat: number; lng: number }[]): MapPosition[] {
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const [minLat, maxLat, minLng, maxLng] = [
+    Math.min(...lats),
+    Math.max(...lats),
+    Math.min(...lngs),
+    Math.max(...lngs),
+  ];
+  const ratio = (value: number, min: number, max: number) =>
+    max > min ? (value - min) / (max - min) : 0.5;
+  return points.map((p) => ({
+    x: ratio(p.lng, minLng, maxLng),
+    y: 1 - ratio(p.lat, minLat, maxLat),
+  }));
+}
+
+/**
+ * GET /owner/demand 응답 + 내 가게 → 지도 데이터.
+ * - 기준점(핀·반경 원)은 서버 shop 의 실제 좌표다. 좌표가 없으면 parse 오류다.
+ * - 알약은 서버가 좌표(center)를 준 동네만 만든다(좌표를 만들어 넣지 않는다). 문구는 "{업종} 요청 {인원}".
+ * - areaBounds 는 "기흥구 전체"용 근사 영역으로, 호출하는 쪽이 구에 맞는 값을 넘긴다(없으면 생략).
+ */
+export function mapOwnerMapData(
+  dto: OwnerDemandDto | undefined,
+  context: {
+    shop: { lat?: number; lng?: number };
+    category: StoreCategory;
+    areaBounds?: GeoBounds;
+  },
+): MerchantMapData {
+  if (!isObject(dto) || !Array.isArray(dto.areas)) {
+    throw parseError('GET /owner/demand 응답에 areas 가 없어요.');
+  }
+  const { shop } = context;
+  if (shop.lat === undefined || shop.lng === undefined) {
+    throw parseError('가게 응답에 좌표가 없어요.');
+  }
+  const located = dto.areas.flatMap((raw) => {
+    const area = isObject(raw) ? raw : {};
+    const id = safeDomainId(area.dongId);
+    const center = isObject(area.center) ? area.center : null;
+    const lat = center ? asNumber(center.lat) : undefined;
+    const lng = center ? asNumber(center.lon) : undefined;
+    const count = asNumber(area.requestCount);
+    if (id === undefined || lat === undefined || lng === undefined || count === undefined)
+      return [];
+    return [{ id, lat, lng, count }];
+  });
+
+  const positions = relativePositions([{ lat: shop.lat, lng: shop.lng }, ...located]);
+  const [originPosition = { x: 0.5, y: 0.5 }, ...markerPositions] = positions;
+  return {
+    markers: located.map(({ id, lat, lng, count }, index) => ({
+      id: `merchant-${id}-${context.category.id}`,
+      kind: 'request' as const,
+      categoryId: context.category.id,
+      label: `${context.category.requestLabel} 요청 ${count}`,
+      position: markerPositions[index] ?? originPosition,
+      lat,
+      lng,
+    })),
+    origin: {
+      label: MERCHANT_ORIGIN_LABEL,
+      position: originPosition,
+      lat: shop.lat,
+      lng: shop.lng,
+      ...(context.areaBounds && { areaBounds: context.areaBounds }),
+    },
+  };
+}
+
+/**
+ * GET /owner/demand/{dongId} 응답 → 도메인 AreaDetail.
+ * - 인원(requestCount)·같은 업종 수(sameCategoryStoreCount)가 숫자가 아니면 parse 오류.
+ * - 조건은 서버가 준 label 을 쓰고, label 이 없으면 확인된 코드 표(CONDITION_LABELS_BY_CODE)로, 그래도 없으면 그 조건은 뺀다.
+ * - 시간대는 requestCodes 표로 도메인 VisitTime 으로 바꾸고(알 수 없는 값은 뺀다), 서버 순서(비율 내림차순)를 그대로 둔다.
+ *   비율은 ratioToPercent 로 퍼센트가 된다.
+ * - 요약은 서버가 준 것만 담는다(없으면 비움).
+ */
+export function mapOwnerDetail(
+  dto: OwnerDetailDto | undefined,
+  context: {
+    neighborhoodId: string;
+    categoryId: string;
+    categories: readonly StoreCategory[];
+    neighborhoods: readonly Neighborhood[];
+  },
+): AreaDetail {
+  if (!isObject(dto)) throw parseError('GET /owner/demand/{id} 응답이 비어 있어요.');
+  const dong = isObject(dto.dong) ? dto.dong : {};
+  const category = isObject(dto.category) ? dto.category : {};
+  const neighborhoodId = safeDomainId(dong.id) ?? context.neighborhoodId;
+
+  const conditions = (Array.isArray(dto.conditions) ? dto.conditions : []).flatMap((raw) => {
+    const item = isObject(raw) ? raw : {};
+    const code = asString(item.code);
+    const label = asString(item.label) || CONDITION_LABELS_BY_CODE[code] || '';
+    const count = asNumber(item.count);
+    return label === '' || count === undefined ? [] : [{ label, count }];
+  });
+  const visitTimes = (Array.isArray(dto.timeSlots) ? dto.timeSlots : []).flatMap((raw) => {
+    const item = isObject(raw) ? raw : {};
+    const time = toVisitTime(item.slot);
+    const ratio = asNumber(item.ratio);
+    return time === undefined || ratio === undefined
+      ? []
+      : [{ time, ratio: ratioToPercent(ratio) }];
+  });
+  const summary = isObject(dto.summary) ? asString(dto.summary.text) : '';
+  const by = isObject(dto.summary) ? asString(dto.summary.by) : '';
+
+  return {
+    neighborhood: {
+      id: neighborhoodId,
+      district: context.neighborhoods.find((n) => n.id === neighborhoodId)?.district ?? '',
+      name: asString(dong.name),
+    },
+    category: categoryOf(context.categoryId, asString(category.name), context.categories),
+    requestCount: requiredCount(dto.requestCount, 'requestCount'),
+    nearbySameCategoryCount: requiredCount(dto.sameCategoryStoreCount, 'sameCategoryStoreCount'),
+    conditions,
+    visitTimes,
+    ...(summary !== '' && { summary: { text: summary, ...(by !== '' && { by }) } }),
   };
 }

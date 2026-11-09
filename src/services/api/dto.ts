@@ -183,3 +183,36 @@ export interface FounderReportDto {
   explanation?: Nullable<{ text?: Nullable<string>; by?: Nullable<string> }>;
   sources?: Nullable<{ name?: Nullable<string>; asOf?: Nullable<string> }[]>;
 }
+
+/** GET /owner/demand 의 동네. center 는 동 중심 좌표(위경도), topTimeSlot 은 요청이 없으면 비어 있을 수 있다. */
+export interface OwnerAreaDto {
+  dongId?: Nullable<number>;
+  name?: Nullable<string>;
+  requestCount?: Nullable<number>;
+  distanceKm?: Nullable<number>;
+  topTimeSlot?: Nullable<string>;
+  sameCategoryStoreCount?: Nullable<number>;
+  center?: Nullable<{ lat?: Nullable<number>; lon?: Nullable<number> }>;
+}
+
+/** GET /owner/demand?radiusKm|gu. 서버 기본 반경은 3km 이고, gu 를 주면 radiusKm 은 null 이다. */
+export interface OwnerDemandDto {
+  radiusKm?: Nullable<number>;
+  gu?: Nullable<string>;
+  areas?: Nullable<OwnerAreaDto[]>;
+}
+
+/** GET /owner/demand/{dongId}. 시간대 ratio 는 0~1(합 1.0), conditions 는 {code,label,count} 다. */
+export interface OwnerDetailDto {
+  dong?: Nullable<IdNameDto>;
+  category?: Nullable<IdNameDto>;
+  requestCount?: Nullable<number>;
+  sameCategoryStoreCount?: Nullable<number>;
+  conditions?: Nullable<
+    { code?: Nullable<string>; label?: Nullable<string>; count?: Nullable<number> }[]
+  >;
+  timeSlots?: Nullable<
+    { slot?: Nullable<string>; count?: Nullable<number>; ratio?: Nullable<number> }[]
+  >;
+  summary?: Nullable<{ text?: Nullable<string>; by?: Nullable<string> }>;
+}

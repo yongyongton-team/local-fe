@@ -98,7 +98,7 @@ describe('mock 모드(기본)', () => {
 });
 
 describe('api 모드', () => {
-  it('인증·me·동네/업종 목록·주민 조회·요청 작성·내 요청·창업자만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
+  it('인증·me·동네/업종 목록·주민 조회·요청 작성·내 요청·창업자·사장님만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
     const { services, mocks } = await loadServices({ source: 'api', base: 'https://api.test' });
 
     expect(services.authService).not.toBe(mocks.auth);
@@ -115,7 +115,9 @@ describe('api 모드', () => {
     expect(services.demandService.getDefaultCategoryId).not.toBe(mocks.demand.getDefaultCategoryId);
     expect(services.demandService.listReports).toBe(mocks.demand.listReports);
     expect(services.demandService.getReport).toBe(mocks.demand.getReport);
-    expect(services.merchantService).toBe(mocks.merchant);
+    // 사장님 가게 정보·동네 수요·상세는 API 구현이다(6단계).
+    expect(services.merchantService).not.toBe(mocks.merchant);
+    expect([services.merchantService.remote, mocks.merchant.remote]).toEqual([true, false]);
     // 예비 창업자 순위·리포트는 API 구현이다(5단계).
     expect(services.founderService).not.toBe(mocks.founder);
     expect([services.founderService.remote, mocks.founder.remote]).toEqual([true, false]);

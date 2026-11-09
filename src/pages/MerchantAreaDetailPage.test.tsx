@@ -95,7 +95,7 @@ describe.each([
       categoryId: 'fruit-vegetable',
       radiusKm: null,
     });
-    const peak = areas.find((a) => a.neighborhood.id === id)!.peakVisitTime;
+    const peak = areas.find((a) => a.neighborhood.id === id)!.peakVisitTime!;
     const peakLabel = { 'weekday-day': '평일 낮', 'weekday-evening': '평일 저녁', weekend: '주말' }[
       peak
     ];

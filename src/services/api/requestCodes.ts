@@ -29,3 +29,13 @@ export const toVisitTime = (code: unknown): VisitTime | undefined =>
 /** 서버 빈도 → 도메인. 모르는 값이면 undefined */
 export const toVisitFrequency = (code: unknown): VisitFrequency | undefined =>
   typeof code === 'string' ? VISIT_FREQUENCY_BY_CODE.get(code) : undefined;
+
+/**
+ * 서버 조건 코드 → 표시 문구. 서버가 label 을 주면 그 label 을 쓰고, 이 표는 label 이 없을 때만 쓴다.
+ * 실서버 응답에서 code 와 label 이 함께 온 것만 넣었다(나머지 MORNING·WEEKEND_OPEN·CHEAP 은 문구를 확인하지 못해 비워 둔다).
+ */
+export const CONDITION_LABELS_BY_CODE: Readonly<Record<string, string>> = {
+  LATE_OPEN: '늦게까지 영업',
+  SMALL_QTY: '낱개 구매',
+  DELIVERY: '배달',
+};

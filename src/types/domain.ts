@@ -165,8 +165,8 @@ export interface AreaDemand {
   requestCount: number;
   /** 내 가게에서 동네 중심까지의 직선거리(km, 반올림하지 않은 값). 목록 문구·반경 필터·지도 원이 같은 기준을 쓴다. */
   distanceKm: number;
-  /** 요청이 가장 많은 방문 시간대 */
-  peakVisitTime: VisitTime;
+  /** 요청이 가장 많은 방문 시간대. 서버가 주지 않으면(요청 없음 등) 없음 */
+  peakVisitTime?: VisitTime;
   /** 근처 같은 업종 가게 수(수요 데이터) */
   nearbySameCategoryCount: number;
 }
@@ -229,6 +229,8 @@ export interface AreaDetail {
   nearbySameCategoryCount: number;
   conditions: AreaCondition[];
   visitTimes: AreaVisitTime[];
+  /** 서버가 쓴 한 줄 요약(API 모드). by 는 "AI" 등 서버가 준 출처. 목 모드에는 없다(생성기가 쓴다). */
+  summary?: { text: string; by?: string };
 }
 
 /**
