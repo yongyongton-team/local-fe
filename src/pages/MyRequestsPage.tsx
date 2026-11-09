@@ -2,6 +2,8 @@ import { MyRequestCard } from '@/features/my-requests/MyRequestCard';
 import { ProgressSummaryCard } from '@/features/my-requests/ProgressSummaryCard';
 import { describeRequestSummary } from '@/features/my-requests/requestProgress';
 import { useMyRequests } from '@/features/my-requests/useMyRequests';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
+import { myRequestService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { Notice } from '@/shared/ui/Notice';
@@ -27,14 +29,14 @@ export function MyRequestsPage() {
           <Text as="h1" variant="title">
             내 요청
           </Text>
-          {/* 디자인에 없는 임시 표시. 이 화면의 데이터는 개발용 목 데이터다. */}
-          <SampleDataBadge />
+          {/* 디자인에 없는 임시 표시. 목 데이터일 때만 붙인다(서버 데이터이면 숨긴다). */}
+          {!myRequestService.remote && <SampleDataBadge />}
         </div>
       </header>
 
       {state.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
       {state.status === 'error' && (
-        <Notice title="요청을 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="요청을 가져오지 못했어요">{describeLoadError(state.error)}</Notice>
       )}
       {state.status === 'success' && <Content items={state.data} />}
     </div>

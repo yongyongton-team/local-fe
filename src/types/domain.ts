@@ -72,6 +72,8 @@ export interface MyRequest {
   neighborhood: Neighborhood;
   category: StoreCategory;
   requestCount: number;
+  /** 요청을 보낸 시각. 서버가 주지 않거나 올바르지 않으면 없음 */
+  createdAt?: Date;
   /** 사장님 응답이 없으면 없음 */
   response?: MerchantResponse;
 }

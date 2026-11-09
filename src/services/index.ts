@@ -1,6 +1,7 @@
 import { createApiAuthService } from './api/apiAuthService';
 import { createApiDemandService } from './api/apiDemandService';
 import { createApiMeService } from './api/apiMeService';
+import { createApiRequestServices } from './api/apiRequestServices';
 import { resolveDataSource } from './api/config';
 import type { AuthService } from './authService';
 import type { DemandService } from './demandService';
@@ -40,7 +41,7 @@ export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
  * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 서비스의 구현을 고른다.
  * 부분 연결 상태다: api 모드에서 실제 서버를 쓰는 것은 인증(authService), 내 정보·역할 저장(meService),
  * 동네·업종 목록과 주민 조회(demandService 의 listNeighborhoods·listCategories·getDefaultCategoryId·
- * listReportsByNeighborhood·listMapMarkers)뿐이다. 나머지 서비스와 메서드는
+ * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService)뿐이다. 나머지 서비스와 메서드는
  * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
  */
 const dataSource = resolveDataSource(
@@ -58,14 +59,23 @@ const dataSource = resolveDataSource(
 export const demandService: DemandService =
   dataSource === 'api' ? createApiDemandService(mockDemandService) : mockDemandService;
 
-/** 입력 문장 정리(키워드 규칙 목). 실제 AI 구현이 생기면 여기서 교체한다. */
-export const requestSummarizer: RequestSummarizer = mockRequestSummarizer;
+/** 요청 작성(정리·생성)과 내 요청. api 모드에서만 만들고, 세 서비스가 조건 code 기록을 나눠 쓴다. */
+const apiRequestServices =
+  dataSource === 'api'
+    ? createApiRequestServices({ listCategories: () => demandService.listCategories() })
+    : null;
 
-/** 요청 제출(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
-export const requestSubmitter: RequestSubmitter = mockRequestSubmitter;
+/** 입력 문장 정리. api 모드는 POST /requests/parse(AI), mock 은 키워드 규칙. */
+export const requestSummarizer: RequestSummarizer =
+  apiRequestServices?.requestSummarizer ?? mockRequestSummarizer;
 
-/** 내가 보낸 요청 조회(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
-export const myRequestService: MyRequestService = mockMyRequestService;
+/** 요청 제출. api 모드는 POST /requests, mock 은 메모리에만 저장한다. */
+export const requestSubmitter: RequestSubmitter =
+  apiRequestServices?.requestSubmitter ?? mockRequestSubmitter;
+
+/** 내가 보낸 요청 조회. api 모드는 GET /me/requests, mock 은 메모리 목. */
+export const myRequestService: MyRequestService =
+  apiRequestServices?.myRequestService ?? mockMyRequestService;
 
 /** 사장님 탐색 데이터(메모리 목). 실제 API 구현이 생기면 여기서 교체한다. */
 export const merchantService: MerchantService = mockMerchantService;

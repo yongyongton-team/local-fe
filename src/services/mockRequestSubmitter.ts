@@ -10,6 +10,7 @@ import type { RequestSubmitter } from './requestSubmitter';
  *   인원 계산은 여기 한 곳에서만 한다.
  */
 export const mockRequestSubmitter: RequestSubmitter = {
+  remote: false,
   async submit(input) {
     const db = getDb();
 

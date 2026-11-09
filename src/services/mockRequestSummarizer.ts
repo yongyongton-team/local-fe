@@ -25,6 +25,7 @@ export function summarizeByKeywords(text: string): RequestSummary {
 }
 
 export const mockRequestSummarizer: RequestSummarizer = {
+  remote: false,
   async summarize(text) {
     return summarizeByKeywords(text);
   },

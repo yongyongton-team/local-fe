@@ -98,7 +98,7 @@ describe('mock 모드(기본)', () => {
 });
 
 describe('api 모드', () => {
-  it('인증·me·동네/업종 목록·주민 조회만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
+  it('인증·me·동네/업종 목록·주민 조회·요청 작성·내 요청만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
     const { services, mocks } = await loadServices({ source: 'api', base: 'https://api.test' });
 
     expect(services.authService).not.toBe(mocks.auth);
@@ -117,9 +117,20 @@ describe('api 모드', () => {
     expect(services.demandService.getReport).toBe(mocks.demand.getReport);
     expect(services.merchantService).toBe(mocks.merchant);
     expect(services.founderService).toBe(mocks.founder);
-    expect(services.myRequestService).toBe(mocks.myRequest);
-    expect(services.requestSubmitter).toBe(mocks.submitter);
-    expect(services.requestSummarizer).toBe(mocks.summarizer);
+    // 요청 작성(정리·제출)과 내 요청은 API 구현이다(4단계). 목과 달리 remote 이다.
+    expect(services.myRequestService).not.toBe(mocks.myRequest);
+    expect(services.requestSubmitter).not.toBe(mocks.submitter);
+    expect(services.requestSummarizer).not.toBe(mocks.summarizer);
+    expect([
+      services.myRequestService.remote,
+      services.requestSubmitter.remote,
+      services.requestSummarizer.remote,
+    ]).toEqual([true, true, true]);
+    expect([mocks.myRequest.remote, mocks.submitter.remote, mocks.summarizer.remote]).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 
   it('import 만으로는 fetch 도 로그인도 일어나지 않고, 처음 쓸 때 게스트 로그인한다', async () => {

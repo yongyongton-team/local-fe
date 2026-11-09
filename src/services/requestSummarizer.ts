@@ -13,5 +13,16 @@ export interface RequestSummary {
  * 입력 문장은 콘솔 등에 기록하지 않는다.
  */
 export interface RequestSummarizer {
-  summarize(text: string): Promise<RequestSummary>;
+  /**
+   * 서버가 정리하는 구현이면 true(업종 후보는 서버 업종 목록이고, 정리 결과 카드의 "예시" 표시를 숨긴다). 목은 false.
+   */
+  readonly remote: boolean;
+  /**
+   * context 의 neighborhoodId 는 선택한 동네의 도메인 id(API 는 숫자로 보낸다). signal 은 화면을 떠나거나 입력이 바뀔 때 취소하는 용도다.
+   * 실패하면 던진다(API 는 ApiError, AI 호출 실패는 AI_UNAVAILABLE).
+   */
+  summarize(
+    text: string,
+    context?: { neighborhoodId: string; signal?: AbortSignal },
+  ): Promise<RequestSummary>;
 }

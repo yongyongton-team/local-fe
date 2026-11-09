@@ -5,6 +5,8 @@ import type { MyRequest } from '@/types/domain';
  * 사장님 쪽 화면과 응답 작성 기능은 없다. 응답은 목 시드로만 존재한다.
  */
 export interface MyRequestService {
+  /** 서버 데이터이면 true("예시 데이터" 표시를 숨긴다). 목은 false. */
+  readonly remote: boolean;
   /** 가장 최근에 보낸 요청이 앞에 온다. 요청이 없으면 빈 배열 */
   listMyRequests(): Promise<MyRequest[]>;
 }
