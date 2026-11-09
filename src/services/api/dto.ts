@@ -45,3 +45,18 @@ export interface MeResponseDto {
 
 /** GET /health: 문자열 값의 객체(키는 명세에 없다) */
 export type HealthResponseDto = Record<string, unknown>;
+
+/** GET /dongs 의 항목 */
+export interface DongDto {
+  id?: Nullable<number>;
+  name?: Nullable<string>;
+  gu?: Nullable<string>;
+}
+
+/** GET /categories 의 항목 */
+export interface CategoryDto {
+  id?: Nullable<number>;
+  code?: Nullable<string>;
+  name?: Nullable<string>;
+  martCheck?: Nullable<boolean>;
+}

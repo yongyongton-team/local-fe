@@ -24,7 +24,7 @@ const failure = async (promise: Promise<unknown>): Promise<ApiError> => {
   throw new Error('거부되어야 해요');
 };
 
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => localStorage.clear());
 
 describe('토큰 부착과 지연 로그인', () => {
   it('토큰이 없으면 먼저 게스트 로그인하고, 그 토큰을 Authorization 헤더로 보낸다', async () => {
@@ -208,7 +208,7 @@ describe('401 처리', () => {
 });
 
 describe('세션 보관과 만료', () => {
-  it('새로고침 뒤에도(새 클라이언트) sessionStorage 의 토큰을 복원해 로그인하지 않는다', async () => {
+  it('새로고침·탭을 닫은 뒤에도(새 클라이언트) localStorage 의 토큰을 복원해 로그인하지 않는다', async () => {
     const { calls } = stubFetch((call) =>
       call.path === GUEST ? auth('tok-1') : jsonResponse(200, {}),
     );
@@ -251,7 +251,7 @@ describe('세션 보관과 만료', () => {
     expect(logins(calls)).toHaveLength(1);
   });
 
-  it('sessionStorage 가 막혀 있어도(예외) 메모리만으로 로그인 한 번에 여러 요청이 동작한다', async () => {
+  it('localStorage 가 막혀 있어도(예외) 메모리만으로 로그인 한 번에 여러 요청이 동작한다', async () => {
     const blocked = {
       getItem: () => {
         throw new DOMException('blocked', 'SecurityError');

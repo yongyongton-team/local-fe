@@ -1,4 +1,5 @@
 import { createApiAuthService } from './api/apiAuthService';
+import { createApiDemandService } from './api/apiDemandService';
 import { createApiMeService } from './api/apiMeService';
 import { resolveDataSource } from './api/config';
 import type { AuthService } from './authService';
@@ -35,8 +36,26 @@ export type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './rep
 export type { RequestSubmitter } from './requestSubmitter';
 export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
 
-/** 앱이 사용하는 수요 서비스. 실제 API 구현이 생기면 여기서 교체한다. */
-export const demandService: DemandService = mockDemandService;
+/*
+ * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 서비스의 구현을 고른다.
+ * 부분 연결 상태다: api 모드에서 실제 서버를 쓰는 것은 인증(authService), 내 정보·역할 저장(meService),
+ * 동네·업종 목록(demandService 의 listNeighborhoods·listCategories)뿐이다. 나머지 서비스와 메서드는
+ * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
+ */
+const dataSource = resolveDataSource(
+  import.meta.env.VITE_DATA_SOURCE,
+  // 잘못된 값은 mock 으로 처리하고, 개발 환경에서만 알린다.
+  import.meta.env.DEV
+    ? (value) =>
+        console.warn(
+          `VITE_DATA_SOURCE 값 "${value}" 은 지원하지 않아 mock 으로 처리해요(mock | api).`,
+        )
+    : undefined,
+);
+
+/** 앱이 사용하는 수요 서비스. api 모드에서는 동네·업종 목록만 실제 서버이고 나머지 메서드는 목이다. */
+export const demandService: DemandService =
+  dataSource === 'api' ? createApiDemandService(mockDemandService) : mockDemandService;
 
 /** 입력 문장 정리(키워드 규칙 목). 실제 AI 구현이 생기면 여기서 교체한다. */
 export const requestSummarizer: RequestSummarizer = mockRequestSummarizer;
@@ -60,24 +79,9 @@ export const founderService: FounderService = mockFounderService;
 export const reportDescriptionGenerator: ReportDescriptionGenerator =
   mockReportDescriptionGenerator;
 
-/*
- * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 두 서비스의 구현을 고른다.
- * 1단계에서 API 구현이 있는 서비스는 인증(authService)과 내 정보(meService)뿐이다.
- * 위의 나머지 서비스는 모드와 무관하게 항상 목 구현을 쓴다.
- * mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
- */
-const dataSource = resolveDataSource(
-  import.meta.env.VITE_DATA_SOURCE,
-  // 잘못된 값은 mock 으로 처리하고, 개발 환경에서만 알린다.
-  import.meta.env.DEV
-    ? (value) =>
-        console.warn(
-          `VITE_DATA_SOURCE 값 "${value}" 은 지원하지 않아 mock 으로 처리해요(mock | api).`,
-        )
-    : undefined,
-);
-
 export const authService: AuthService =
   dataSource === 'api' ? createApiAuthService() : mockAuthService;
 
 export const meService: MeService = dataSource === 'api' ? createApiMeService() : mockMeService;
+
+export { describeApiError } from './api/errorMessages';

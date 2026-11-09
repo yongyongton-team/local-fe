@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { demandService } from '@/services';
+import { demandService, describeApiError, meService } from '@/services';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
 import { Button } from '@/shared/ui/Button';
 import { CheckCircleIcon } from '@/shared/ui/icons';
@@ -35,14 +35,20 @@ export function RoleSelectForm() {
   const [role, setRole] = useState<UserRole | null>(selection.role);
   const [chosenNeighborhoodId, setChosenNeighborhoodId] = useState<string | null>(null);
   const [roleError, setRoleError] = useState(false);
+  // 역할·동네 저장(PUT /me) 진행 중 여부와 실패 안내. 서버 message 가 아니라 오류 종류·코드로 정한 문구다.
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
   const firstRadioRef = useRef<HTMLInputElement>(null);
 
   const list = neighborhoods.status === 'success' ? neighborhoods.data : [];
   // 사용자가 고르기 전에는 이전 선택, 없으면 목록의 첫 동네를 보여준다.
   const neighborhoodId = chosenNeighborhoodId ?? selection.neighborhood?.id ?? list[0]?.id ?? '';
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    // 저장하는 동안 다시 눌러도 요청이 한 번만 나간다(state 갱신보다 빠른 연타도 막으려고 ref 로 확인한다).
+    if (submittingRef.current) return;
     if (!role) {
       setRoleError(true);
       firstRadioRef.current?.focus();
@@ -50,6 +56,23 @@ export function RoleSelectForm() {
     }
     const neighborhood = list.find((n) => n.id === neighborhoodId);
     if (!neighborhood) return;
+
+    // mock 모드는 서버에 저장하지 않으므로 기다리지 않고 바로 이동한다(기존 동작 그대로, 네트워크 없음).
+    if (meService.savesRemotely) {
+      submittingRef.current = true;
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        // api 모드: PUT /me 로 역할과 동네를 저장한다.
+        await meService.saveSelection(role, neighborhood.id);
+      } catch (error) {
+        // 실패하면 이동하지 않고 안내를 보여준다.
+        setSubmitError(describeApiError(error));
+        submittingRef.current = false;
+        setSubmitting(false);
+        return;
+      }
+    }
     selection.select(role, neighborhood);
     const target = ROLE_OPTIONS.find((option) => option.role === role);
     if (target) void navigate(target.homePath);
@@ -73,6 +96,7 @@ export function RoleSelectForm() {
                 onChange={() => {
                   setRole(option.role);
                   setRoleError(false);
+                  setSubmitError(null);
                 }}
                 className="visually-hidden"
               />
@@ -116,7 +140,10 @@ export function RoleSelectForm() {
         <SelectBox
           id="neighborhood"
           value={neighborhoodId}
-          onChange={(event) => setChosenNeighborhoodId(event.target.value)}
+          onChange={(event) => {
+            setChosenNeighborhoodId(event.target.value);
+            setSubmitError(null);
+          }}
           disabled={neighborhoods.status !== 'success'}
         >
           {neighborhoods.status === 'success' ? (
@@ -139,7 +166,12 @@ export function RoleSelectForm() {
       </div>
 
       <div className={styles.submit}>
-        <Button type="submit" fullWidth>
+        {submitError && (
+          <p role="alert" className={styles.error}>
+            {submitError}
+          </p>
+        )}
+        <Button type="submit" fullWidth loading={submitting}>
           시작하기
         </Button>
       </div>

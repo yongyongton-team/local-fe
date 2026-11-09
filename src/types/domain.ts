@@ -27,6 +27,11 @@ export interface StoreCategory {
   objectPhrase: string;
   /** 사장님 동네 상세 제목의 업종 표기. 예: 과일 가게, 빵집 ("{동네} / {titleLabel}") */
   titleLabel: string;
+  /**
+   * 서버의 martCheck. 대형마트 거리 확인이 필요한 업종인지로 추정하지만 의미는 확정되지 않았다.
+   * 지금은 화면 동작에 쓰지 않는다. 목 업종에는 없다.
+   */
+  martCheck?: boolean;
 }
 
 /** 방문하기 좋은 시간대. 여러 개를 고를 수 있다. */
