@@ -71,7 +71,12 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   // 제출 실패 안내 문구(없으면 null). API 오류는 코드별 문구이고 서버 message 는 쓰지 않는다.
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { summary, isCurrent, error: summaryError } = useRequestSummary(text, neighborhood.id);
+  const {
+    summary,
+    isCurrent,
+    error: summaryError,
+    pending: summaryPending,
+  } = useRequestSummary(text, neighborhood.id);
   const choices = useRequestCategoryChoices();
 
   // 업종이 문장에서 정해지면 그 업종(A), 아니면 후보 칩에서 고른 업종(B)
@@ -141,6 +146,12 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
           />
         </div>
 
+        {/* 서버가 정리하는 동안(약 3초) 카드 자리에 보이는 안내. 기존 로딩 안내와 같은 방식이다. */}
+        {summaryPending && (
+          <div className={styles.summary}>
+            <p role="status">요청 내용을 정리하고 있어요.</p>
+          </div>
+        )}
         {showCard && (
           <div className={styles.summary}>
             <SummaryCard

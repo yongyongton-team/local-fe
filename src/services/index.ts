@@ -67,7 +67,10 @@ export const demandService: DemandService =
 /** 요청 작성(정리·생성)과 내 요청. api 모드에서만 만들고, 세 서비스가 조건 code 기록을 나눠 쓴다. */
 const apiRequestServices =
   dataSource === 'api'
-    ? createApiRequestServices({ listCategories: () => demandService.listCategories() })
+    ? createApiRequestServices({
+        listCategories: () => demandService.listCategories(),
+        listNeighborhoods: () => demandService.listNeighborhoods(),
+      })
     : null;
 
 /** 입력 문장 정리. api 모드는 POST /requests/parse(AI), mock 은 키워드 규칙. */

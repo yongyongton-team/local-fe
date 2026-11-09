@@ -6,9 +6,11 @@ import {
   buildRankMarkers,
   describeLocationRow,
   resolveCategoryId,
+  shouldShowRankMap,
 } from '@/features/founder-explore/locationRows';
 import { useCategories, useLocationRanks } from '@/features/founder-explore/useFounderExplore';
 import { describeLoadError } from '@/features/resident-map/loadErrorText';
+import { founderService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { IconButton } from '@/shared/ui/IconButton';
@@ -78,6 +80,7 @@ function Explorer({
   const items = ranks.status === 'success' ? ranks.data : [];
   // 위치 정보가 없는 순위(서버 순위에는 좌표가 없다)는 지도에 마커를 만들지 않는다. 목록은 그대로 보여준다.
   const markers = buildRankMarkers(items, categoryId);
+  const showMap = shouldShowRankMap(founderService.remote, markers.length);
 
   return (
     <>
@@ -131,19 +134,22 @@ function Explorer({
           ))}
       </section>
 
-      <div className={styles.map}>
-        {/* 업종에 따라 마커 집합이 달라지므로 바뀔 때마다 마커 전체가 보이게 다시 맞춘다. */}
-        <NaverMap
-          refitOnChange
-          label="입지 후보 지도(예시)"
-          markers={markers}
-          summary={
-            ranks.status === 'success' && category
-              ? buildMapSummary(category, markers.length)
-              : undefined
-          }
-        />
-      </div>
+      {/* 서버 순위에는 좌표가 없어 마커가 0개이면(API 모드) 빈 지도 카드를 숨기고 순위 목록만 보여준다. */}
+      {showMap && (
+        <div className={styles.map}>
+          {/* 업종에 따라 마커 집합이 달라지므로 바뀔 때마다 마커 전체가 보이게 다시 맞춘다. */}
+          <NaverMap
+            refitOnChange
+            label="입지 후보 지도(예시)"
+            markers={markers}
+            summary={
+              ranks.status === 'success' && category
+                ? buildMapSummary(category, markers.length)
+                : undefined
+            }
+          />
+        </div>
+      )}
     </>
   );
 }

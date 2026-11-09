@@ -111,25 +111,27 @@ describe('api 모드의 입지 찾기', () => {
 
     await app.screen.findByRole('link', { name: /1\. 구성동/ });
     const rows = rankSection(app).getAllByRole('link');
-    expect(rows).toHaveLength(3);
+    // 요청 0명 동네(영덕2동)는 숨기므로 2행이다.
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveAccessibleName(/1\. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2\.4km/);
-    expect(rows[2]).toHaveAccessibleName('3. 영덕2동, 요청 0명, 같은 업종 0곳');
+    expect(rows[1]).toHaveAccessibleName(/2\. 보정동, 요청 14명/);
     expect(rows[0]).toHaveAttribute('href', '/founder/areas/22/report?category=7');
 
     expect(rankingCalls(calls)).toHaveLength(1);
     expect(rankingCalls(calls)[0]?.path).toBe('/api/v1/founder/rankings?categoryId=7&limit=50');
   });
 
-  it('서버 순위에는 좌표가 없어 지도에 알약을 그리지 않고, 순위 목록은 정상이다', async () => {
+  it('서버 순위에는 좌표가 없어 마커가 0개이므로 지도 카드를 숨기고, 순위 목록은 정상이다', async () => {
     stubServer();
     const app = await loadApp('api');
     app.renderApp(['/founder']);
     await app.screen.findByRole('link', { name: /1\. 구성동/ });
-    expect(rankSection(app).getAllByRole('link')).toHaveLength(3);
+    expect(rankSection(app).getAllByRole('link')).toHaveLength(2);
 
-    const map = app.screen.getByRole('region', { name: '입지 후보 지도(예시)' });
-    expect(app.within(map).queryAllByRole('listitem')).toHaveLength(0);
-    expect(app.within(map).getByText(/기준 동네 0곳 표시 중/)).toBeInTheDocument();
+    expect(
+      app.screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),
+    ).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/기준 동네 .*곳 표시 중/)).not.toBeInTheDocument();
   });
 
   it('업종 38개를 모두 선택지로 보여준다', async () => {

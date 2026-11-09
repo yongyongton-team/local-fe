@@ -21,13 +21,16 @@ const MANUAL_CHOICE: RequestSummary = { categoryId: null, conditions: [] };
  * 정리가 실패하면(예: AI_UNAVAILABLE) 업종 없음 결과로 대신해 업종 칩으로 직접 고르게 하고, 실패 이유 문구를 error 로 준다.
  *
  * @param neighborhoodId 정리 요청에 쓸 동네 id(서버가 동네별로 정리한다). 없으면 context 없이 정리를 부른다.
- * @returns summary 마지막 정리 결과(입력이 비면 null), isCurrent 그 결과가 현재 문장에 대한 것인지, error 실패 안내(없으면 null)
+ * @returns summary 마지막 정리 결과(입력이 비면 null), isCurrent 그 결과가 현재 문장에 대한 것인지, error 실패 안내(없으면 null),
+ *          pending 응답을 기다리는 중인지
  */
 export function useRequestSummary(text: string, neighborhoodId?: string) {
   const trimmed = text.trim();
   const blank = isBlank(text);
   const [result, setResult] = useState<Result | null>(null);
   const [wasBlank, setWasBlank] = useState(true);
+  // 호출이 시작된 문장. 응답이 올 때까지 "정리하는 중"을 보여주는 근거다(서버가 정리하는 구현에서만 쓴다).
+  const [pendingText, setPendingText] = useState<string | null>(null);
 
   // 입력이 비면 이전 결과를 비운다(렌더 중 파생 상태 조정).
   if (blank !== wasBlank) {
@@ -40,16 +43,21 @@ export function useRequestSummary(text: string, neighborhoodId?: string) {
     let stale = false;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      const pending =
+      if (requestSummarizer.remote) setPendingText(trimmed);
+      const call =
         neighborhoodId === undefined
           ? requestSummarizer.summarize(trimmed)
           : requestSummarizer.summarize(trimmed, { neighborhoodId, signal: controller.signal });
-      pending.then(
+      call.then(
         (summary) => {
-          if (!stale) setResult({ text: trimmed, summary, error: null });
+          if (!stale) {
+            setPendingText(null);
+            setResult({ text: trimmed, summary, error: null });
+          }
         },
         (error: unknown) => {
           if (!stale) {
+            setPendingText(null);
             setResult({
               text: trimmed,
               summary: MANUAL_CHOICE,
@@ -70,6 +78,8 @@ export function useRequestSummary(text: string, neighborhoodId?: string) {
     summary: blank ? null : (result?.summary ?? null),
     isCurrent: !blank && result?.text === trimmed,
     error: blank ? null : (result?.error ?? null),
+    /** 호출을 시작했고 응답을 기다리는 중인지(입력 지연 400ms 동안은 아니다). 목 구현에서는 항상 false. */
+    pending: !blank && pendingText === trimmed,
   };
 }
 

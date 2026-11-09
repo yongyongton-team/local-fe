@@ -77,7 +77,8 @@ describe('mapRankings', () => {
   it('숫자 id 를 문자열로 바꾸고 서버 순서·순위를 그대로 둔다(요청 수로 다시 정렬하지 않는다)', () => {
     const shuffled = [ITEMS[2]!, ITEMS[0]!, ITEMS[1]!].map((item, i) => ({ ...item, rank: i + 1 }));
 
-    const ranks = mapRankings({ items: shuffled });
+    // 요청 0명 동네를 숨기지 않는 모드(false)로 서버 순서·순위 보존을 확인한다.
+    const ranks = mapRankings({ items: shuffled }, false);
 
     expect(ranks.map((r) => [r.rank, r.neighborhood.id, r.neighborhood.name])).toEqual([
       [1, '16', '영덕2동'],
@@ -93,7 +94,7 @@ describe('mapRankings', () => {
   });
 
   it('nearestMartKm 가 없으면 거리를 비우고, 서버에 없는 좌표·위치를 만들어 넣지 않는다', () => {
-    const [first, , third] = mapRankings({ items: ITEMS });
+    const [first, , third] = mapRankings({ items: ITEMS }, false);
 
     expect(third).not.toHaveProperty('nearestHypermarketKm');
     for (const rank of [first, third]) {
@@ -108,31 +109,34 @@ describe('mapRankings', () => {
   });
 
   it('서버가 준 순위 값(동점 등으로 연속이 아닐 수 있다)을 그대로 쓴다', () => {
-    const ranks = mapRankings({
-      items: [
-        { ...ITEMS[0]!, rank: 1 },
-        { ...ITEMS[1]!, rank: 1 },
-        { ...ITEMS[2]!, rank: 3 },
-      ],
-    });
+    const ranks = mapRankings(
+      {
+        items: [
+          { ...ITEMS[0]!, rank: 1 },
+          { ...ITEMS[1]!, rank: 1 },
+          { ...ITEMS[2]!, rank: 3 },
+        ],
+      },
+      false,
+    );
 
     expect(ranks.map((r) => r.rank)).toEqual([1, 1, 3]);
   });
 
   it('rank 가 없으면 서버 순서의 번호를 쓴다', () => {
-    const ranks = mapRankings({ items: ITEMS.map(({ rank, ...rest }) => (void rank, rest)) });
+    const ranks = mapRankings(
+      { items: ITEMS.map(({ rank, ...rest }) => (void rank, rest)) },
+      false,
+    );
 
     expect(ranks.map((r) => r.rank)).toEqual([1, 2, 3]);
   });
 
-  it('요청 0명 동네는 기본 규칙(HIDE_ZERO_REQUEST_RANKS)대로 그대로 두고, 규칙을 켜면 뺀다', () => {
-    expect(HIDE_ZERO_REQUEST_RANKS).toBe(false);
-    expect(mapRankings({ items: ITEMS })).toHaveLength(3);
+  it('요청 0명 동네는 기본 규칙(HIDE_ZERO_REQUEST_RANKS = true)대로 숨기고, 규칙을 끄면 서버 목록 그대로다', () => {
+    expect(HIDE_ZERO_REQUEST_RANKS).toBe(true);
+    expect(mapRankings({ items: ITEMS }).map((r) => r.neighborhood.id)).toEqual(['22', '28']);
 
-    const hidden = mapRankings({ items: ITEMS }, true);
-
-    expect(hidden.map((r) => r.neighborhood.id)).toEqual(['22', '28']);
-    expect(hidden.map((r) => r.rank)).toEqual([1, 2]);
+    expect(mapRankings({ items: ITEMS }, false)).toHaveLength(3);
   });
 
   it('id 가 올바르지 않으면 INVALID_ID, 이름·개수가 없거나 items 가 없으면 parse 오류다', () => {
@@ -244,7 +248,8 @@ describe('createApiFounderService', () => {
 
     const ranks = await newServices().founderService.listLocationRanks('7');
 
-    expect(ranks).toHaveLength(3);
+    // 요청 0명 동네(영덕2동)는 숨긴다.
+    expect(ranks).toHaveLength(2);
     const call = calls.find((c) => c.path.startsWith('/api/v1/founder/rankings'));
     expect(call?.path).toBe(`/api/v1/founder/rankings?categoryId=7&limit=${RANKING_LIMIT}`);
     expect(call?.method).toBe('GET');

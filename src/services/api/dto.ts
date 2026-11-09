@@ -83,11 +83,22 @@ export interface MapStoreDto {
 }
 
 /**
- * GET /dongs/{dongId}/map. 마커로 쓰는 것은 stores 뿐이다.
- * requests·gaps 는 좌표가 없고(명세와 실제 응답 모두), marts 는 쓰지 않는다.
+ * GET /dongs/{dongId}/map. 가게 핀은 stores 좌표, 요청·부족 가게 알약은 requests·gaps 를 dong.center 에 놓는다.
+ * requests·gaps 항목에는 좌표가 없다. dong.center 는 OpenAPI 에 없지만 실제 응답에 있다({lat, lon}). marts 는 쓰지 않는다.
+ * gaps 항목의 모양({categoryId, name})은 명세 기준이다(실서버에서 항목을 본 것은 이번이 처음이고 명세와 같았다).
  */
 export interface DongMapDto {
+  dong?: Nullable<{
+    id?: Nullable<number>;
+    center?: Nullable<{ lat?: Nullable<number>; lon?: Nullable<number> }>;
+  }>;
   stores?: Nullable<MapStoreDto[]>;
+  /** [{categoryId, name, count}] 주민 요청 인원 */
+  requests?: Nullable<
+    { categoryId?: Nullable<number>; name?: Nullable<string>; count?: Nullable<number> }[]
+  >;
+  /** [{categoryId, name}] 이 동네에 없는 업종 */
+  gaps?: Nullable<{ categoryId?: Nullable<number>; name?: Nullable<string> }[]>;
 }
 
 /** 업종·동네 등의 {id, name} */

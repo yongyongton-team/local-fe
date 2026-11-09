@@ -14,6 +14,9 @@ export type GeoMarker = MapMarker & { lat: number; lng: number };
 export const hasCoordinates = (marker: MapMarker): marker is GeoMarker =>
   Number.isFinite(marker.lat) && Number.isFinite(marker.lng);
 
+/** [임의] 알약(요청·부족 가게) 마커의 z-index. 가게 핀(0)보다 위에 둔다. */
+const PILL_Z_INDEX = 10;
+
 /** [임의] 마커가 하나뿐일 때의 고정 줌 */
 export const SINGLE_MARKER_ZOOM = 16;
 /** [임의] 마커 전체가 보이게 맞출 때의 여백(px). 알약이 가장자리에서 잘리지 않게 한다. */
@@ -75,6 +78,8 @@ export function syncMarkers(
         map,
         position: new naver.maps.LatLng(marker.lat, marker.lng),
         clickable: false,
+        // 가게 핀이 수백 개인 동네에서도 알약(요청·부족 가게)이 핀에 가려지지 않게 알약을 위에 그린다.
+        zIndex: marker.kind === 'existing' ? 0 : PILL_Z_INDEX,
         icon: {
           content: buildMarkerElement(marker),
           // 자리표시자 지도와 같이 요소의 왼쪽 위가 좌표다. 자리표시자에서 겹치지 않게 잡은 배치 관계가

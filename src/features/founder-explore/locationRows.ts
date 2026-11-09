@@ -72,3 +72,11 @@ export function resolveCategoryId(
 ): string {
   return param !== null && categories.some((c) => c.id === param) ? param : defaultId;
 }
+
+/**
+ * 입지 찾기의 지도 카드를 보여줄지. 서버가 준 순위(API 모드)에는 좌표가 없어서 마커가 0개이면 빈 지도 카드를 숨긴다.
+ * 서버가 중심 좌표를 주기 시작해 마커가 생기면 자동으로 다시 보인다. 목 모드는 항상 보인다.
+ */
+export function shouldShowRankMap(remote: boolean, markerCount: number): boolean {
+  return !remote || markerCount > 0;
+}

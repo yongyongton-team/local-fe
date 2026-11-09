@@ -62,6 +62,11 @@ describe('useRequestSummary 의 동네 id·취소·실패 처리', () => {
 
     rerender({ text: '  ' });
 
-    expect(result.current).toEqual({ summary: null, isCurrent: false, error: null });
+    expect(result.current).toEqual({
+      summary: null,
+      isCurrent: false,
+      error: null,
+      pending: false,
+    });
   });
 });
