@@ -1,4 +1,10 @@
+import { createApiAuthService } from './api/apiAuthService';
+import { createApiMeService } from './api/apiMeService';
+import { resolveDataSource } from './api/config';
+import type { AuthService } from './authService';
 import type { DemandService } from './demandService';
+import { mockAuthService } from './mockAuthService';
+import { mockMeService } from './mockMeService';
 import { mockAreaDescriptionGenerator } from './mockAreaDescriptionGenerator';
 import { mockDemandService } from './mockDemandService';
 import { mockFounderService } from './mockFounderService';
@@ -9,6 +15,7 @@ import { mockRequestSubmitter } from './mockRequestSubmitter';
 import { mockRequestSummarizer } from './mockRequestSummarizer';
 import type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './reportDescription';
 import type { FounderService } from './founderService';
+import type { MeService } from './meService';
 import type { MerchantService } from './merchantService';
 import type { MyRequestService } from './myRequestService';
 import type { RequestSubmitter } from './requestSubmitter';
@@ -52,3 +59,25 @@ export const founderService: FounderService = mockFounderService;
 /** 창업자 동네 리포트 "왜 이 동네인가요?" 문장 생성(템플릿 목). 실제 AI 구현이 생기면 여기서 교체한다. */
 export const reportDescriptionGenerator: ReportDescriptionGenerator =
   mockReportDescriptionGenerator;
+
+/*
+ * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 두 서비스의 구현을 고른다.
+ * 1단계에서 API 구현이 있는 서비스는 인증(authService)과 내 정보(meService)뿐이다.
+ * 위의 나머지 서비스는 모드와 무관하게 항상 목 구현을 쓴다.
+ * mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
+ */
+const dataSource = resolveDataSource(
+  import.meta.env.VITE_DATA_SOURCE,
+  // 잘못된 값은 mock 으로 처리하고, 개발 환경에서만 알린다.
+  import.meta.env.DEV
+    ? (value) =>
+        console.warn(
+          `VITE_DATA_SOURCE 값 "${value}" 은 지원하지 않아 mock 으로 처리해요(mock | api).`,
+        )
+    : undefined,
+);
+
+export const authService: AuthService =
+  dataSource === 'api' ? createApiAuthService() : mockAuthService;
+
+export const meService: MeService = dataSource === 'api' ? createApiMeService() : mockMeService;
