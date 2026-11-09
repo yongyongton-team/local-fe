@@ -4,6 +4,7 @@ import type { MyRequest } from '@/types/domain';
 import type { MyRequestService } from './myRequestService';
 
 export const mockMyRequestService: MyRequestService = {
+  remote: false,
   async listMyRequests() {
     const db = getDb();
     const items: MyRequest[] = [];

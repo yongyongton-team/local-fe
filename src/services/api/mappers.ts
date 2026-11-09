@@ -3,24 +3,35 @@ import type {
   MapMarker,
   Me,
   MeShop,
+  MyRequest,
   Neighborhood,
   NeighborhoodReport,
+  NewStoreRequest,
   StoreCategory,
+  StoreRequest,
   UserRole,
+  VisitFrequency,
+  VisitTime,
 } from '@/types/domain';
+import type { RequestSummary } from '../requestSummarizer';
 import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
 import type {
   CategoryDto,
+  CreateRequestBody,
+  CreateResponseDto,
   DongDto,
   DongMapDto,
   GapDto,
   HealthResponseDto,
   MeResponseDto,
+  MyRequestDto,
+  ParseResponseDto,
   ShopViewDto,
 } from './dto';
 import { isNoStoreGap } from './gapStatus';
-import { toDomainId } from './ids';
+import { toDomainId, toServerId } from './ids';
+import { FREQUENCY_CODES, TIME_SLOT_CODES, toVisitFrequency, toVisitTime } from './requestCodes';
 
 const parseError = (message: string) => new ApiError({ kind: 'parse', message });
 
@@ -250,4 +261,123 @@ export function mapMapMarkers(dto: DongMapDto | undefined): MapMarker[] {
     lat,
     lng,
   }));
+}
+
+/** 서버 id 가 양의 정수면 문자열 id, 아니면 undefined(예외를 던지지 않는다). */
+function safeDomainId(id: unknown): string | undefined {
+  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? String(id) : undefined;
+}
+
+/** 업종 목록에서 id 로 찾고, 목록에 없으면 서버가 준 이름으로 대체한다(이름도 없으면 빈 이름). */
+function categoryOf(id: string, name: string, categories: readonly StoreCategory[]): StoreCategory {
+  return categories.find((c) => c.id === id) ?? { id, name, ...labelsFor('', name) };
+}
+
+/**
+ * POST /requests/parse 응답 → 도메인 RequestSummary.
+ * - categoryId: 응답의 업종 id 를 문자열로 바꾸되, 업종 목록에 없거나 id 가 올바르지 않으면 null(선택 없음)이다.
+ * - conditions: 서버가 준 label 을 쓴다(label 이 없으면 code). label → code 쌍을 conditionCodes 에 기록해
+ *   요청 생성 때 code 로 되돌린다(서버 enum 이라 화면 문구와 따로 관리하지 않는다).
+ * 응답이 객체가 아니면 parse 오류.
+ */
+export function mapParseResponse(
+  dto: ParseResponseDto | undefined,
+  categories: readonly StoreCategory[],
+  conditionCodes: Map<string, string>,
+): RequestSummary {
+  if (!isObject(dto)) throw parseError('POST /requests/parse 응답이 비어 있어요.');
+  const id = isObject(dto.category) ? safeDomainId(dto.category.id) : undefined;
+  const categoryId = id !== undefined && categories.some((c) => c.id === id) ? id : null;
+
+  const conditions: string[] = [];
+  for (const item of Array.isArray(dto.conditions) ? dto.conditions : []) {
+    if (!isObject(item)) continue;
+    const code = asString(item.code);
+    const label = asString(item.label) || code;
+    if (code === '' || label === '') continue;
+    conditionCodes.set(label, code);
+    conditions.push(label);
+  }
+  return { categoryId, conditions };
+}
+
+/**
+ * 도메인 NewStoreRequest → POST /requests 본문. 동네·업종 id 는 숫자로 바꾼다(숫자가 아니면 INVALID_ID).
+ * - detail → text, visitTimes → timeSlots, visitFrequency → frequency(표: requestCodes.ts).
+ * - conditions(라벨)는 parse 때 기록한 code 로 바꾸고, 기록에 없는 라벨은 보내지 않는다.
+ * - 서버가 받지 않는 도메인 필드는 없다. 시간대·빈도가 없으면 그 필드를 비워 보낸다(서버가 필수로 거절한다).
+ */
+export function buildCreateRequestBody(
+  input: NewStoreRequest,
+  conditionCodes: ReadonlyMap<string, string>,
+): CreateRequestBody {
+  return {
+    dongId: toServerId(input.neighborhoodId),
+    categoryId: toServerId(input.categoryId),
+    text: input.detail,
+    conditions: input.conditions.flatMap((label) => conditionCodes.get(label) ?? []),
+    timeSlots: input.visitTimes.map((time) => TIME_SLOT_CODES[time]),
+    ...(input.visitFrequency !== undefined && { frequency: FREQUENCY_CODES[input.visitFrequency] }),
+  };
+}
+
+/** POST /requests 201 응답 → 저장된 도메인 StoreRequest. 응답의 request.id 가 없으면 parse 오류(만들어졌는지 알 수 없다). */
+export function mapCreateResponse(
+  dto: CreateResponseDto | undefined,
+  input: NewStoreRequest,
+): StoreRequest {
+  const request = isObject(dto) && isObject(dto.request) ? dto.request : null;
+  const id = request ? safeDomainId(request.id) : undefined;
+  if (id === undefined) throw parseError('POST /requests 응답에 요청 id 가 없어요.');
+  return { ...input, id };
+}
+
+/** ISO 8601 문자열 → Date. 올바르지 않으면 undefined */
+export function parseIsoDate(value: unknown): Date | undefined {
+  if (typeof value !== 'string' || value === '') return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/**
+ * GET /me/requests 응답 → 도메인 MyRequest[]. 서버가 준 순서를 그대로 둔다.
+ * 서버에 없는 값은 만들지 않고 비워 둔다: 입력 문장(detail)은 빈 문자열, conditions 는 빈 배열, 동네의 구(district)는 빈 문자열,
+ * 사장님 응답(response)은 없음. 인원은 count(없으면 0), 시각은 ISO 8601 로 파싱한 createdAt(올바르지 않으면 없음).
+ * 알 수 없는 시간대·빈도 값은 건너뛴다. id 가 양의 정수가 아닌 항목이 있으면 INVALID_ID 오류, 응답이 배열이 아니면 parse 오류.
+ */
+export function mapMyRequests(
+  dtos: MyRequestDto[] | undefined,
+  categories: readonly StoreCategory[],
+): MyRequest[] {
+  if (!Array.isArray(dtos)) throw parseError('GET /me/requests 응답이 배열이 아니에요.');
+  return dtos.map((dto) => {
+    const item: MyRequestDto = isObject(dto) ? dto : {};
+    const dong = isObject(item.dong) ? item.dong : {};
+    const category = isObject(item.category) ? item.category : {};
+    const id = toDomainId(item.id);
+    const neighborhoodId = toDomainId(dong.id);
+    const categoryId = toDomainId(category.id);
+
+    const visitTimes = (Array.isArray(item.timeSlots) ? item.timeSlots : []).flatMap(
+      (code) => toVisitTime(code) ?? [],
+    ) satisfies VisitTime[];
+    const visitFrequency: VisitFrequency | undefined = toVisitFrequency(item.frequency);
+    const createdAt = parseIsoDate(item.createdAt);
+
+    return {
+      request: {
+        id,
+        neighborhoodId,
+        categoryId,
+        detail: '',
+        conditions: [],
+        visitTimes,
+        ...(visitFrequency !== undefined && { visitFrequency }),
+      },
+      neighborhood: { id: neighborhoodId, district: '', name: asString(dong.name) },
+      category: categoryOf(categoryId, asString(category.name), categories),
+      requestCount: Math.max(0, asNumber(item.count) ?? 0),
+      ...(createdAt !== undefined && { createdAt }),
+    };
+  });
 }

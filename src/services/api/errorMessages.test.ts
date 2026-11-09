@@ -59,9 +59,17 @@ describe('describeApiError', () => {
     expect(describeApiError(http(403, 'FORBIDDEN', '서버 원문'))).toBe(expected);
   });
 
+  it('ALREADY_REQUESTED 와 AI_UNAVAILABLE 은 코드별 문구이고 서버 message 는 쓰지 않는다', () => {
+    const already = '이 동네에 같은 업종을 이미 요청했어요. 내 요청에서 확인해 보세요.';
+    const ai = '요청 내용을 정리하지 못했어요. 업종을 직접 골라 주세요.';
+    expect(describeApiError(http(409, 'ALREADY_REQUESTED', '서버 원문'))).toBe(already);
+    expect(describeApiError(http(502, 'AI_UNAVAILABLE', '서버 원문'))).toBe(ai);
+    expect(ERROR_MESSAGES_BY_CODE.ALREADY_REQUESTED).toBe(already);
+    expect(ERROR_MESSAGES_BY_CODE.AI_UNAVAILABLE).toBe(ai);
+  });
+
   it('문구가 아직 없는 코드는 마지막 문구다', () => {
     for (const [status, code] of [
-      [409, 'ALREADY_REQUESTED'],
       [409, 'ALREADY_ORDERED'],
       [409, 'OFFER_CLOSED'],
     ] as const) {
@@ -75,9 +83,14 @@ describe('describeApiError', () => {
     expect(describeApiError(http(422, 'TEAPOT'))).toBe(FALLBACK_ERROR_MESSAGE);
   });
 
-  it('5xx 는 코드와 무관하게 마지막 문구다', () => {
+  it('5xx 는 마지막 문구다(502 AI_UNAVAILABLE 만 예외로 코드별 문구)', () => {
     expect(describeApiError(http(500, 'VALIDATION_ERROR'))).toBe(FALLBACK_ERROR_MESSAGE);
-    expect(describeApiError(http(502, 'AI_UNAVAILABLE'))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(502, 'AI_UNAVAILABLE'))).toBe(
+      ERROR_MESSAGES_BY_CODE.AI_UNAVAILABLE,
+    );
+    expect(describeApiError(http(502, 'SOMETHING_ELSE'))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(502))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(500, 'ALREADY_REQUESTED'))).toBe(FALLBACK_ERROR_MESSAGE);
     expect(describeApiError(http(503))).toBe(FALLBACK_ERROR_MESSAGE);
     expect(describeApiError(http(500, 'FORBIDDEN'))).toBe(FALLBACK_ERROR_MESSAGE);
   });

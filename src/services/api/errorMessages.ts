@@ -11,7 +11,7 @@ const TIMEOUT_MESSAGE = '응답이 늦어지고 있어요. 잠시 후 다시 시
 /**
  * 오류 코드별 화면 문구. 서버 message 는 쓰지 않고 이 표로만 정한다.
  * 문구는 그 코드를 쓰는 화면(단계)을 연동할 때 이 표에 추가한다. 표에 없는 코드는 마지막 문구로 대체된다.
- * 아직 문구가 없는 코드: ALREADY_REQUESTED, ALREADY_ORDERED, OFFER_CLOSED, AI_UNAVAILABLE.
+ * 아직 문구가 없는 코드: ALREADY_ORDERED, OFFER_CLOSED.
  */
 export const ERROR_MESSAGES_BY_CODE: Partial<Record<KnownErrorCode, string>> = {
   VALIDATION_ERROR: '선택한 정보를 확인하지 못했어요. 역할과 동네를 다시 선택해 주세요.',
@@ -20,7 +20,14 @@ export const ERROR_MESSAGES_BY_CODE: Partial<Record<KnownErrorCode, string>> = {
   UNAUTHORIZED: '로그인 상태를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.',
   // 다른 역할 전용 API(예: 역할이 없거나 사장님인 계정의 주민 조회)
   FORBIDDEN: '이 화면을 볼 수 있는 역할이 아니에요. 처음 화면에서 역할을 다시 선택해 주세요.',
+  // 같은 동네·같은 업종을 이미 요청한 경우(요청 생성)
+  ALREADY_REQUESTED: '이 동네에 같은 업종을 이미 요청했어요. 내 요청에서 확인해 보세요.',
+  // AI 호출 실패(요청 정리). 화면은 업종 칩으로 직접 고르게 한다.
+  AI_UNAVAILABLE: '요청 내용을 정리하지 못했어요. 업종을 직접 골라 주세요.',
 };
+
+/** 5xx 이어도 코드별 문구를 보여주는 코드. AI_UNAVAILABLE 은 502 로 오지만 화면이 업종 직접 선택으로 이어가야 한다. */
+const CODES_SHOWN_ON_5XX: readonly string[] = ['AI_UNAVAILABLE'];
 
 /** 오류 본문에 code 가 없을 때(게이트웨이 HTML 등) 상태 코드로 대신 고르는 코드 */
 const CODE_BY_STATUS: Readonly<Record<number, KnownErrorCode>> = {
@@ -32,7 +39,7 @@ const CODE_BY_STATUS: Readonly<Record<number, KnownErrorCode>> = {
 /**
  * ApiError 를 화면에 보여줄 한국어 문구로 바꾼다. 서버가 보낸 message 는 보존하지도 쓰지도 않는다.
  * - network, timeout 은 종류로 구분한다.
- * - 5xx 는 코드와 무관하게 마지막 문구다.
+ * - 5xx 는 마지막 문구다(AI_UNAVAILABLE 만 예외로 코드별 문구).
  * - http 는 code(없으면 상태 코드)로 표에서 찾고, 표에 없으면 마지막 문구다.
  * - ApiError 가 아닌 오류와 parse 오류도 마지막 문구다.
  */
@@ -41,7 +48,13 @@ export function describeApiError(error: unknown): string {
   if (error.kind === 'network') return NETWORK_MESSAGE;
   if (error.kind === 'timeout') return TIMEOUT_MESSAGE;
   if (error.kind !== 'http') return FALLBACK_ERROR_MESSAGE;
-  if (error.status !== undefined && error.status >= 500) return FALLBACK_ERROR_MESSAGE;
+  if (
+    error.status !== undefined &&
+    error.status >= 500 &&
+    !(error.code !== undefined && CODES_SHOWN_ON_5XX.includes(error.code))
+  ) {
+    return FALLBACK_ERROR_MESSAGE;
+  }
 
   const code = isKnownErrorCode(error.code)
     ? error.code

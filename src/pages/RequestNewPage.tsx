@@ -14,10 +14,11 @@ import {
   isBlank,
 } from '@/features/store-request/requestForm';
 import { SummaryCard } from '@/features/store-request/SummaryCard';
+import { useRequestCategoryChoices } from '@/features/store-request/useRequestCategoryChoices';
 import { useRequestSummary } from '@/features/store-request/useRequestSummary';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
-import { requestSubmitter } from '@/services';
+import { describeApiError, isApiError, requestSubmitter, requestSummarizer } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
@@ -56,6 +57,9 @@ export function RequestNewPage() {
 
 const SUBMIT_HINT_ID = 'request-submit-hint';
 
+/** 목 모드(ApiError 가 아닌 오류)의 기존 제출 실패 문구 */
+const SUBMIT_FAILED_TEXT = '요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.';
+
 function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const navigate = useNavigate();
 
@@ -64,21 +68,31 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const [visitTimes, setVisitTimes] = useState<VisitTime[]>([]);
   const [visitFrequency, setVisitFrequency] = useState<VisitFrequency | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitFailed, setSubmitFailed] = useState(false);
+  // 제출 실패 안내 문구(없으면 null). API 오류는 코드별 문구이고 서버 message 는 쓰지 않는다.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { summary, isCurrent } = useRequestSummary(text);
+  const { summary, isCurrent, error: summaryError } = useRequestSummary(text, neighborhood.id);
+  const choices = useRequestCategoryChoices();
 
   // 업종이 문장에서 정해지면 그 업종(A), 아니면 후보 칩에서 고른 업종(B)
   const recognizedCategoryId = summary?.categoryId ?? null;
   const categoryId = recognizedCategoryId ?? chosenCategoryId;
-  const categoryLabel = getCategoryLabel(categoryId);
+  const categoryLabel = getCategoryLabel(categoryId, choices);
   const showCard = summary !== null;
   const needsChoice = showCard && recognizedCategoryId === null;
-  const canSubmit = canSubmitRequest({ text, categoryId, summaryIsCurrent: isCurrent });
+  // 서버(API 모드)는 시간대 1개 이상과 빈도를 필수로 받는다. 목 모드는 선택 사항이다.
+  const visitInfoComplete =
+    !requestSubmitter.remote || (visitTimes.length > 0 && visitFrequency !== null);
+  const canSubmit = canSubmitRequest({
+    text,
+    categoryId,
+    summaryIsCurrent: isCurrent,
+    visitInfoComplete,
+  });
 
   function handleTextChange(value: string) {
     setText(value);
-    setSubmitFailed(false);
+    setSubmitError(null);
     // 입력이 비면 카드가 사라지므로 고른 업종도 함께 비운다.
     if (isBlank(value)) setChosenCategoryId(null);
   }
@@ -88,7 +102,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
     if (!canSubmit || submitting || categoryId === null) return;
 
     setSubmitting(true);
-    setSubmitFailed(false);
+    setSubmitError(null);
     try {
       await requestSubmitter.submit({
         neighborhoodId: neighborhood.id,
@@ -98,10 +112,10 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
         visitTimes,
         visitFrequency: visitFrequency ?? undefined,
       });
-    } catch {
+    } catch (error) {
       // 입력은 그대로 유지하고 오류 문구만 보여준다. 입력 문장은 기록하지 않는다.
       setSubmitting(false);
-      setSubmitFailed(true);
+      setSubmitError(isApiError(error) ? describeApiError(error) : SUBMIT_FAILED_TEXT);
       return;
     }
     void navigate(paths.residentRequests);
@@ -135,6 +149,9 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
               needsChoice={needsChoice}
               chosenCategoryId={chosenCategoryId}
               onChooseCategory={setChosenCategoryId}
+              choices={choices}
+              remote={requestSummarizer.remote}
+              error={summaryError}
             />
           </div>
         )}
@@ -168,9 +185,9 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
 
         {/* 내용이 짧으면 하단 내비 바로 위에 붙고, 길면 스크롤 끝에 놓인다. */}
         <div className={styles.footer}>
-          {submitFailed && (
+          {submitError && (
             <p role="alert" className={styles.error}>
-              요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.
+              {submitError}
             </p>
           )}
           <Button
@@ -184,7 +201,9 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
           </Button>
           {!canSubmit && (
             <span id={SUBMIT_HINT_ID} className="visually-hidden">
-              문장을 입력하고 업종이 정해지면 보낼 수 있어요
+              {requestSubmitter.remote
+                ? '문장을 입력하고 업종, 시간대, 빈도를 고르면 보낼 수 있어요'
+                : '문장을 입력하고 업종이 정해지면 보낼 수 있어요'}
             </span>
           )}
         </div>

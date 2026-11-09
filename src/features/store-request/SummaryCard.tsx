@@ -1,5 +1,4 @@
 import { ChipFieldset } from './ChipFieldset';
-import { REQUEST_CATEGORY_CHOICES } from './constants';
 import styles from './SummaryCard.module.css';
 
 interface SummaryCardProps {
@@ -10,6 +9,12 @@ interface SummaryCardProps {
   needsChoice: boolean;
   chosenCategoryId: string | null;
   onChooseCategory: (categoryId: string) => void;
+  /** 업종 후보 칩의 선택지 */
+  choices: readonly { value: string; label: string }[];
+  /** true 이면 목 구현의 "예시 정리" 표시를 숨긴다(서버가 정리한 결과). */
+  remote?: boolean;
+  /** 정리에 실패해 직접 고르게 하는 경우의 안내 문구 */
+  error?: string | null;
 }
 
 /**
@@ -23,11 +28,14 @@ export function SummaryCard({
   needsChoice,
   chosenCategoryId,
   onChooseCategory,
+  choices,
+  remote = false,
+  error = null,
 }: SummaryCardProps) {
   return (
     <section className={styles.card} aria-label="요청 정리 결과">
       {/* 디자인에 없는 임시 표시. AI 연동 후 제거한다. */}
-      <p className={styles.sample}>예시 정리 · AI 연동 예정</p>
+      {!remote && <p className={styles.sample}>예시 정리 · AI 연동 예정</p>}
 
       <div className={styles.head}>
         <span className={styles.badge} aria-hidden="true">
@@ -55,13 +63,18 @@ export function SummaryCard({
             legend="업종 후보"
             legendHidden
             mode="radio"
-            options={REQUEST_CATEGORY_CHOICES}
+            options={choices}
             value={chosenCategoryId}
             onChange={onChooseCategory}
           />
         </div>
       )}
 
+      {error && (
+        <p className={styles.notice} role="status">
+          {error}
+        </p>
+      )}
       <p className={styles.notice}>
         {needsChoice ? '가장 가까운 업종을 선택해 주세요!' : '문장을 바꾸면 다시 정리해요!'}
       </p>

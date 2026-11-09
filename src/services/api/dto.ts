@@ -89,3 +89,62 @@ export interface MapStoreDto {
 export interface DongMapDto {
   stores?: Nullable<MapStoreDto[]>;
 }
+
+/** 업종·동네 등의 {id, name} */
+export interface IdNameDto {
+  id?: Nullable<number>;
+  name?: Nullable<string>;
+}
+
+/** POST /requests/parse 의 조건. code 는 서버 enum(LATE_OPEN 등), label 은 서버가 주는 표시 문구 */
+export interface ConditionViewDto {
+  code?: Nullable<string>;
+  label?: Nullable<string>;
+}
+
+/** POST /requests/parse */
+export interface ParseResponseDto {
+  category?: Nullable<IdNameDto>;
+  conditions?: Nullable<ConditionViewDto[]>;
+  alreadyRequested?: Nullable<boolean>;
+  candidates?: Nullable<IdNameDto[]>;
+  by?: Nullable<string>;
+}
+
+/** POST /requests 본문. dongId·categoryId·timeSlots·frequency 는 서버 필수다. */
+export interface CreateRequestBody {
+  dongId: number;
+  categoryId: number;
+  text?: string;
+  conditions?: string[];
+  timeSlots?: string[];
+  frequency?: string;
+}
+
+/**
+ * POST /requests 201 응답. 실제 응답에서 count·goal·reachedGoal·notifiedOwnerCount 는 request 안이 아니라 같은 층에 있다
+ * (명세와 다르다). 도메인이 쓰는 것은 request.id 뿐이다(나머지는 아직 쓰지 않는다).
+ */
+export interface CreateResponseDto {
+  request?: Nullable<{
+    id?: Nullable<number>;
+    dongId?: Nullable<number>;
+    categoryId?: Nullable<number>;
+    createdAt?: Nullable<string>;
+  }>;
+  count?: Nullable<number>;
+  goal?: Nullable<number>;
+  reachedGoal?: Nullable<boolean>;
+  notifiedOwnerCount?: Nullable<number>;
+}
+
+/** GET /me/requests 의 항목. offers(제안·주문)는 이번 단계 범위 밖이라 타입에 두지 않는다. */
+export interface MyRequestDto {
+  id?: Nullable<number>;
+  dong?: Nullable<IdNameDto>;
+  category?: Nullable<IdNameDto>;
+  count?: Nullable<number>;
+  timeSlots?: Nullable<string[]>;
+  frequency?: Nullable<string>;
+  createdAt?: Nullable<string>;
+}
