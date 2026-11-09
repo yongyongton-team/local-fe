@@ -22,7 +22,10 @@ interface SelectionContextValue extends Selection {
    * mock 모드와 토큰이 없을 때는 항상 false 다.
    */
   restoring: boolean;
-  select: (role: UserRole, neighborhood: Neighborhood) => void;
+  /** neighborhood 가 null 이면 동네 없이 역할만 정한다(동네가 없는 데모 계정). */
+  select: (role: UserRole, neighborhood: Neighborhood | null) => void;
+  /** 선택을 비운다(데모 종료). 복원 중 상태도 끝낸다. */
+  clear: () => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -64,6 +67,10 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
       select: (role, neighborhood) => {
         setRestoring(false);
         setSelection({ role, neighborhood });
+      },
+      clear: () => {
+        setRestoring(false);
+        setSelection({ role: null, neighborhood: null });
       },
     }),
     [selection, restoring],

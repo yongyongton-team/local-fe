@@ -3,6 +3,8 @@ export interface StoredSession {
   token: string;
   /** 만료 시각(epoch ms). 알 수 없으면 undefined(서버가 401 로 알려 줄 때까지 쓴다) */
   expiresAt?: number;
+  /** 시연용 데모 로그인으로 받은 세션이면 true. 같은 키에 저장해서 토큰이 바뀌거나 지워지면 함께 사라진다. */
+  demo?: true;
 }
 
 export interface TokenStore {
@@ -20,11 +22,12 @@ const STORAGE_KEY = 'yyt.session';
 
 function isStoredSession(value: unknown): value is StoredSession {
   if (typeof value !== 'object' || value === null) return false;
-  const { token, expiresAt } = value as Record<string, unknown>;
+  const { token, expiresAt, demo } = value as Record<string, unknown>;
   return (
     typeof token === 'string' &&
     token !== '' &&
-    (expiresAt === undefined || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)))
+    (expiresAt === undefined || (typeof expiresAt === 'number' && Number.isFinite(expiresAt))) &&
+    (demo === undefined || demo === true)
   );
 }
 

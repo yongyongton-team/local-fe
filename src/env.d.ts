@@ -10,6 +10,11 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   /** 서비스 구현 선택: mock | api. 비어 있거나 잘못된 값은 mock. 브라우저에 공개되는 값이다. */
   readonly VITE_DATA_SOURCE?: string;
+  /**
+   * "true" 이고 VITE_DATA_SOURCE=api 일 때만 시연용 사장님 데모 진입(/?demo=owner)이 켜진다. 기본은 꺼짐.
+   * 데모 계정은 모두가 공유하는 계정이라 운영 환경에서는 켜지 않는다.
+   */
+  readonly VITE_ENABLE_DEMO_LOGIN?: string;
 }
 
 interface Window {

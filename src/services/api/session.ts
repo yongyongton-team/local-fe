@@ -38,11 +38,20 @@ export interface GuestSession {
   clear(): void;
   /** 만료되지 않은 토큰이 저장돼 있는지. 로그인도 요청도 일으키지 않는다. */
   hasSession(): boolean;
+  /**
+   * 시연용 데모 로그인(POST /auth/demo)으로 세션을 바꾼다. 받은 토큰과 "데모 세션" 표시를 같은 키에 저장한다.
+   * 동시에 여러 번 불러도 로그인은 한 번이다. demoLoginUrl 을 넘기지 않은 세션이면 던진다.
+   */
+  loginDemo(role: 'OWNER'): Promise<void>;
+  /** 저장된 세션이 데모 세션인지(만료되지 않았을 때만). 요청을 일으키지 않는다. */
+  isDemo(): boolean;
 }
 
 interface GuestSessionOptions {
   /** 로그인 요청의 전체 주소(호스트 + /api/v1/auth/guest) */
   loginUrl: string;
+  /** 데모 로그인 주소(호스트 + /api/v1/auth/demo). 없으면 loginDemo 를 쓸 수 없다. */
+  demoLoginUrl?: string;
   store: TokenStore;
   now?: () => number;
   timeoutMs?: number;
@@ -51,11 +60,13 @@ interface GuestSessionOptions {
 /** 게스트 세션. 로그인 요청에는 토큰을 붙이지 않고, 401 이어도 재시도하지 않는다(재시도는 apiClient 가 요청마다 한 번만 한다). */
 export function createGuestSession({
   loginUrl,
+  demoLoginUrl,
   store,
   now = Date.now,
   timeoutMs,
 }: GuestSessionOptions): GuestSession {
   let inflight: Promise<string> | null = null;
+  let demoInflight: Promise<void> | null = null;
 
   async function login(): Promise<string> {
     const dto = await sendRequest<AuthResponseDto>({
@@ -67,11 +78,45 @@ export function createGuestSession({
     if (token === '') {
       throw new ApiError({ kind: 'parse', message: '로그인 응답에 토큰이 없어요.' });
     }
+    // 게스트 로그인을 기다리는 사이 데모 로그인이 먼저 끝났다면(메인을 /?demo=owner 로 처음 열 때 동네 목록 요청이
+    // 게스트 로그인을 먼저 시작한다) 데모 세션을 덮어쓰지 않는다. 덮어쓰면 공유 계정 보호(데모 표시)가 사라진다.
+    const current = store.read(now());
+    if (current?.demo === true) return current.token;
     store.write({ token, expiresAt: resolveExpiresAt(token, dto?.expiresIn, now()) });
     return token;
   }
 
+  async function loginDemo(role: 'OWNER'): Promise<void> {
+    if (demoLoginUrl === undefined) {
+      throw new ApiError({
+        kind: 'parse',
+        code: 'DEMO_DISABLED',
+        message: '데모 로그인을 쓸 수 없어요.',
+      });
+    }
+    const dto = await sendRequest<AuthResponseDto>({
+      url: demoLoginUrl,
+      method: 'POST',
+      body: { role },
+      timeoutMs,
+    });
+    const token = typeof dto?.accessToken === 'string' ? dto.accessToken : '';
+    if (token === '') {
+      throw new ApiError({ kind: 'parse', message: '로그인 응답에 토큰이 없어요.' });
+    }
+    store.write({ token, expiresAt: resolveExpiresAt(token, dto?.expiresIn, now()), demo: true });
+  }
+
   return {
+    loginDemo(role) {
+      demoInflight ??= loginDemo(role).finally(() => {
+        demoInflight = null;
+      });
+      return demoInflight;
+    },
+    isDemo() {
+      return store.read(now())?.demo === true;
+    },
     async ensureSession() {
       const current = store.read(now());
       if (current) return current.token;

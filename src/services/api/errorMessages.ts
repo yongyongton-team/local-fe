@@ -3,6 +3,13 @@ import { isApiError, isKnownErrorCode, type KnownErrorCode } from './apiError';
 /** 표에 없는 오류, 5xx, 문구가 정해지지 않은 코드에 쓰는 마지막 문구 */
 export const FALLBACK_ERROR_MESSAGE = '일시적인 문제가 생겼어요. 잠시 후 다시 시도해 주세요.';
 
+/**
+ * 데모 세션에서 서버에 쓰는 호출을 막았을 때의 문구. [임시]
+ * 데모 계정은 모두가 공유하는 계정이라 역할·동네를 바꾸지 못한다(사장님 화면만 볼 수 있다).
+ */
+export const DEMO_WRITE_BLOCKED_MESSAGE =
+  '데모 계정은 사장님 화면만 볼 수 있어요. 나가려면 주소 끝에 ?demo=off를 붙여 주세요.';
+
 /** 서버에 닿지 못했을 때(오프라인, DNS, CORS 차단 등) */
 const NETWORK_MESSAGE = '네트워크 연결을 확인하고 다시 시도해 주세요.';
 /** 응답이 오지 않았을 때 */
@@ -45,6 +52,7 @@ const CODE_BY_STATUS: Readonly<Record<number, KnownErrorCode>> = {
  */
 export function describeApiError(error: unknown): string {
   if (!isApiError(error)) return FALLBACK_ERROR_MESSAGE;
+  if (error.code === 'DEMO_SESSION') return DEMO_WRITE_BLOCKED_MESSAGE;
   if (error.kind === 'network') return NETWORK_MESSAGE;
   if (error.kind === 'timeout') return TIMEOUT_MESSAGE;
   if (error.kind !== 'http') return FALLBACK_ERROR_MESSAGE;
