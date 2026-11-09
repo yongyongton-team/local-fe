@@ -242,3 +242,33 @@ export interface LocationRank {
   lat?: number;
   lng?: number;
 }
+
+/**
+ * 로그인한 사용자(GET /me). 서버 값을 화면용 도메인 값으로 바꾼 것이다.
+ * 동네 id 는 서버의 숫자 id 그대로다(기존 Neighborhood.id 는 문자열 slug 라 다음 단계에서 맞춘다).
+ */
+export interface Me {
+  id: number;
+  nickname: string;
+  /** 서버에 역할이 없거나 알 수 없는 값이면 null */
+  role: UserRole | null;
+  dong: { id: number; name: string; district: string } | null;
+  /** 가게를 등록하지 않았으면 null */
+  shop: MeShop | null;
+}
+
+/** 사장님 가게. 좌표나 id 가 응답에 없으면 그 필드만 비어 있다. */
+export interface MeShop {
+  shopName: string;
+  categoryId?: number;
+  categoryName: string;
+  dongId?: number;
+  dongName: string;
+  lat?: number;
+  lng?: number;
+}
+
+/** 서버 상태 확인 결과(GET /health). 값은 서버가 준 문자열만 담는다. */
+export interface Health {
+  details: Record<string, string>;
+}

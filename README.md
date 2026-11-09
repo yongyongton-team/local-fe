@@ -27,9 +27,18 @@ pnpm dev           # 개발 서버
 | `pnpm format`       | Prettier 로 파일 수정              |
 | `pnpm format:check` | Prettier 포맷 검사                 |
 
-백엔드, AI 키 없이 실행됩니다. 네이버 지도 키도 없어도 실행되며, 그때는 기존 자리표시자 지도를 보여줍니다.
+백엔드, AI 키 없이 실행됩니다(기본은 목 데이터). 네이버 지도 키도 없어도 실행되며, 그때는 기존 자리표시자 지도를 보여줍니다.
 
 실제 지도를 보려면 `.env.example` 을 참고해 `.env.local` 에 `VITE_NAVER_MAP_CLIENT_ID`(네이버 클라우드 콘솔의 Web Dynamic Map Client ID)를 넣고 개발 서버를 다시 시작합니다. `.env.local` 은 커밋되지 않습니다. `VITE_` 접두사 변수는 브라우저 번들에 그대로 공개되므로 Client Secret 이나 비밀 키는 넣지 않습니다(프런트에서 필요하지 않습니다). 콘솔의 Web 서비스 URL 에 `http://localhost:5173` 과 배포 주소를 등록해야 인증됩니다.
+
+백엔드 API 는 환경 변수 두 개로 고릅니다. 값이 없으면 `mock` 이라 네트워크 요청과 로그인이 전혀 일어나지 않습니다.
+
+| 변수                | 설명                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `VITE_DATA_SOURCE`  | `mock`(기본) 또는 `api`. 잘못된 값은 `mock` 으로 처리하고 개발 환경에서만 경고합니다.                         |
+| `VITE_API_BASE_URL` | API 호스트만(예: `https://example.com`). `/api/v1` 은 코드가 붙입니다. `VITE_DATA_SOURCE=api` 일 때만 씁니다. |
+
+`VITE_` 변수는 브라우저에 공개되므로 토큰·비밀 값은 넣지 않습니다. 현재 `api` 로 바뀌는 서비스는 인증(게스트 로그인)과 내 정보(`/me`)뿐이고, 나머지 서비스는 모드와 무관하게 목입니다. 게스트 토큰은 메모리와 `sessionStorage` 에만 보관하며, 테스트는 실제 네트워크를 막고 `fetch` 를 스텁해서 씁니다.
 
 ## 라우트
 
@@ -77,10 +86,10 @@ src/
     assets/     공통 이미지(로고)
     lib/        경로 상수, useAsyncData, 방문 시간대 표기, 링크 공유(Web Share → 복사), useNaverMapScript(지도 스크립트 한 번만 로드·상태 idle/loading/ready/error)
     styles/     tokens.css(디자인 토큰), fonts.css(@font-face), global.css(reset·전역), fonts/(Pretendard WOFF2·라이선스)
-  services/     데이터 접근 인터페이스, 목 구현, 입력 문장 정리(키워드 규칙 목)·요청 제출·내 요청 조회·사장님 탐색·동네 상세·창업자 입지 순위(메모리 목) 인터페이스, 동네 상세 한 줄 요약 문장 생성(템플릿 목)과 AI 설명 생성 인터페이스
+  services/     데이터 접근 인터페이스, 목 구현, api/(fetch 클라이언트·게스트 세션·토큰 보관·/me·/health 의 DTO·mapper, 인증·me 만 API 구현), 인증·내 정보 인터페이스, 입력 문장 정리(키워드 규칙 목)·요청 제출·내 요청 조회·사장님 탐색·동네 상세·창업자 입지 순위(메모리 목) 인터페이스, 동네 상세 한 줄 요약 문장 생성(템플릿 목)과 AI 설명 생성 인터페이스
   mocks/        목 데이터(동네별 시간대·조건 분포는 사장님 상세와 창업자 리포트가 함께 읽는 한 곳), 메모리 DB(요청 제출 시 인원이 늘어나는 상태. 새로고침하면 시드로 초기화)
   types/        공통 도메인 타입
-  test/         테스트 설정과 renderApp 헬퍼
+  test/         테스트 설정(네트워크 차단 fetch 스텁 포함)과 renderApp·fetch 스텁 헬퍼
 ```
 
 `@` 는 `src` 의 별칭이며 `vite.config.ts`(개발·빌드·Vitest 공유)와 `tsconfig.app.json`(타입 검사)에 설정되어 있습니다.
