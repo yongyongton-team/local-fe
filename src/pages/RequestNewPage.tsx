@@ -34,8 +34,16 @@ import styles from './RequestNewPage.module.css';
  * 제출하면 /resident/requests(내 요청)로 이동한다. 별도의 제출 완료 화면은 없다.
  */
 export function RequestNewPage() {
-  const { neighborhood } = useSelection();
+  const { neighborhood, restoring } = useSelection();
 
+  // 새로고침 뒤 서버에 저장된 선택을 불러오는 동안은 "먼저 선택해 주세요" 안내를 보여주지 않는다.
+  if (restoring) {
+    return (
+      <Page title="가게 요청하기" backTo={paths.resident}>
+        <p role="status">불러오는 중이에요.</p>
+      </Page>
+    );
+  }
   if (!neighborhood) {
     return (
       <Page title="가게 요청하기" backTo={paths.resident}>

@@ -6,6 +6,12 @@ const MOCK_ME: Me = { id: 0, nickname: '예시 사용자', role: null, dong: nul
 
 export const mockMeService: MeService = {
   savesRemotely: false,
+  canRestoreSelection() {
+    return false;
+  },
+  async restoreSelection() {
+    return null;
+  },
   async getMe() {
     return { ...MOCK_ME };
   },
