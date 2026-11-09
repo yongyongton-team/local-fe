@@ -104,7 +104,12 @@ export interface NeighborhoodReport {
  * peakVisitTime 은 사장님 동네 상세와 같은 시간대 분포의 최상위다.
  */
 export interface AreaReport extends NeighborhoodReport {
-  peakVisitTime: VisitTime;
+  /** 가장 많이 원하는 시간대. 요청이 없어 서버가 주지 않으면 없음 */
+  peakVisitTime?: VisitTime;
+  /** 서버가 쓴 설명 문장(API 모드). by 는 "AI", "TEMPLATE" 등 서버가 준 출처. 목 모드에는 없다(생성기가 쓴다). */
+  explanation?: { text: string; by?: string };
+  /** 서버가 준 근거 데이터(API 모드). asOf 는 기준일 문자열 그대로 */
+  sources?: { name: string; asOf?: string }[];
 }
 
 /** 지도 마커 종류. request: 주민 요청, missing: 없는 가게, existing: 있는 가게 */
@@ -240,11 +245,14 @@ export interface LocationRank {
   nearbySameCategoryCount: number;
   /** 가장 가까운 대형마트까지의 거리(km). 값이 없으면 화면에 표시하지 않는다. */
   nearestHypermarketKm?: number;
-  /** 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표 */
-  position: MapPosition;
+  /**
+   * 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표. 목 데이터에만 있다.
+   * 백엔드 순위(GET /founder/rankings)에는 위치 정보가 없어 API 모드에서는 없다(만들어 넣지 않는다).
+   */
+  position?: MapPosition;
   /**
    * 실제 지도(NaverMap)가 쓰는 위도·경도. 동네에 속한 값이라 업종이 바뀌어도 같다.
-   * 백엔드 순위(GET /founder/rankings)에는 좌표가 없어 지금은 목 데이터의 동네 중심 좌표다.
+   * 백엔드 순위에는 좌표가 없어 API 모드에서는 없고, 목 모드에서는 목 데이터의 동네 중심 좌표다.
    */
   lat?: number;
   lng?: number;

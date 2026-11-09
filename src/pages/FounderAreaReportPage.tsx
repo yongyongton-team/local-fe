@@ -7,7 +7,8 @@ import { buildReportStats, buildReportTitle } from '@/features/founder-report/re
 import { SourcesSection } from '@/features/founder-report/SourcesSection';
 import { useAreaReport, useReportSentence } from '@/features/founder-report/useAreaReport';
 import { WhyCard } from '@/features/founder-report/WhyCard';
-import { DEFAULT_CATEGORY_ID } from '@/services';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
+import { founderService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
@@ -29,23 +30,34 @@ export function FounderAreaReportPage() {
   const categories = useCategories();
 
   if (categories.status === 'success') {
-    return <ReportScreen categories={categories.data} />;
+    return (
+      <ReportScreen
+        categories={categories.data.categories}
+        defaultCategoryId={categories.data.defaultCategoryId}
+      />
+    );
   }
   return (
     <Shell title={FALLBACK_TITLE} backTo={paths.founderExplore()}>
       {categories.status === 'loading' ? (
         <p role="status">불러오는 중이에요.</p>
       ) : (
-        <Notice title="업종을 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="업종을 가져오지 못했어요">{describeLoadError(categories.error)}</Notice>
       )}
     </Shell>
   );
 }
 
-function ReportScreen({ categories }: { categories: Parameters<typeof resolveCategoryId>[1] }) {
+function ReportScreen({
+  categories,
+  defaultCategoryId,
+}: {
+  categories: Parameters<typeof resolveCategoryId>[1];
+  defaultCategoryId: string;
+}) {
   const { areaId } = useParams();
   const [params] = useSearchParams();
-  const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, DEFAULT_CATEGORY_ID);
+  const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, defaultCategoryId);
   // 뒤로 가기(직접 진입)와 안내 링크는 선택한 업종을 유지한 입지 찾기로 간다.
   const backTo = paths.founderExplore(categoryId);
   const state = useAreaReport(areaId, categoryId);
@@ -60,7 +72,7 @@ function ReportScreen({ categories }: { categories: Parameters<typeof resolveCat
   if (state.status === 'error') {
     return (
       <Shell title={FALLBACK_TITLE} backTo={backTo}>
-        <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="데이터를 가져오지 못했어요">{describeLoadError(state.error)}</Notice>
       </Shell>
     );
   }
@@ -100,10 +112,10 @@ function ReportContent({
         <StatCards items={buildReportStats(report)} />
       </div>
       <div className={styles.why}>
-        <WhyCard sentence={sentence} />
+        <WhyCard sentence={sentence} remote={founderService.remote} by={report.explanation?.by} />
       </div>
       <div className={styles.sources}>
-        <SourcesSection />
+        <SourcesSection sources={report.sources} remote={founderService.remote} />
       </div>
       <footer className={styles.footer}>
         <ShareButton

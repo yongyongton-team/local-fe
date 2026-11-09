@@ -27,3 +27,10 @@ export function toServerId(id: string): number {
   }
   return value;
 }
+
+/** toServerId 와 같지만 숫자가 아니면 던지지 않고 null 을 돌려준다(라우트 파라미터처럼 사용자가 만들 수 있는 값용). */
+export function tryToServerId(id: string | null | undefined): number | null {
+  return typeof id === 'string' && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id))
+    ? Number(id)
+    : null;
+}

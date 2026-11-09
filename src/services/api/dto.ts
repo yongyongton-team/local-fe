@@ -148,3 +148,38 @@ export interface MyRequestDto {
   frequency?: Nullable<string>;
   createdAt?: Nullable<string>;
 }
+
+/** GET /founder/rankings 의 항목. 구(gu)와 좌표는 없다. score 는 서버가 순위를 매기는 값이라 화면이 쓰지 않는다. */
+export interface RankingItemDto {
+  rank?: Nullable<number>;
+  dongId?: Nullable<number>;
+  name?: Nullable<string>;
+  requestCount?: Nullable<number>;
+  sameCategoryStoreCount?: Nullable<number>;
+  nearestMartKm?: Nullable<number>;
+  score?: Nullable<number>;
+}
+
+export interface FounderRankingDto {
+  category?: Nullable<IdNameDto>;
+  items?: Nullable<RankingItemDto[]>;
+}
+
+/** GET /founder/report */
+export interface FounderReportDto {
+  dong?: Nullable<{ id?: Nullable<number>; name?: Nullable<string>; gu?: Nullable<string> }>;
+  category?: Nullable<IdNameDto>;
+  stats?: Nullable<{
+    requestCount?: Nullable<number>;
+    walkStoreCount?: Nullable<number>;
+    walkRadiusM?: Nullable<number>;
+    nearestMart?: Nullable<{ name?: Nullable<string>; km?: Nullable<number> }>;
+    /** 요청이 없으면 null 이다 */
+    topTimeSlot?: Nullable<string>;
+    topConditions?: Nullable<string[]>;
+    offers?: Nullable<{ done?: Nullable<number>; orders?: Nullable<number> }>;
+  }>;
+  /** by: 실제 응답에서 "AI" 또는 "TEMPLATE" 을 봤다 */
+  explanation?: Nullable<{ text?: Nullable<string>; by?: Nullable<string> }>;
+  sources?: Nullable<{ name?: Nullable<string>; asOf?: Nullable<string> }[]>;
+}

@@ -211,7 +211,7 @@ describe('입지 순위의 지도 좌표(서비스 계층)', () => {
   it('자리표시자용 상대좌표(position)도 그대로 유지한다', async () => {
     const [first] = await founderService.listLocationRanks(FRUIT);
 
-    expect(first?.position.x).toBeGreaterThan(0);
-    expect(first?.position.x).toBeLessThan(1);
+    expect(first?.position?.x).toBeGreaterThan(0);
+    expect(first?.position?.x).toBeLessThan(1);
   });
 });
