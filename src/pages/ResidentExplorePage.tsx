@@ -6,6 +6,7 @@ import {
   getVisibleMarkers,
   type MapFilter,
 } from '@/features/resident-map/mapMarkers';
+import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { getMissingStoreCards } from '@/features/resident-map/missingStoreCards';
 import { StoreRequestCard } from '@/features/resident-map/StoreRequestCard';
 import { useResidentExplore } from '@/features/resident-map/useResidentExplore';
@@ -87,7 +88,7 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
       </div>
 
       {markers.status === 'error' && (
-        <Notice title="지도 마커를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>
+        <Notice title="지도 마커를 가져오지 못했어요">{describeLoadError(markers.error)}</Notice>
       )}
       <div className={styles.mapBleed}>
         <NaverMap markers={visibleMarkers} label="동네 지도(예시)" summary={summary} />
@@ -114,7 +115,7 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
 function StoreCards({ state }: { state: AsyncState<NeighborhoodReport[]> }) {
   if (state.status === 'loading') return <p role="status">불러오는 중이에요.</p>;
   if (state.status === 'error') {
-    return <Notice title="데이터를 가져오지 못했어요">잠시 후 다시 시도해 주세요.</Notice>;
+    return <Notice title="데이터를 가져오지 못했어요">{describeLoadError(state.error)}</Notice>;
   }
 
   const cards = getMissingStoreCards(state.data);

@@ -1,7 +1,25 @@
-import type { Health, Me, MeShop, Neighborhood, StoreCategory, UserRole } from '@/types/domain';
+import type {
+  Health,
+  MapMarker,
+  Me,
+  MeShop,
+  Neighborhood,
+  NeighborhoodReport,
+  StoreCategory,
+  UserRole,
+} from '@/types/domain';
 import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
-import type { CategoryDto, DongDto, HealthResponseDto, MeResponseDto, ShopViewDto } from './dto';
+import type {
+  CategoryDto,
+  DongDto,
+  DongMapDto,
+  GapDto,
+  HealthResponseDto,
+  MeResponseDto,
+  ShopViewDto,
+} from './dto';
+import { isNoStoreGap } from './gapStatus';
 import { toDomainId } from './ids';
 
 const parseError = (message: string) => new ApiError({ kind: 'parse', message });
@@ -135,4 +153,101 @@ export function mapCategories(dtos: CategoryDto[] | undefined): StoreCategory[] 
       martCheck: item.martCheck === true,
     };
   });
+}
+
+/** 업종 목록에서 기본 업종의 id. code FRUIT_VEG 가 있으면 그것, 없으면 첫 업종. 목록이 비어 있으면 undefined. */
+export function pickDefaultCategoryId(dtos: CategoryDto[] | undefined): string | undefined {
+  if (!Array.isArray(dtos)) return undefined;
+  const chosen = dtos.find((dto) => isObject(dto) && dto.code === 'FRUIT_VEG') ?? dtos[0];
+  return isObject(chosen) ? toDomainId(chosen.id) : undefined;
+}
+
+interface GapContext {
+  neighborhood: Neighborhood;
+  categories: readonly StoreCategory[];
+}
+
+/**
+ * GET /dongs/{dongId}/gaps 응답 → 도메인 NeighborhoodReport[]. 서버 순서를 그대로 둔다(정렬은 화면 규칙이 한다).
+ * - categoryId 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 업종 정보는 업종 목록에서 찾고,
+ *   목록에 없으면 항목의 name 으로 대체한다.
+ * - status 로 보여줄 항목만 남긴다(isNoStoreGap). 남긴 항목은 "주변 같은 업종 가게 0곳" 후보라
+ *   nearbySameCategoryCount 를 0 으로 둔다(서버가 가게 수를 주지 않는다).
+ * - nearestMart 가 null 이거나 km 가 숫자가 아니면 nearestHypermarketKm 을 비워 화면에 표시하지 않는다.
+ * - requestCount 가 없으면 0, myRequested 는 true 일 때만 true.
+ */
+export function mapGaps(dtos: GapDto[] | undefined, context: GapContext): NeighborhoodReport[] {
+  if (!Array.isArray(dtos)) throw parseError('GET /dongs/{id}/gaps 응답이 배열이 아니에요.');
+  const reports: NeighborhoodReport[] = [];
+  for (const dto of dtos) {
+    const item: GapDto = isObject(dto) ? dto : {};
+    const categoryId = toDomainId(item.categoryId);
+    if (!isNoStoreGap(item.status)) continue;
+
+    const name = asString(item.name);
+    const category = context.categories.find((c) => c.id === categoryId) ?? {
+      id: categoryId,
+      name,
+      ...labelsFor('', name),
+    };
+    const km = isObject(item.nearestMart) ? asNumber(item.nearestMart.km) : undefined;
+    reports.push({
+      neighborhood: context.neighborhood,
+      category,
+      demand: {
+        neighborhoodId: context.neighborhood.id,
+        categoryId,
+        requestCount: Math.max(0, asNumber(item.requestCount) ?? 0),
+        nearbySameCategoryCount: 0,
+        ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
+        requestedByMe: item.myRequested === true,
+      },
+    });
+  }
+  return reports;
+}
+
+/**
+ * GET /dongs/{dongId}/map 응답 → 지도 마커. 좌표가 있는 stores 만 'existing' 마커로 만든다(lat, lon → lat, lng).
+ * 좌표가 없거나 숫자가 아닌 가게, id 가 없는 가게는 빼고, 요청·없는 가게는 좌표가 없어 마커로 만들지 않는다
+ * (동네 중심 등으로 좌표를 만들어 넣지 않는다). stores 가 없으면 빈 배열, 응답이 객체가 아니면 parse 오류.
+ * position(자리표시자 지도용 상대좌표)은 마커 좌표의 범위 안에서 계산한 값이다(북쪽이 위).
+ */
+export function mapMapMarkers(dto: DongMapDto | undefined): MapMarker[] {
+  if (!isObject(dto)) throw parseError('GET /dongs/{id}/map 응답이 비어 있어요.');
+  const stores = Array.isArray(dto.stores) ? dto.stores : [];
+
+  const located = stores.flatMap((store) => {
+    if (!isObject(store)) return [];
+    const id = asNumber(store.id);
+    const lat = asNumber(store.lat);
+    const lng = asNumber(store.lon);
+    if (id === undefined || lat === undefined || lng === undefined) return [];
+    const categoryId = asNumber(store.categoryId);
+    return [{ id, lat, lng, name: asString(store.name), categoryId }];
+  });
+  if (located.length === 0) return [];
+
+  const lats = located.map((s) => s.lat);
+  const lngs = located.map((s) => s.lng);
+  const [minLat, maxLat, minLng, maxLng] = [
+    Math.min(...lats),
+    Math.max(...lats),
+    Math.min(...lngs),
+    Math.max(...lngs),
+  ];
+  const ratio = (value: number, min: number, max: number) =>
+    max > min ? (value - min) / (max - min) : 0.5;
+
+  return located.map(({ id, lat, lng, name, categoryId }) => ({
+    id: `store-${id}`,
+    kind: 'existing' as const,
+    ...(categoryId !== undefined && Number.isSafeInteger(categoryId) && categoryId > 0
+      ? { categoryId: String(categoryId) }
+      : {}),
+    label: name,
+    position: { x: ratio(lng, minLng, maxLng), y: 1 - ratio(lat, minLat, maxLat) },
+    lat,
+    lng,
+  }));
 }

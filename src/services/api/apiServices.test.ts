@@ -81,15 +81,15 @@ describe('createApiDemandService', () => {
     await expect(service.listCategories()).rejects.toMatchObject({ kind: 'http', status: 500 });
   });
 
-  it('나머지 메서드는 목 구현을 그대로 쓰고 네트워크를 쓰지 않는다', async () => {
+  it('전 동네 리포트(listReports·getReport)는 목 구현을 그대로 쓰고 네트워크를 쓰지 않는다', async () => {
     const { fn } = stubFetch(() => jsonResponse(200, []));
     const client = newClient();
     const service = createApiDemandService(mockDemandService, () => client);
 
-    expect(service.listReportsByNeighborhood).toBe(mockDemandService.listReportsByNeighborhood);
-    expect(service.listMapMarkers).toBe(mockDemandService.listMapMarkers);
-    await expect(service.listReportsByNeighborhood('guseong')).resolves.not.toHaveLength(0);
-    await service.listMapMarkers('guseong');
+    expect(service.listReports).toBe(mockDemandService.listReports);
+    expect(service.getReport).toBe(mockDemandService.getReport);
+    await expect(service.listReports('fruit-vegetable')).resolves.not.toHaveLength(0);
+    await service.getReport('guseong', 'fruit-vegetable');
 
     expect(fn).not.toHaveBeenCalled();
   });

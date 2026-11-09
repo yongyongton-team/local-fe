@@ -6,7 +6,7 @@ import {
 } from '@/mocks/demand';
 import { getDb } from '@/mocks/memoryDb';
 import type { MapMarker, MapPosition, NeighborhoodReport } from '@/types/domain';
-import type { DemandService } from './demandService';
+import { DEFAULT_CATEGORY_ID, type DemandService } from './demandService';
 import { spreadAroundCenter } from './mapCoordinates';
 
 function buildReport(neighborhoodId: string, categoryId: string): NeighborhoodReport | null {
@@ -78,6 +78,10 @@ export const mockDemandService: DemandService = {
 
   async listCategories() {
     return mockCategories;
+  },
+
+  async getDefaultCategoryId() {
+    return DEFAULT_CATEGORY_ID;
   },
 
   async listReports(categoryId) {
