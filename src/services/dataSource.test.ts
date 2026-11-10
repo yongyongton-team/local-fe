@@ -184,9 +184,27 @@ describe('api 모드', () => {
     expect(calls[0]).toMatchObject({ path: '/api/v1/health', authorization: null });
   });
 
-  it('API 주소가 없으면 fetch 없이 CONFIG_API_BASE_URL ApiError 다', async () => {
-    const { fn } = stubFetch(() => jsonResponse(200, {}));
+  it('API 주소가 없으면 상대 경로 /api/v1 로 부른다(오류 없음)', async () => {
+    const { calls, fn } = stubFetch((call) =>
+      call.path === '/api/v1/auth/guest'
+        ? jsonResponse(200, { accessToken: fakeJwt({ exp: 9_999_999_999 }), expiresIn: 3600 })
+        : jsonResponse(200, { id: 3, nickname: 'x' }),
+    );
     const { services } = await loadServices({ source: 'api', base: '' });
+    expect(fn).not.toHaveBeenCalled();
+
+    await services.meService.getMe();
+
+    expect(fn.mock.calls.map(([input]) => String(input))).toEqual([
+      '/api/v1/auth/guest',
+      '/api/v1/me',
+    ]);
+    expect(calls.map((c) => c.path)).toEqual(['/api/v1/auth/guest', '/api/v1/me']);
+  });
+
+  it('API 주소가 올바르지 않으면(호스트가 아님) fetch 없이 CONFIG_API_BASE_URL ApiError 다', async () => {
+    const { fn } = stubFetch(() => jsonResponse(200, {}));
+    const { services } = await loadServices({ source: 'api', base: '/api' });
 
     await expect(services.meService.getMe()).rejects.toMatchObject({
       kind: 'network',

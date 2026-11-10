@@ -23,7 +23,8 @@ export const jsonResponse = (status: number, body: unknown): Response =>
 export function stubFetch(handler: Handler) {
   const calls: StubCall[] = [];
   const fn = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
-    const url = new URL(String(input));
+    // 상대 경로(/api/v1/...)로 부르는 경우도 있어 기준 주소를 둔다. 경로와 쿼리만 기록한다.
+    const url = new URL(String(input), 'http://localhost');
     const headers = new Headers(init.headers);
     const call: StubCall = {
       method: init.method ?? 'GET',

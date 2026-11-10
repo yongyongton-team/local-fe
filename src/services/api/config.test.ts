@@ -40,11 +40,19 @@ describe('readApiBaseUrl', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://env.example.com/');
     expect(readApiBaseUrl()).toBe('https://env.example.com');
 
+    // 값이 없거나 빈 값이면 기본값(빈 문자열)이라 요청 주소가 상대 경로 /api/v1 이 된다.
     vi.stubEnv('VITE_API_BASE_URL', '');
-    expect(() => readApiBaseUrl()).toThrow(/VITE_API_BASE_URL/);
+    expect(readApiBaseUrl()).toBe('');
   });
 
-  it.each(['', '   ', 'api.example.com', '/api', 'ftp://x.com', 'https://x.com/path'])(
+  it.each([undefined, '', '   ', ' / '])(
+    '%j 는 기본값(빈 문자열 → 상대 경로 /api/v1)이다',
+    (raw) => {
+      expect(readApiBaseUrl(raw)).toBe('');
+    },
+  );
+
+  it.each(['api.example.com', '/api', 'ftp://x.com', 'https://x.com/path'])(
     '%j 는 CONFIG_API_BASE_URL ApiError 다',
     (raw) => {
       try {
