@@ -1,0 +1,26 @@
+import type { AreaReport, LocationRank } from '@/types/domain';
+
+export interface AreaReportQuery {
+  /** 라우트의 :areaId (동네 id) */
+  areaId: string;
+  categoryId: string;
+}
+
+/**
+ * 예비 창업자 입지 탐색 데이터 접근 인터페이스. 목 구현은 메모리의 목이고 네트워크 호출이 없다.
+ * 집계된 인원과 가게 수만 돌려주며 주민이 입력한 원문 문장이나 개인 정보는 담지 않는다.
+ */
+export interface FounderService {
+  /** 서버 데이터이면 true(리포트의 "예시" 표시를 숨기고 서버가 준 설명·근거를 쓴다). 목은 false. */
+  readonly remote: boolean;
+  /**
+   * 업종에 대한 동네 입지 순위, 순위 순. 목은 그 업종의 수요 데이터가 있는 동네만, 없으면 빈 배열.
+   * API 는 서버가 준 순서·순위를 그대로 쓴다(요청 0명인 동네도 서버가 주면 포함).
+   */
+  listLocationRanks(categoryId: string, signal?: AbortSignal): Promise<LocationRank[]>;
+  /**
+   * 한 동네·업종의 리포트 수치. 없는 동네이거나 그 업종의 수요 데이터가 없으면 null.
+   * API 는 id 가 숫자가 아니면 요청 없이 null 이고, 서버가 모르는 id 는 NOT_FOUND ApiError 로 던진다.
+   */
+  getAreaReport(query: AreaReportQuery, signal?: AbortSignal): Promise<AreaReport | null>;
+}

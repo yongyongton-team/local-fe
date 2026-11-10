@@ -1,0 +1,92 @@
+/*
+ * 주민 탐색 화면 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
+ * 402×874 는 참고 크기라 높이를 고정하지 않는다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+  /* 떠 있는 "+가게 요청하기" 버튼이 마지막 카드를 가리지 않도록 버튼 높이만큼 여백을 더한다. */
+  padding-bottom: calc(var(--button-height-small) + var(--fab-gap) + var(--space-4));
+}
+
+/* 헤더: 로고, 동네 이름, 아이콘 버튼. 본문보다 6px 안쪽에 놓인다. */
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+}
+
+.neighborhood {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap-target-min);
+  padding-left: var(--header-inset-x);
+  font: var(--font-contents);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+}
+
+/* 칩 4개가 360px 에서도 한 줄에 들어가도록 좌우 패딩을 줄인다(시각 높이 26px 은 그대로). */
+.filters {
+  --chip-padding-x: var(--space-3);
+}
+
+/* 지도는 화면 전체 너비: 본문 좌우 여백(+safe-area)만큼 바깥으로 넓힌다. */
+.mapBleed {
+  --map-radius: 0;
+  margin-right: calc(-1 * max(var(--space-page), env(safe-area-inset-right)));
+  margin-left: calc(-1 * max(var(--space-page), env(safe-area-inset-left)));
+}
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--compact-card-gap);
+  margin-top: var(--space-2);
+}
+
+/*
+ * 하단 내비 위에 떠 있는 버튼. 내비와 같은 방식으로 모바일 영역 폭에 맞춰 우측에 둔다.
+ * 우측 여백은 본문 여백(20px)과 같다.
+ */
+.fab {
+  position: fixed;
+  right: 0;
+  bottom: calc(
+    var(--bottom-nav-gap) + env(safe-area-inset-bottom) + var(--bottom-nav-height) + var(--fab-gap)
+  );
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, var(--layout-max-width));
+  margin-inline: auto;
+  padding-right: max(var(--space-page), env(safe-area-inset-right));
+  pointer-events: none;
+}
+
+.fab > * {
+  pointer-events: auto;
+}

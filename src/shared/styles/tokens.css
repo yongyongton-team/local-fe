@@ -1,0 +1,248 @@
+/*
+ * 디자인 토큰.
+ *
+ * 값의 출처 표기
+ *   [DS]    Figma 디자인 시스템 문서(node 7:30)에 명시된 값
+ *   [화면]  Figma 서비스 화면(node 1:3)에서 읽은 값. 디자인 시스템에는 명시되지 않음
+ *   [임시]  어디에서도 확인하지 못해 임시로 정한 값. 확정된 규격이 아님
+ *
+ * 컴포넌트에서는 HEX 를 직접 쓰지 않고 아래 의미 토큰을 참조한다.
+ */
+:root {
+  /* ───────── 색상: 원시 토큰 ───────── */
+  --color-lime: #c8ff80; /* [DS] Main */
+  --color-gray-light: #e4e4e4; /* [DS] Sub */
+  --color-black: #000000; /* [DS] Font */
+  --color-gray: #757575; /* [DS] Sub2 */
+  --color-white: #ffffff; /* [화면] 화면 기본 배경 */
+
+  /* ───────── 색상: 의미 토큰 ───────── */
+  --color-accent: var(--color-lime); /* 강조 배경(선택된 칩, 강조 카드, 강조 버튼) */
+  --color-on-accent: var(--color-black); /* 라임 배경 위 텍스트·아이콘은 검정 */
+  --color-text-primary: var(--color-black);
+  --color-text-secondary: var(--color-gray);
+  --color-text-inverse: var(--color-white); /* 검정 배경 위 텍스트 */
+  --color-surface: var(--color-white);
+  --color-surface-muted: var(--color-gray-light); /* 비선택 칩 등 */
+  --color-border: var(--color-gray-light); /* [임시] 매핑: 구분선·카드 테두리 */
+  --color-focus-ring: var(--color-black); /* [임시] 라임은 흰 배경 대비가 낮아 검정 사용 */
+
+  /* 디자인 시스템에 아직 없는 임시 토큰 */
+  --color-danger: #f04856; /* [화면] 지도 "없는 가게" 점선 태그에서 관찰. 오류 용도로는 [임시] */
+  --color-border-control: var(--color-gray); /* [임시] 입력 필드 경계(비텍스트 대비 3:1 확보용) */
+  --color-surface-field: #f2f2f2; /* [화면] 동네 선택 박스 배경 근사값(원본 rgba(195,195,195,0.21)) */
+  --color-page-bg: #f5f5f5; /* [임시] 넓은 화면에서 모바일 영역 바깥 배경 */
+
+  /* 디자인 시스템 밖의 개별 화면 전용 색 (첫 화면 역할 카드) */
+  --color-lime-strong: #bcff65; /* [화면] 역할 카드 그라데이션 끝. DS Main(#C8FF80)과 다름 */
+  --color-text-on-card-muted: #4d4d4d; /* [화면] 역할 카드 설명 */
+  --color-check-idle: rgb(134 129 129 / 40%); /* [화면] 선택되지 않은 체크 원 */
+
+  /* ───────── 타이포그래피 ───────── */
+  --font-family-base:
+    'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
+    'Malgun Gothic', system-ui, sans-serif; /* [DS] Pretendard + [임시] 한글 시스템 폰트 폴백 */
+  --font-weight-regular: 400; /* [화면] 작은 알약 글자(결정 필요) */
+  --font-weight-medium: 500; /* [DS] Contents·Caption */
+  --font-weight-semibold: 600; /* [화면] DS 밖 개별 화면(첫 화면 제목·역할 카드) */
+  --font-weight-bold: 700; /* [DS] Title */
+  --letter-spacing-base: 0; /* [DS] 0% */
+
+  /*
+   * 행간: 디자인 문서에는 22% / 19% / 18% 로 표기되어 있다. CSS line-height 에 %로 넣으면
+   * 글자가 겹치므로 px 로 임시 해석했다. 확정된 값이 아니다. (README 확인 필요 항목)
+   */
+  --font-size-title: 18px; /* [DS] */
+  --line-height-title: 22px; /* [임시] "22%" 의 해석 */
+  --font-size-contents: 16px; /* [DS] */
+  --line-height-contents: 19px; /* [임시] "19%" 의 해석 */
+  --font-size-caption: 14px; /* [DS] */
+  --line-height-caption: 18px; /* [임시] "18%" 의 해석 */
+
+  /* font 단축 속성용 합성 토큰: font: var(--font-title); */
+  --font-title: var(--font-weight-bold) var(--font-size-title) / var(--line-height-title)
+    var(--font-family-base);
+  --font-contents: var(--font-weight-medium) var(--font-size-contents) / var(--line-height-contents)
+    var(--font-family-base);
+  --font-caption: var(--font-weight-medium) var(--font-size-caption) / var(--line-height-caption)
+    var(--font-family-base);
+
+  /* 디자인 시스템 밖의 개별 화면 스타일 */
+  --font-size-display: 28px; /* [화면] 첫 화면 큰 제목 */
+  --line-height-display: 34px; /* [화면 근사] 원본은 normal(Pretendard 약 1.2배) */
+  --letter-spacing-display: -0.56px; /* [화면] 원본 -2% */
+  --font-display: var(--font-weight-semibold) var(--font-size-display) / var(--line-height-display)
+    var(--font-family-base); /* [화면] 원본 SemiBold */
+  --font-size-role-title: 14px; /* [화면] 역할 카드 제목(SemiBold) */
+  --font-size-role-description: 12px; /* [화면] 역할 카드 설명(SemiBold) */
+  --font-size-chip: 12px; /* [화면] 칩 라벨 */
+  --font-size-button-large: 18px; /* [화면] 큰 버튼 라벨 */
+  --font-size-button-small: 14px; /* [화면] 작은 버튼 라벨 */
+
+  /* ───────── 간격 ───────── */
+  --space-page: 20px; /* [화면] 좌우 여백 */
+  --space-1: 4px; /* [임시] 이하 간격 스케일 */
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* ───────── 모서리·그림자 ───────── */
+  --radius-card: 20px; /* [화면] 카드, 선택 박스 */
+  --radius-field: 20px; /* [화면] 선택 박스. 입력 필드에도 같은 값을 임시 적용 */
+  --radius-pill: 999px; /* [화면] 버튼·칩·내비는 높이 이상(40~50px)의 완전 알약형 */
+  --shadow-floating: 0 2px 10px rgb(0 0 0 / 10%); /* [화면] 하단 내비게이션 */
+  /* 역할 카드 그림자: MCP 로 값을 읽지 못해 스크린샷을 보고 근사한 값이다. 디자인 확인 필요. */
+  --shadow-role-card: 0 1px 4px rgb(0 0 0 / 12%); /* [화면 근사] 기본 */
+  --shadow-role-card-selected: 0 4px 6px rgb(0 0 0 / 30%); /* [화면 근사] 선택됨 */
+
+  /* ───────── 크기 ───────── */
+  --button-height-large: 60px; /* [화면] "시작하기" */
+  --button-height-small: 36px; /* [화면] "+가게 요청하기" (시각적 높이) */
+  --chip-height: 26px; /* [화면] 칩의 시각적 높이 */
+  --tap-target-min: 44px; /* 터치 영역 최소 크기 */
+  --logo-height: 43px; /* [화면] 서비스 로고 높이(너비 129px) */
+  --bottom-nav-height: 66px; /* [화면] */
+  --bottom-nav-gap: 12px; /* [임시] */
+  --layout-max-width: 430px; /* [임시] 화면 기준 402px 안팎. 고정 크기가 아님 */
+
+  /* 주민 탐색 화면(/resident) 전용 */
+  /* [임시] 칩 좌우 패딩. 좁은 화면에서 한 줄에 들어가도록 화면에서 줄인다 */
+  --chip-padding-x: var(--space-4);
+  /* [화면] 지도 영역 비율. 높이를 고정하지 않고 너비에 비례 */
+  --map-aspect: 402 / 288;
+  /* [임시] 아주 좁은 화면에서의 최소 높이 */
+  --map-min-height: 200px;
+  /* [화면] 요청·없는 가게 마커 알약 높이 */
+  --marker-height: 26px;
+  /* [화면] 헤더가 본문(20px)보다 안쪽(26px)에 놓인 정도 */
+  --header-inset-x: 6px;
+  /* [화면] 요청 카드 사이 간격 */
+  --compact-card-gap: 11px;
+  /* [화면] 하단 내비 좌우 여백 */
+  --bottom-nav-inset-x: 34px;
+  /* [화면] 선택된 내비 아이콘 뒤 라임 번짐 크기 */
+  --nav-glow-size: 91px;
+  /* [임시] 떠 있는 "+가게 요청하기" 버튼과 하단 내비 사이 간격. 디자인은 내비가 버튼을 가린다 */
+  --fab-gap: 8px;
+  /* [임시] 지도 자리표시자의 중립 배경 */
+  --color-map-bg: #eeeeee;
+  /* [화면] 요청 마커 배경 */
+  --color-marker-request: #4d4d4d;
+  /* [임시] 지도 위 글자 가독성을 위한 반투명 흰 배경(디자인은 투명) */
+  --color-marker-missing-bg: rgb(255 255 255 / 80%);
+
+  /* 가게 요청하기 화면(/resident/requests/new) 전용 */
+  /* [화면] 시간대·빈도 칩의 시각적 높이 */
+  --chip-height-large: 34px;
+  /* [화면] 칩 라벨 줄 높이. 칩의 시각 높이가 줄 높이가 아니라 --chip-height(26px)로 정해지게 한다 */
+  --line-height-chip: 14px;
+  /* [화면] 입력창 높이(최소 높이로만 쓴다) */
+  --request-input-min-height: 98px;
+  /* [화면] 입력창과 AI 카드 사이 */
+  --request-gap-card: 14px;
+  /* [화면] 일관된 섹션 간격. B 상태에서 Figma 가 12px 로 줄인 것은 따르지 않는다 */
+  --request-gap-section: 28px;
+  /* [화면] AI 원형 배지 */
+  --ai-badge-size: 47px;
+  /* [화면] AI 카드 "업종/조건" 라벨 칸 너비 */
+  --ai-label-width: 54px;
+  /* [화면 근사] AI 카드 바탕. 스크린샷 픽셀값 */
+  --color-ai-card: #f4fbeb;
+  /* [화면 근사] AI 카드 중심 하이라이트. 원본은 큰 타원 방사형 그라데이션 */
+  --color-ai-card-glow: #fffdf3;
+  /* [화면] AI 배지 방사형 그라데이션. 원본 #B1FFAD → #F6FEF0, 불투명도 0.6 */
+  --color-ai-badge-center: rgb(177 255 173 / 60%);
+  --color-ai-badge-edge: rgb(246 254 240 / 60%);
+
+  /* 내 요청 화면(/resident/requests) 전용 */
+  /* [화면] 요약 카드 좌우 안쪽 여백. 진행 영역은 이 값에서, 글자는 여기에 아래 inset 을 더한 위치에서 시작한다 */
+  --summary-card-pad-x: 21px;
+  --summary-card-inset: 4px;
+  /* [화면] 진행 막대 높이 */
+  --progress-bar-height: 9px;
+  /* [임시] 진행 막대 트랙. 디자인에는 가득 찬(30/30) 막대만 있어 트랙 색이 없다 */
+  --color-progress-track: var(--color-surface);
+  /* [화면] 요청 카드 윤곽선 */
+  --color-border-card: #999999;
+  /* [화면] "결정 필요" 알약. 글자는 Figma 변수 Accents/Red, 배경은 rgba(255,0,0,0.12) */
+  --color-decision-text: #ff383c;
+  --color-decision-bg: rgb(255 0 0 / 12%);
+
+  /* 사장님 탐색 화면(/merchant) 전용 */
+  /* [화면] 반경 칩 폭. Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다 */
+  --merchant-chip-width: 80px;
+  /* [화면] 지도 점선 원 지름 / 지도 너비 = 230px / 402px. 너비에 비례해 위치 관계를 유지한다 */
+  --map-ring-ratio: 0.572;
+  /* [화면] 지도 중심 핀(17×21)의 절반. 핀 좌상단 기준 좌표에서 핀 중심을 구할 때 쓴다 */
+  --pin-half-width: 8.5px;
+  --pin-half-height: 10.5px;
+
+  /* 사장님 동네 상세 화면(/merchant/areas/:areaId) 전용 */
+  /* [화면] 요약 카드(요청한 주민 / 근처 같은 업종): 높이 102px, 글자는 카드 안쪽 34px 에서 시작 */
+  --detail-stat-card-height: 102px;
+  --detail-stat-card-pad-x: 34px;
+  /* [화면 근사] 라벨+값(18+6+29=53px)을 102px 카드 가운데에 둔 위쪽 여백 */
+  --detail-stat-card-pad-top: 24.5px;
+  --detail-stat-gap: 6px;
+  /* [화면] 요약 카드 값 글자: Medium 24px. 줄 높이는 원본 normal 의 근사 */
+  --font-size-stat-value: 24px;
+  --line-height-stat-value: 29px;
+  /* [화면] 막대 행: 라벨 칸 95px, 값 칸 51px(글자는 4px 안쪽), 행 간격 28px, 막대 높이 15px */
+  --bar-label-width: 95px;
+  --bar-value-width: 51px;
+  --bar-value-inset: 4px;
+  --bar-row-height: 28px;
+  --bar-height: 15px;
+  /* [화면] 섹션 사이 간격: 요약 카드 → 조건 22px, 조건 → 시간 16px(space-4), 시간 → 한 줄 요약은 아래 */
+  --detail-gap-stats: 22px;
+  /* [화면] 앱바 아래(요약 카드 위) 추가 간격. 로고 아래 앱바 영역이 Figma 에서 47px 이다 */
+  --detail-gap-header: 3px;
+  /* [화면] 가기 좋은 시간 → 한 줄 요약 카드 간격(막대 행 하단 기준) */
+  --detail-gap-summary: 34px;
+  /* [화면] 한 줄 요약 카드: AI 배지 위치(14, 3), 문장 줄 높이 17px */
+  --detail-summary-pad-x: 14px;
+  --detail-summary-pad-top: 3px;
+  --line-height-summary-text: 17px;
+  /* [화면] 결정 필요 영역: 윤곽은 순수 빨강 점선 1px */
+  --color-callout-border: #ff0000;
+  --callout-pad-top: 10px;
+  --callout-pad: 11px;
+  --callout-gap: 7px;
+  --callout-pill-pad-y: 6px;
+  --callout-pill-pad-x: 17px;
+  /* [임시] 안전 영역이 없는 화면에서 결정 필요 영역 아래 최소 간격(Figma 는 홈 인디케이터 영역 34px) */
+  --detail-bottom-gap-min: 16px;
+
+  /* 입지 찾기 화면(/founder) 전용 */
+  /* [화면] 업종 선택 상자: 높이 54px, 글자는 상자 안쪽 24px(테두리 1px 포함), chevron 은 오른쪽에서 23px */
+  --founder-select-height: 54px;
+  --founder-select-pad-left: 23px;
+  --founder-select-chevron-right: 23px;
+  /* [화면] 간격: 앱바 → 질문 10px, 질문 → 선택 상자 12px, 선택 상자 → 섹션 제목 19px, 부제 → 첫 행 15px(섹션 안 간격 4px 포함, 아래 값은 그 나머지), 마지막 행 → 지도 22px. 로고 아래 제목 줄은 2px 내려 놓인다 */
+  --founder-gap-question: 10px;
+  --founder-gap-select: 12px;
+  --founder-gap-section: 19px;
+  --founder-gap-list: 11px;
+  --founder-gap-header: 2px;
+  --founder-gap-map: 22px;
+  /* [화면] 지도 카드 362×199, 모서리 25px. 높이는 너비에 비례한다 */
+  --founder-map-aspect: 362 / 199;
+  --founder-map-radius: 25px;
+  /* [화면] 지도 공통 최소 높이(200px)를 쓰지 않고 카드 비율만 따른다 */
+  --founder-map-min-height: 0px;
+
+  /* 동네 리포트 화면(/founder/areas/:areaId/report) 전용 */
+  /* [화면] "왜 이 동네인가요?" 카드: 가운데는 AI 카드 하이라이트(#fffdf3), 가장자리는 옅은 파란색(원본 rgba(233,240,255)) */
+  --color-report-card-edge: rgb(233 240 255);
+  --report-why-pad-bottom: 17px;
+  /* [화면] 근거 데이터 카드 좌우 안쪽 여백(글자 시작 x=45) */
+  --report-card-pad-x: 25px;
+  /* [화면] 간격: 요약 카드 줄 사이 12px, 요약 → 왜 이 동네 카드 21px, 왜 이 동네 카드 → 근거 데이터 제목 12px */
+  --report-gap-stat-rows: 12px;
+  --report-gap-why: 21px;
+  --report-gap-sources: 12px;
+  /* [임시] 공유 버튼 아래 간격(안전 영역에 더한다). Figma 는 홈 인디케이터 영역 34px + 11px */
+  --report-bottom-gap: 11px;
+}

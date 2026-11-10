@@ -1,0 +1,89 @@
+/*
+ * 요약 카드 (Figma 2:1660). 가게 요청 작성의 AI 카드와 같은 계열의 옅은 라임 바탕이다.
+ * 바탕 색은 --color-ai-card / --color-ai-card-glow 를 그대로 쓴다.
+ */
+.card {
+  padding: var(--space-3) var(--summary-card-pad-x) var(--space-4);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+  color: var(--color-text-primary);
+}
+
+/* 글자는 카드 안쪽 25px(= 패딩 21 + 4), 진행 영역(알약·막대)은 21px 에서 시작한다. */
+.title,
+.description,
+.goal {
+  padding-left: var(--summary-card-inset);
+}
+
+/* [화면] "요청했어요!": SemiBold 18px */
+.title {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-title);
+}
+
+.description {
+  margin-top: var(--space-1);
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.progress {
+  margin-top: var(--space-4);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* 결정 필요: 분홍 배경 + 빨간 글자 (Figma Accents/Red) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: var(--chip-height);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-decision-bg);
+  color: var(--color-decision-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-chip);
+}
+
+.count {
+  font: var(--font-caption);
+  color: var(--color-text-primary);
+}
+
+/* 진행 막대: 라임 채움. 트랙은 디자인에 없어(30/30 만 그려져 있음) 임시로 흰 바탕 + 윤곽선을 쓴다. */
+.track {
+  height: var(--progress-bar-height);
+  margin-top: var(--space-1);
+  overflow: hidden;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-pill);
+  background: var(--color-progress-track);
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.goal {
+  margin-top: var(--space-2);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-role-description);
+  font-weight: var(--font-weight-medium);
+  line-height: 16px;
+  color: var(--color-text-secondary);
+}

@@ -1,0 +1,63 @@
+/*
+ * 가게 요청하기 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
+ * 402×874 는 참고 크기라 높이를 고정하지 않는다. B 상태에서 Figma 가 줄인 섹션 간격은 따르지 않고,
+ * 상태와 관계없이 일관된 간격(A 기준)을 쓴다. 넘치면 스크롤한다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+  /* 이 화면의 칩은 좌우 패딩 12px (Figma). */
+  --chip-padding-x: var(--space-3);
+  /* 요청 보내기 버튼 아래 간격을 Figma(약 13px)에 맞추려고 공통 본문 하단 여백을 줄인다. */
+  margin-bottom: -20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 질문(label, 큰 제목)과 입력창 */
+.question {
+  margin-top: var(--space-2);
+  --textarea-gap: calc(var(--space-4) + var(--space-1));
+  --textarea-min-height: var(--request-input-min-height);
+}
+
+.summary {
+  margin-top: var(--request-gap-card);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--request-gap-section);
+}
+
+.location {
+  margin-top: var(--space-1);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+}
+
+.error {
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}

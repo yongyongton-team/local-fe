@@ -1,0 +1,60 @@
+/* 터치 영역: 시각적 칩보다 크게(44px) */
+.touch {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--chip-min-width, 0);
+  gap: var(--space-1);
+  min-height: var(--chip-height);
+  padding: var(--space-1) var(--chip-padding-x);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-chip);
+}
+
+.large {
+  min-height: var(--chip-height-large);
+}
+
+.selected {
+  border-color: var(--color-black);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 시각적으로 숨긴 radio 의 키보드 포커스를 칩에 표시한다. */
+.input:focus-visible + .chip,
+.touch:focus-visible .chip {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.touch:focus-visible {
+  outline: none;
+}
+
+.touch:disabled,
+.disabled {
+  cursor: not-allowed;
+}
+
+.touch:disabled .chip,
+.disabled .chip {
+  opacity: 0.4;
+}

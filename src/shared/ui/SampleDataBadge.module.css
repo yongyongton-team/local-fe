@@ -1,0 +1,9 @@
+.badge {
+  align-self: flex-start;
+  padding: 2px var(--space-3);
+  border: 1px dashed var(--color-danger);
+  border-radius: var(--radius-pill);
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}

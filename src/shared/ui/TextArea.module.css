@@ -1,0 +1,46 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--textarea-gap, var(--space-2));
+}
+
+.label {
+  font: var(--font-title);
+}
+
+/* 큰 제목형 label (디자인 시스템 밖의 개별 화면 스타일) */
+.labelDisplay {
+  font: var(--font-display);
+  letter-spacing: var(--letter-spacing-display);
+}
+
+.description {
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.textarea {
+  width: 100%;
+  min-height: var(--textarea-min-height, calc(var(--tap-target-min) * 2));
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border-control);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  line-height: var(--line-height-contents);
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.textarea[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.error {
+  /* 색상만으로 오류를 전달하지 않도록 메시지 텍스트를 항상 함께 둔다. */
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}

@@ -1,0 +1,32 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* 제목(h2)과 목록·카드가 붙지 않도록 섹션 내부 간격을 둔다. */
+.page > section[aria-labelledby] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  margin-left: calc(-1 * var(--space-2));
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+}
