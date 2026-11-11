@@ -194,7 +194,7 @@ export interface MockStoredRequest {
 /**
  * [임의] 처음부터 있는 "내가 보낸 요청". 개발용 값이다.
  * 구성동 반찬 요청 12명·"내가 요청함"(위 수요 데이터)과 일치하게 두었다.
- * 사장님 응답의 업체·지역·문구도 개발용이다(Figma 예시는 과일/채소 카드의 "싱싱과일(신갈동)" 응답).
+ * 사장님 응답의 업체·수령 시각·장소도 개발용이다(Figma 예시는 과일/채소 카드의 "싱싱과일: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요" 응답).
  */
 export const mockSeedRequests: MockStoredRequest[] = [
   {
@@ -209,8 +209,9 @@ export const mockSeedRequests: MockStoredRequest[] = [
     },
     response: {
       merchantName: '맛나반찬',
-      areaName: '신갈동',
-      message: '토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+      // 2026-11-14 는 토요일이다.
+      pickupAt: new Date('2026-11-14T10:00:00+09:00'),
+      pickupPlace: '구성동 주민센터 앞',
     },
   },
 ];

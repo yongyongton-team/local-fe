@@ -28,8 +28,43 @@ describe('내 요청 목 서비스', () => {
       neighborhood: { name: '구성동' },
       requestCount: 12,
       request: { visitTimes: ['weekday-evening'], visitFrequency: 'monthly' },
-      response: { merchantName: expect.any(String), areaName: expect.any(String) },
+      response: { merchantName: expect.any(String), pickupAt: expect.any(Date) },
     });
+  });
+});
+
+describe('내 요청 목 서비스의 삭제', () => {
+  it('요청을 목록에서 빼고 해당 동네·업종의 인원을 1 줄이며 "내가 요청함"을 해제한다', async () => {
+    const submitted = await requestSubmitter.submit(fruit());
+    expect((await fruitReport())?.demand).toMatchObject({ requestCount: 30, requestedByMe: true });
+
+    await myRequestService.deleteRequest(submitted.id);
+
+    const ids = (await myRequestService.listMyRequests()).map((item) => item.request.id);
+    expect(ids).not.toContain(submitted.id);
+    expect(ids).toHaveLength(1);
+    expect((await fruitReport())?.demand).toMatchObject({ requestCount: 29, requestedByMe: false });
+  });
+
+  it('없는 id 는 이미 지워진 것으로 보고 아무것도 바꾸지 않는다', async () => {
+    const before = await myRequestService.listMyRequests();
+
+    await expect(myRequestService.deleteRequest('nope')).resolves.toBeUndefined();
+
+    expect(await myRequestService.listMyRequests()).toEqual(before);
+  });
+
+  it('같은 요청을 두 번 지워도 인원은 한 번만 줄어든다', async () => {
+    const [seed] = await myRequestService.listMyRequests();
+
+    await myRequestService.deleteRequest(seed!.request.id);
+    await myRequestService.deleteRequest(seed!.request.id);
+
+    expect(await myRequestService.listMyRequests()).toEqual([]);
+    const sideDish = (await demandService.listReportsByNeighborhood('guseong')).find(
+      (report) => report.category.id === 'side-dish',
+    );
+    expect(sideDish?.demand.requestCount).toBe(11);
   });
 });
 

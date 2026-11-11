@@ -100,6 +100,8 @@
   /* ───────── 크기 ───────── */
   --button-height-large: 60px; /* [화면] "시작하기" */
   --button-height-small: 36px; /* [화면] "+가게 요청하기" (시각적 높이) */
+  --button-height-medium: 50px; /* [화면] 확인창의 "취소"·"지우기" */
+  --font-size-button-medium: 16px; /* [화면] 확인창 버튼 라벨(Medium) */
   --chip-height: 26px; /* [화면] 칩의 시각적 높이 */
   --tap-target-min: 44px; /* 터치 영역 최소 크기 */
   --logo-height: 43px; /* [화면] 서비스 로고 높이(너비 129px) */
@@ -169,6 +171,28 @@
   /* [화면] "결정 필요" 알약. 글자는 Figma 변수 Accents/Red, 배경은 rgba(255,0,0,0.12) */
   --color-decision-text: #ff383c;
   --color-decision-bg: rgb(255 0 0 / 12%);
+
+  /* [화면] 요청 카드 왼쪽 체크 표시의 중심: 카드 왼쪽 가장자리에서 14px */
+  --request-check-x: 14px;
+  /* [화면] 확인창 뒤 어두운 막: 검정 40% */
+  --color-overlay: rgb(0 0 0 / 40%);
+  /* [화면] 확인창: 너비 320px(좁은 화면에서는 좌우 여백을 남긴다), 모서리 20px */
+  --dialog-width: 320px;
+  --dialog-margin-x: 24px;
+  /* [화면] 확인창 안 간격: 위쪽 86px(제목 위 빈 공간), 제목→본문 15px, 본문→버튼 50px, 아래 30px, 버튼 사이 10px */
+  --dialog-pad-top: 86px;
+  --dialog-pad-bottom: 30px;
+  --dialog-pad-x: 20px;
+  --dialog-gap-body: 15px;
+  --dialog-gap-actions: 50px;
+  --dialog-actions-gap: 10px;
+  /* [화면] 확인창 제목: Bold 24px */
+  --font-size-dialog-title: 24px;
+  --line-height-dialog-title: 29px;
+  /* [화면] 확인창 버튼 폭 */
+  --dialog-button-width: 130px;
+  /* [임시] 확인창 본문 줄 높이. 원본은 normal(Noto Sans KR 약 1.45배) */
+  --line-height-dialog-body: 20px;
 
   /* 사장님 탐색 화면(/merchant) 전용 */
   /* [화면] 반경 칩 폭. Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다 */

@@ -441,22 +441,25 @@ export function parseIsoDate(value: unknown): Date | undefined {
 
 /**
  * 요청의 제안(offers[]) → "사장님 응답". 서버가 준 순서에서 보여줄 수 있는 첫 제안 하나를 쓴다.
- * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이나 제목(title)이 없는 것
- *   (없는 값을 지어내지 않으므로 "업체(지역): 제목" 한 줄을 만들 수 없다).
- * - 매핑: shopName → merchantName, 요청의 동네 이름 → areaName, title → message.
- * 가격·수령 시각과 장소·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
+ * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이 없는 것.
+ * - 매핑: shopName → merchantName, pickupAt → pickupAt(ISO 8601 을 해석하지 못하면 없음), pickupPlace → pickupPlace(비면 없음).
+ * 제목·가격·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
  * 제안이 없거나 배열이 아니면 undefined 다.
  */
 export function selectOfferResponse(
   offers: OfferDto[] | null | undefined,
-  areaName: string,
 ): MerchantResponse | undefined {
   for (const offer of Array.isArray(offers) ? offers : []) {
     if (!isObject(offer) || !isShownOfferStatus(offer.status)) continue;
     const merchantName = asString(offer.shopName);
-    const message = asString(offer.title);
-    if (merchantName === '' || message === '') continue;
-    return { merchantName, areaName, message };
+    if (merchantName === '') continue;
+    const pickupAt = parseIsoDate(offer.pickupAt);
+    const pickupPlace = asString(offer.pickupPlace).trim();
+    return {
+      merchantName,
+      ...(pickupAt !== undefined && { pickupAt }),
+      ...(pickupPlace !== '' && { pickupPlace }),
+    };
   }
   return undefined;
 }
@@ -487,7 +490,7 @@ export function mapMyRequests(
     ) satisfies VisitTime[];
     const visitFrequency: VisitFrequency | undefined = toVisitFrequency(item.frequency);
     const createdAt = parseIsoDate(item.createdAt);
-    const response = selectOfferResponse(item.offers, asString(dong.name));
+    const response = selectOfferResponse(item.offers);
 
     return {
       request: {

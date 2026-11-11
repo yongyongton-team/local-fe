@@ -3,6 +3,7 @@ import type { MyRequestService } from '../myRequestService';
 import type { RequestSubmitter } from '../requestSubmitter';
 import type { RequestSummarizer } from '../requestSummarizer';
 import type { ApiClient } from './apiClient';
+import { isApiError } from './apiError';
 import { getApiClient } from './defaultClient';
 import type { CreateResponseDto, MyRequestDto, ParseResponseDto } from './dto';
 import { assertNotDemoSession } from './demoGuard';
@@ -23,7 +24,7 @@ interface Options {
 }
 
 /**
- * 요청 작성(정리·생성)과 내 요청의 API 구현. 세 서비스는 조건 라벨 → 서버 code 기록을 나눠 쓴다
+ * 요청 작성(정리·생성)과 내 요청(조회·삭제)의 API 구현. 세 서비스는 조건 라벨 → 서버 code 기록을 나눠 쓴다
  * (정리 응답이 준 label 을 생성 요청의 code 로 되돌리려고). 기록은 만든 인스턴스 안에만 있다.
  */
 export function createApiRequestServices({
@@ -75,6 +76,19 @@ export function createApiRequestServices({
         (listNeighborhoods?.() ?? Promise.resolve([])).catch((): Neighborhood[] => []),
       ]);
       return mapMyRequests(dtos, categories, neighborhoods);
+    },
+    async deleteRequest(requestId) {
+      // 공유 데모 계정의 요청을 지우지 않는다. DELETE 는 이 한 곳에서만 부른다.
+      assertNotDemoSession(getClient().session);
+      const id = toServerId(requestId);
+      try {
+        // 성공은 204(본문 없음)이고 클라이언트가 undefined 로 돌려준다.
+        await getClient().request<undefined>(`/requests/${id}`, { method: 'DELETE' });
+      } catch (error) {
+        // 404: 이미 지워진 요청이다. 지우려던 결과와 같으므로 성공으로 본다.
+        if (isApiError(error) && error.kind === 'http' && error.status === 404) return;
+        throw error;
+      }
     },
   };
 

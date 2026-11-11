@@ -1,0 +1,60 @@
+/* 확인창 (Figma 41:198): 검정 40% 막 위에 흰색 320px 카드, 모서리 20px */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--dialog-margin-x);
+  background: var(--color-overlay);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  width: min(var(--dialog-width), 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--dialog-pad-top) var(--dialog-pad-x) var(--dialog-pad-bottom);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-dialog-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-dialog-title);
+  color: var(--color-text-primary);
+}
+
+/* 프로그램으로만 포커스를 받는 제목에는 윤곽선을 그리지 않는다. */
+.title:focus {
+  outline: none;
+}
+
+.body {
+  margin: var(--dialog-gap-body) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-dialog-body);
+  color: var(--color-text-secondary);
+  word-break: keep-all;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--dialog-actions-gap);
+  margin-top: var(--dialog-gap-actions);
+}
+
+.actions > * {
+  width: var(--dialog-button-width);
+}
