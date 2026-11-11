@@ -16,11 +16,8 @@ import {
   type GeoOrigin,
   type OriginOverlay,
 } from './naverMapOrigin';
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from './naverMapDefaults';
 import styles from './NaverMap.module.css';
-
-/** [임의] 마커가 없을 때의 지도 중심(용인시 기흥구 부근)과 줌 */
-const DEFAULT_CENTER = { lat: 37.3, lng: 127.115 };
-const DEFAULT_ZOOM = 14;
 
 /** 폴백 문구: 키가 있는데 불러오지 못했거나 인증에 실패했을 때만 보인다. */
 const FALLBACK_NOTICE = '지도를 불러오지 못했어요';

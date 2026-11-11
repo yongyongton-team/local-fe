@@ -10,6 +10,7 @@ import { MyRequestsPage } from '@/pages/MyRequestsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RequestNewPage } from '@/pages/RequestNewPage';
 import { ResidentExplorePage } from '@/pages/ResidentExplorePage';
+import { ShopEditPage } from '@/pages/ShopEditPage';
 import { ResidentTabsLayout } from '@/shared/layouts/ResidentTabsLayout';
 import { RoleLayout } from '@/shared/layouts/RoleLayout';
 import { RootLayout } from '@/shared/layouts/RootLayout';
@@ -44,12 +45,13 @@ export function createRoutes(extraRoutes: RouteObject[] = []): RouteObject[] {
       ],
     },
     {
-      // 내비도 우측 상단 아이콘도 없는 화면: 첫 화면, 내 정보, 동네 선택, 없는 주소
+      // 내비도 우측 상단 아이콘도 없는 화면: 첫 화면, 내 정보, 동네 선택, 내 가게, 없는 주소
       element: <RootLayout />,
       children: [
         { index: true, element: <HomePage /> },
         { path: 'me', element: <MyInfoPage /> },
         { path: 'me/dong', element: <DongSelectPage /> },
+        { path: 'me/shop', element: <ShopEditPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

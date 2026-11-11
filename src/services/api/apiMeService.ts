@@ -7,7 +7,7 @@ import { assertNotDemoSession } from './demoGuard';
 import { toDomainId, toServerId } from './ids';
 import { mapHealth, mapMe, toServerRole } from './mappers';
 
-/** GET /me, PUT /me(역할·동네 저장), GET /health 의 실제 API 구현. */
+/** GET /me, PUT /me(역할·동네 저장), PUT /me/shop(내 가게 저장), GET /health 의 실제 API 구현. */
 export function createApiMeService(getClient: () => ApiClient = getApiClient): MeService {
   return {
     savesRemotely: true,
@@ -56,6 +56,24 @@ export function createApiMeService(getClient: () => ApiClient = getApiClient): M
           signal,
         }),
       );
+    },
+    async saveShop({ shopName, categoryId, lat, lng }, signal) {
+      // 데모 계정은 공유 계정이라 가게를 만들거나 고치면 안 된다. PUT /me/shop 은 이 한 곳에서만 부른다.
+      assertNotDemoSession(getClient().session);
+      const id = toServerId(categoryId);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new ApiError({
+          kind: 'parse',
+          code: 'INVALID_LOCATION',
+          message: '가게 위치가 올바르지 않아요.',
+        });
+      }
+      // 서버 필드 이름은 lon 이다(도메인은 lng). 응답은 쓰지 않는다.
+      await getClient().request('/me/shop', {
+        method: 'PUT',
+        body: { shopName, categoryId: id, lat, lon: lng },
+        signal,
+      });
     },
     async checkHealth(signal) {
       // 상태 확인은 인증이 필요 없다고 보고 토큰을 붙이지 않는다(로그인도 일으키지 않는다).
