@@ -102,12 +102,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* 일러스트 에셋 대기: 남는 높이를 채운다. */
-.illustration {
-  flex: 1;
-  min-height: var(--info-illustration-min-height);
-}
-
 /* 정보 카드: 윤곽선 1px #999, 모서리 20px, 행 오른쪽의 > */
 .card {
   margin: 0;
@@ -161,10 +155,4 @@
   display: inline-flex;
   flex: none;
   color: var(--color-text-primary);
-}
-
-/* ChevronRightIcon 의 너비(14px)와 같다 */
-.chevronSpacer {
-  flex: none;
-  width: 14px;
 }

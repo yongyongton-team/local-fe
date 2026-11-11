@@ -1,4 +1,4 @@
-import type { DemandSummary } from '@/types/domain';
+import type { DemandSummary, MeShop } from '@/types/domain';
 import { mockDemandSummaries, mockSeedRequests, type MockStoredRequest } from './demand';
 
 /*
@@ -12,6 +12,8 @@ interface MemoryDb {
   /** 내가 보낸 요청. 배열 끝이 가장 최근이다. */
   requests: MockStoredRequest[];
   nextRequestNumber: number;
+  /** 내 가게(GET /me 의 shop 에 해당). 등록하기 전에는 null. 내 가게 화면이 저장하면 채워진다. */
+  shop: MeShop | null;
 }
 
 function createInitialDb(): MemoryDb {
@@ -22,6 +24,7 @@ function createInitialDb(): MemoryDb {
       response: response && { ...response },
     })),
     nextRequestNumber: 1,
+    shop: null,
   };
 }
 

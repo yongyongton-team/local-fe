@@ -5,6 +5,8 @@ export const paths = {
   me: '/me',
   /** 동네 선택(내 정보에서 들어간다) */
   meDong: '/me/dong',
+  /** 내 가게 등록·수정(사장님). 내 정보에서 들어간다. */
+  meShop: '/me/shop',
   resident: '/resident',
   residentRequestNew: '/resident/requests/new',
   residentRequests: '/resident/requests',

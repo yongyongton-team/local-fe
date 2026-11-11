@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { MY_INFO_COPY } from '@/features/my-info/copy';
+import { MyInfoIllustration } from '@/features/my-info/MyInfoIllustration';
 import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { ROLE_OPTIONS } from '@/features/selection/roles';
 import { useSelection } from '@/features/selection/SelectionContext';
@@ -24,7 +25,8 @@ const ROLE_CHIPS = ROLE_OPTIONS.map(({ role, label }) => ({ value: role, label }
  * - 닉네임·ID·가게는 GET /me, 역할·동네는 선택 Context(없으면 GET /me 의 값)를 쓴다.
  * - 역할 칩을 누르면 PUT /me 로 바꾸고 그 역할의 첫 화면으로 이동한다. 데모 세션은 서버에 쓰지 않고 막는다.
  * - "내 가게" 행은 역할이 사장님일 때만 보인다.
- * - 일러스트는 이미지 에셋이 없어 자리만 둔다.
+ * - 일러스트는 장식이고, 칩에 보이는(선택 중인) 역할의 캐릭터가 활성이다. 역할이 없으면 사장님 상태(디자인 기준)다.
+ * - "내 가게" 행(사장님만)은 가게 등록·수정(/me/shop)으로 간다. 가게가 없어도 눌러서 등록한다.
  */
 export function MyInfoPage() {
   const selection = useSelection();
@@ -59,12 +61,15 @@ function Content({ me }: { me: Me }) {
   // state 갱신보다 빠른 연타를 막는다.
   const savingRef = useRef(false);
 
-  const role = selection.role ?? me.role;
+  // 역할 변경을 서버에 저장하는 동안 칩과 일러스트가 선택 중인 역할을 따라간다. 실패하면 원래 역할로 돌아간다.
+  const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
+  const savedRole = selection.role ?? me.role;
+  const role = pendingRole ?? savedRole;
   const neighborhood = selection.neighborhood ?? toNeighborhood(me.dong);
   const nickname = me.nickname.trim() || MY_INFO_COPY.fallbackNickname;
 
   async function changeRole(next: UserRole) {
-    if (savingRef.current || next === role) return;
+    if (savingRef.current || next === savedRole) return;
     setError(null);
 
     // 데모 세션(공유 계정)은 역할을 바꾸지 않는다(PUT /me 없음). 서비스에도 같은 방어가 있다.
@@ -81,12 +86,14 @@ function Content({ me }: { me: Me }) {
       }
       savingRef.current = true;
       setSaving(true);
+      setPendingRole(next);
       try {
         await meService.saveSelection(next, neighborhood.id);
       } catch (e) {
         setError(describeApiError(e));
         savingRef.current = false;
         setSaving(false);
+        setPendingRole(null);
         return;
       }
     }
@@ -143,8 +150,7 @@ function Content({ me }: { me: Me }) {
         )}
       </div>
 
-      {/* 일러스트 에셋이 아직 없다. 자리만 유연한 여백으로 둔다. */}
-      <div className={styles.illustration} aria-hidden="true" />
+      <MyInfoIllustration role={role} />
 
       <ul className={styles.card}>
         <li>
@@ -160,15 +166,16 @@ function Content({ me }: { me: Me }) {
             </span>
           </Link>
         </li>
-        {role === 'merchant' && (
+        {/* 행은 저장된 역할을 따른다. 변경을 저장하는 동안 선택 중인 역할로 행이 늘거나 줄어 화면이 밀리지 않게 한다. */}
+        {savedRole === 'merchant' && (
           <li>
-            {/* TODO: 가게 화면은 다음 PR 에서 만든다. 지금은 이동 없이 값만 보여준다(chevron 없음). */}
-            <div className={styles.row}>
+            <Link to={paths.meShop} className={`${styles.row} ${styles.rowLink}`}>
               <span className={styles.rowLabel}>{MY_INFO_COPY.myShop}</span>
               <span className={styles.rowValue}>{shopValue}</span>
-              {/* 내 동네 행의 > 와 값의 오른쪽 끝을 맞추는 빈 자리 */}
-              <span className={styles.chevronSpacer} aria-hidden="true" />
-            </div>
+              <span className={styles.chevron} aria-hidden="true">
+                <ChevronRightIcon />
+              </span>
+            </Link>
           </li>
         )}
       </ul>

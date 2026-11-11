@@ -14,6 +14,11 @@ import { useEffect, useSyncExternalStore } from 'react';
 const SCRIPT_URL = 'https://oapi.map.naver.com/openapi/v3/maps.js';
 /** 키 쿼리 파라미터 이름. 문서가 바뀌면 이 상수만 고친다(ncpKeyId ↔ ncpClientId). */
 export const NAVER_MAP_KEY_PARAM = 'ncpKeyId';
+/**
+ * 함께 불러올 서브모듈. 주소 → 좌표 검색(naver.maps.Service.geocode)에 geocoder 가 필요하다(내 가게 위치 선택).
+ * 클라이언트 지오코더는 Client ID 만 쓴다(Client Secret 은 쓰지 않는다).
+ */
+export const NAVER_MAP_SUBMODULES = 'geocoder';
 /** 이미 삽입된 스크립트를 찾는 표식(HMR 등으로 모듈 상태가 초기화돼도 중복 삽입하지 않는다). */
 const SCRIPT_MARK = 'data-naver-map-sdk';
 
@@ -109,7 +114,7 @@ export function ensureNaverMapScript(): void {
   const script = document.createElement('script');
   script.async = true;
   script.setAttribute(SCRIPT_MARK, '');
-  script.src = `${SCRIPT_URL}?${NAVER_MAP_KEY_PARAM}=${encodeURIComponent(key)}`;
+  script.src = `${SCRIPT_URL}?${NAVER_MAP_KEY_PARAM}=${encodeURIComponent(key)}&submodules=${NAVER_MAP_SUBMODULES}`;
   attach(script);
   document.head.appendChild(script);
 }

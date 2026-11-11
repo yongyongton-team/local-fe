@@ -234,6 +234,53 @@
   /* [화면] 하단 고정 버튼 아래 간격: Figma 는 홈 인디케이터 영역을 빼고 33px */
   --sticky-footer-gap: 33px;
 
+  /*
+   * 내 정보 일러스트(Figma 41:31, 사장님이 선택된 상태가 기준): 영역 362×266. 아래 값은 영역 대비 퍼센트다.
+   * 선택한 역할의 캐릭터가 활성(크게·불투명)이고 나머지 둘은 비활성(작게·투명도 50%)이며, 빛 번짐은 활성 캐릭터 뒤에 있다.
+   * 크기는 높이로만 정하고(가로는 자동) 가로 위치는 슬롯 가로 중심으로 정한다.
+   */
+  --info-illustration-aspect: 362 / 266;
+  --illust-glow-top: 0%; /* 빛 번짐 245×245 (높이 92.11%, 너비 67.68%) */
+  --illust-glow-height: 92.11%;
+  --illust-glow-width: 67.68%;
+  --illust-active-top: 9.02%; /* 활성 캐릭터 높이 198(74.44%), 위에서 24. 세 역할 모두 같은 바닥선 */
+  --illust-active-height: 74.44%;
+  --illust-inactive-top: 46.24%; /* 비활성 캐릭터 높이 143(53.76%), 위에서 123. 영역 바닥에 닿는다 */
+  --illust-inactive-height: 53.76%;
+  --illust-slot-resident: 15.46%; /* 슬롯 가로 중심: 주민 왼쪽, 사장님 가운데, 예비 창업자 오른쪽 */
+  --illust-slot-owner: 49.86%;
+  --illust-slot-founder: 85.77%;
+  --illust-inactive-opacity: 0.5;
+  --illust-duration: 250ms; /* 활성이 바뀔 때의 전환 */
+  /*
+   * 주민·예비 창업자가 활성이면 커진 캐릭터가 가운데의 비활성 사장님과 겹친다. 둘을 서로 반대로 벌린다
+   * (사장님이 활성인 디자인 기준 상태에는 적용하지 않는다). 가로(dx)는 영역 너비 대비 %, 세로(dy)는 영역 높이 대비 %이고
+   * 음수가 왼쪽·위쪽이다. 402px 기준 px 는 괄호 안이다. 활성 캐릭터가 화면 가장자리에서 12px 이상 안쪽에 있게 정했다.
+   */
+  --illust-founder-active-dx: 9.39%; /* 활성 예비 창업자: 오른쪽으로 34px */
+  --illust-founder-active-dy: -3.76%; /* 위로 10px */
+  --illust-founder-owner-dx: -3.87%; /* 비활성 사장님: 왼쪽으로 14px */
+  --illust-founder-owner-dy: -3.01%; /* 위로 8px */
+  --illust-resident-active-dx: -8.29%; /* 활성 주민: 왼쪽으로 30px */
+  --illust-resident-active-dy: -3.76%; /* 위로 10px */
+  --illust-resident-owner-dx: 6.08%; /* 비활성 사장님: 오른쪽으로 22px */
+  --illust-resident-owner-dy: -3.01%; /* 위로 8px */
+  /* 활성 캐릭터가 위로 올라간 만큼의 이 비율만 빛 번짐도 함께 올린다 */
+  --illust-glow-dy-ratio: 0.5;
+
+  /* 내 가게(/me/shop) 화면 전용 */
+  /* [화면] 가게 위치 지도: 좌우 끝까지, 높이 208px */
+  --shop-map-height: 208px;
+  /* [화면] 입력·select 박스: 높이 57px(내 정보 검색 입력과 같다), 글자는 안쪽 30px, select 오른쪽 chevron */
+  --shop-field-height: 57px;
+  --shop-field-pad-left: 30px;
+  --shop-field-chevron-right: 28px;
+  /* [화면] select 배경은 회색(#e4e4e4)이고 윤곽선은 #999 */
+  --shop-select-bg: var(--color-gray-light);
+  /* [화면] 섹션 간격: 라벨 → 상자 6px, 상자 → 다음 라벨 13px */
+  --shop-label-gap: 6px;
+  --shop-section-gap: 13px;
+
   /* 사장님 탐색 화면(/merchant) 전용 */
   /* [화면] 반경 칩 폭. Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다 */
   --merchant-chip-width: 80px;

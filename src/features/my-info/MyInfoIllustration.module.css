@@ -1,0 +1,133 @@
+/* 남는 높이를 채우고 일러스트는 그 안에서 가운데에 둔다. 너무 낮으면 일러스트가 줄어든다. */
+.area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--info-illustration-min-height);
+  padding: var(--space-2) 0;
+}
+
+/*
+ * 영역 362×266(402px 화면 기준). 영역의 높이는 너비에 비례해 고정이라 활성이 바뀌어도 주변이 밀리지 않는다.
+ * 안의 그림은 모두 이 영역 대비 퍼센트로 놓는다. 크기는 높이로만 정하고 가로는 자동이다(이미지 비율).
+ */
+.illustration {
+  /* 화면 가장자리까지 갈 수 있는 거리(본문 좌우 여백). 활성 그림이 화면 밖으로 나가지 않게 막는 데 쓴다. */
+  --gutter-left: max(var(--space-page), env(safe-area-inset-left));
+  --gutter-right: max(var(--space-page), env(safe-area-inset-right));
+  /*
+   * 활성 캐릭터와 빛 번짐의 공통 가로 중심 = 슬롯 중심. 단, 빛 번짐(가장 넓다)이 화면 밖으로 나가면
+   * 중심을 안쪽으로 필요한 만큼만 민다. 사장님(가운데)은 밀리지 않는다.
+   */
+  --active-min: calc(var(--illust-glow-width) / 2 - var(--gutter-left));
+  --active-max: calc(100% + var(--gutter-right) - var(--illust-glow-width) / 2);
+
+  position: relative;
+  width: 100%;
+  max-width: 362px;
+  aspect-ratio: var(--info-illustration-aspect);
+  max-height: 100%;
+}
+
+.glow,
+.character {
+  position: absolute;
+  display: block;
+  width: auto;
+  max-width: none;
+  /* 가로 위치는 가로 중심(left)으로 정한다. 가로 크기는 자동이라 자기 너비의 절반만큼 왼쪽으로 당긴다. */
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.glow {
+  z-index: 0;
+  top: calc(var(--illust-glow-top) + var(--dy, 0%));
+  height: var(--illust-glow-height);
+  left: clamp(var(--active-min), var(--slot), var(--active-max));
+}
+
+/* 빛 번짐은 활성 캐릭터의 슬롯 중심에 있다(data-role 이 활성 역할). */
+.character {
+  left: calc(var(--slot) + var(--dx, 0%));
+}
+
+/* 슬롯 가로 중심 */
+.resident,
+.glow[data-role='resident'] {
+  --slot: var(--illust-slot-resident);
+}
+
+.owner,
+.glow[data-role='owner'] {
+  --slot: var(--illust-slot-owner);
+}
+
+.founder,
+.glow[data-role='founder'] {
+  --slot: var(--illust-slot-founder);
+}
+
+/* 비활성: 작게, 낮은 자리(영역 바닥), 투명도 50% */
+.character[data-active='false'] {
+  z-index: 1;
+  top: calc(var(--illust-inactive-top) + var(--dy, 0%));
+  height: var(--illust-inactive-height);
+  opacity: var(--illust-inactive-opacity);
+}
+
+/* 활성: 크게, 세 역할 모두 같은 바닥선, 불투명. 비활성과 겹치면 위에 보인다. */
+.character[data-active='true'] {
+  z-index: 2;
+  top: calc(var(--illust-active-top) + var(--dy, 0%));
+  height: var(--illust-active-height);
+  opacity: 1;
+  left: calc(clamp(var(--active-min), var(--slot), var(--active-max)) + var(--dx, 0%));
+}
+
+/*
+ * 주민·예비 창업자가 활성일 때: 커진 활성 캐릭터와 가운데의 비활성 사장님이 겹치지 않게 서로 반대로 벌린다.
+ * 활성은 바깥쪽 위로, 사장님은 안쪽이 아닌 반대쪽 위로 옮기고, 빛 번짐은 활성이 올라간 만큼의 절반만 올린다(가로는 그대로 활성을 따라간다).
+ * 사장님이 활성인 상태(디자인 기준)에는 규칙이 없다. 이동량은 tokens.css 의 --illust-*-dx·dy 한 곳에서 고친다.
+ */
+.illustration[data-active-role='founder'] .founder {
+  --dx: var(--illust-founder-active-dx);
+  --dy: var(--illust-founder-active-dy);
+}
+
+.illustration[data-active-role='founder'] .owner {
+  --dx: var(--illust-founder-owner-dx);
+  --dy: var(--illust-founder-owner-dy);
+}
+
+.illustration[data-active-role='founder'] .glow {
+  --dy: calc(var(--illust-founder-active-dy) * var(--illust-glow-dy-ratio));
+}
+
+.illustration[data-active-role='resident'] .resident {
+  --dx: var(--illust-resident-active-dx);
+  --dy: var(--illust-resident-active-dy);
+}
+
+.illustration[data-active-role='resident'] .owner {
+  --dx: var(--illust-resident-owner-dx);
+  --dy: var(--illust-resident-owner-dy);
+}
+
+.illustration[data-active-role='resident'] .glow {
+  --dy: calc(var(--illust-resident-active-dy) * var(--illust-glow-dy-ratio));
+}
+
+/* 활성이 바뀔 때 크기·투명도·위치가 부드럽게 바뀐다. 움직임 줄이기 설정이면 전환 없이 바로 바뀐다. */
+@media (prefers-reduced-motion: no-preference) {
+  .glow,
+  .character {
+    transition:
+      left var(--illust-duration) ease,
+      top var(--illust-duration) ease,
+      height var(--illust-duration) ease,
+      opacity var(--illust-duration) ease;
+  }
+}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
 import { DONG_SELECT_COPY, MY_INFO_COPY } from '@/features/my-info/copy';
+import { useBackToMyInfo } from '@/features/my-info/useBackToMyInfo';
 import { useSelection } from '@/features/selection/SelectionContext';
 import {
   DEMO_WRITE_BLOCKED_MESSAGE,
@@ -53,8 +53,7 @@ export function DongSelectPage() {
 }
 
 function Picker({ list }: { list: Neighborhood[] }) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const goBack = useBackToMyInfo();
   const selection = useSelection();
   const current = selection.neighborhood;
 
@@ -80,12 +79,6 @@ function Picker({ list }: { list: Neighborhood[] }) {
       (district === undefined || n.district === district) &&
       (keyword === '' || n.name.includes(keyword)),
   );
-
-  function goBack() {
-    // 이 앱에서 처음 연 화면(직접 진입)이면 돌아갈 곳이 없어 내 정보로 간다.
-    if (location.key === 'default') void navigate(paths.me, { replace: true });
-    else void navigate(-1);
-  }
 
   async function save() {
     if (savingRef.current || !selected) return;

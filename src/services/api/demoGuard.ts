@@ -5,7 +5,7 @@ import type { GuestSession } from './session';
 export const DEMO_SESSION_CODE = 'DEMO_SESSION';
 
 /**
- * 데모 세션이면 던진다. 데모 계정은 모두가 공유하는 계정이라 서버에 쓰는 호출(PUT /me, POST /requests 등)이
+ * 데모 세션이면 던진다. 데모 계정은 모두가 공유하는 계정이라 서버에 쓰는 호출(PUT /me, PUT /me/shop, POST /requests 등)이
  * 이 함수를 거쳐야 한다. 쓰기 호출을 추가할 때 이 함수를 먼저 부른다.
  */
 export function assertNotDemoSession(session: Pick<GuestSession, 'isDemo'>): void {

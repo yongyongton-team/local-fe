@@ -1,0 +1,98 @@
+/*
+ * 내 가게 레이아웃 (Figma 41:121, 402×874 기준을 비율·여백으로 옮김).
+ * 높이를 고정하지 않는다. 내용이 길면 스크롤하고 저장 버튼은 화면 아래에 붙는다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--shop-section-gap);
+  /* 앱바 아래 첫 라벨까지 */
+  margin-top: var(--shop-section-gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shop-label-gap);
+  min-width: 0;
+}
+
+/* [화면] 라벨: Medium 16px */
+.label {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-contents);
+  color: var(--color-text-primary);
+}
+
+/* 입력: 윤곽선 1px #999, 모서리 20px, 높이 57px, 글자는 안쪽 30px */
+.input {
+  width: 100%;
+  min-height: var(--shop-field-height);
+  padding: 0 var(--space-4) 0 var(--shop-field-pad-left);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: max(16px, 1rem);
+  font-weight: var(--font-weight-regular);
+}
+
+.input::placeholder {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-search);
+  opacity: 0.87;
+}
+
+/* 업종 select: 회색 배경 + 윤곽선 #999 */
+.select {
+  --select-bg: var(--shop-select-bg);
+  --select-border: 1px solid var(--color-border-card);
+  --select-min-height: var(--shop-field-height);
+  --select-pad-left: var(--shop-field-pad-left);
+  --select-chevron-right: var(--shop-field-chevron-right);
+  --select-font-weight: var(--font-weight-regular);
+}
+
+.notice {
+  margin: 0;
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 하단 고정 버튼: 짧은 화면에서는 맨 아래, 긴 화면에서는 스크롤하며 아래에 붙는다. */
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  padding-bottom: calc(var(--sticky-footer-gap) - var(--space-6) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-surface) var(--space-5));
+}
