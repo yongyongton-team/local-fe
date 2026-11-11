@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { myRequestService, requestSubmitter } from '@/services';
@@ -79,17 +79,18 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
     expect(item.getByText('구성동 · 평일 저녁 · 한 달 2~3번')).toBeInTheDocument();
     const response = item.getByRole('group', { name: '사장님 응답' });
     expect(response).toHaveTextContent(
-      '맛나반찬(신갈동): 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+      '맛나반찬: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
     );
     expect(item.queryByText('아직 사장님 응답이 없어요')).not.toBeInTheDocument();
   });
 
-  it('요청 카드 안에는 링크나 버튼이 없다(정보만 보여준다)', async () => {
+  it('요청 카드 안에는 링크나 버튼이 없고 삭제할 요청을 고르는 체크만 있다', async () => {
     await openMyRequests();
 
     cards().forEach((card) => {
       expect(within(card).queryAllByRole('link')).toHaveLength(0);
       expect(within(card).queryAllByRole('button')).toHaveLength(0);
+      expect(within(card).getAllByRole('checkbox')).toHaveLength(1);
     });
   });
 
@@ -251,5 +252,361 @@ describe('이웃에게 알리기', () => {
     await user.click(shareButton());
 
     expect(JSON.stringify(share.mock.calls)).not.toContain('생기면');
+  });
+});
+
+describe('요청 삭제(선택 후 삭제 + 확인창)', () => {
+  const trash = () => screen.getByRole('button', { name: '선택한 요청 지우기' });
+  const check = (index: number) => within(cards()[index]!).getByRole('checkbox');
+  const dialog = () => screen.getByRole('dialog');
+  const confirmButton = () => within(dialog()).getByRole('button', { name: /^지우기/ });
+  const cancelButton = () => within(dialog()).getByRole('button', { name: '취소' });
+  const FAILED = '일부 요청을 지우지 못했어요. 다시 시도해 주세요.';
+
+  /** 과일 요청을 하나 더 만들어 카드를 2개(과일, 반찬) 둔다. */
+  async function openWithTwo() {
+    await requestSubmitter.submit(fruitRequest());
+    await openMyRequests();
+  }
+
+  /** 아직 끝나지 않는 삭제 호출. release 로 끝낸다. */
+  function pendingDelete() {
+    const release: { resolve: () => void } = { resolve: () => {} };
+    const spy = vi.spyOn(myRequestService, 'deleteRequest').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          release.resolve = resolve;
+        }),
+    );
+    return { spy, release };
+  }
+
+  it('목록 위에 "요청 선택하기" 줄과 휴지통이 있고, 선택이 없으면 휴지통이 비활성이다', async () => {
+    await openMyRequests();
+
+    expect(listSection().getByText('요청 선택하기')).toBeInTheDocument();
+    expect(trash()).toBeDisabled();
+    expect(check(0)).not.toBeChecked();
+  });
+
+  it('체크를 누르면 선택되고 다시 누르면 해제되며, 선택이 있으면 휴지통이 켜진다', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+
+    await user.click(check(0));
+    expect(check(0)).toBeChecked();
+    expect(trash()).toBeEnabled();
+
+    await user.click(check(0));
+    expect(check(0)).not.toBeChecked();
+    expect(trash()).toBeDisabled();
+  });
+
+  it('체크의 이름에 동네와 업종이 들어 있다', async () => {
+    await openMyRequests();
+
+    expect(
+      within(cards()[0]!).getByRole('checkbox', { name: '구성동 반찬가게 요청 선택' }),
+    ).toBeInTheDocument();
+  });
+
+  it('여러 개를 고를 수 있다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+
+    await user.click(check(0));
+    await user.click(check(1));
+
+    expect(check(0)).toBeChecked();
+    expect(check(1)).toBeChecked();
+  });
+
+  it('하나를 고르고 휴지통을 누르면 확인창이 뜬다: 제목, 인원이 하나 줄어든다는 본문, 취소·지우기', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+    await user.click(check(0));
+
+    await user.click(trash());
+
+    const box = within(dialog());
+    expect(dialog()).toHaveAttribute('aria-modal', 'true');
+    expect(box.getByRole('heading', { name: '이 요청을 지울까요?' })).toBeInTheDocument();
+    // 시드: 구성동 반찬 12명 → 11명
+    expect(
+      box.getByText('구성동 반찬 요청이 11명으로 줄어요. 지운 요청은 되돌릴 수 없어요.'),
+    ).toBeInTheDocument();
+    expect(box.getByRole('button', { name: '취소' })).toBeInTheDocument();
+    expect(box.getByRole('button', { name: '지우기' })).toBeInTheDocument();
+    expect(dialog()).toHaveAccessibleName('이 요청을 지울까요?');
+    expect(dialog()).toHaveAccessibleDescription(/11명으로 줄어요/);
+  });
+
+  it('확인창이 열리면 제목에 포커스가 있고, 닫으면 포커스가 열기 전 자리로 돌아간다', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+    await user.click(check(0));
+    trash().focus();
+
+    await user.click(trash());
+    expect(within(dialog()).getByRole('heading')).toHaveFocus();
+
+    await user.click(cancelButton());
+    expect(trash()).toHaveFocus();
+  });
+
+  it('인원이 0 이면 "0명으로 줄어요"(음수가 되지 않는다)', async () => {
+    const user = userEvent.setup();
+    const [seed] = await myRequestService.listMyRequests();
+    vi.spyOn(myRequestService, 'listMyRequests').mockResolvedValue([{ ...seed!, requestCount: 0 }]);
+    await openMyRequests();
+    await user.click(check(0));
+
+    await user.click(trash());
+
+    expect(within(dialog()).getByText(/0명으로 줄어요/)).toBeInTheDocument();
+    expect(within(dialog()).queryByText(/-1명/)).not.toBeInTheDocument();
+  });
+
+  it('둘 이상 고르면 임시 문구: "선택한 요청 N개를 지울까요?" / "지운 요청은 되돌릴 수 없어요."', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    await user.click(check(0));
+    await user.click(check(1));
+
+    await user.click(trash());
+
+    const box = within(dialog());
+    expect(box.getByRole('heading', { name: '선택한 요청 2개를 지울까요?' })).toBeInTheDocument();
+    expect(box.getByText('지운 요청은 되돌릴 수 없어요.')).toBeInTheDocument();
+  });
+
+  it('"취소"를 누르면 확인창만 닫히고 목록과 선택은 그대로다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.click(cancelButton());
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(cards()).toHaveLength(2);
+    expect(check(0)).toBeChecked();
+  });
+
+  it('Escape 로 닫는다', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('뒤 배경을 누르면 닫히지만 확인창 안을 누르면 닫히지 않는다', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.click(within(dialog()).getByRole('heading'));
+    expect(dialog()).toBeInTheDocument();
+
+    await user.click(dialog().parentElement!);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('Tab 은 확인창 안에서만 돈다', async () => {
+    const user = userEvent.setup();
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.tab();
+    expect(cancelButton()).toHaveFocus();
+    await user.tab();
+    expect(confirmButton()).toHaveFocus();
+    await user.tab();
+    expect(cancelButton()).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(confirmButton()).toHaveFocus();
+  });
+
+  it('"지우기"를 누르면 그 요청이 목록에서 빠지고 확인창이 닫히며 선택이 비워진다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(cards()).toHaveLength(1);
+    expect(within(cards()[0]!).getByRole('heading', { name: '반찬가게' })).toBeInTheDocument();
+    expect(check(0)).not.toBeChecked();
+    expect(trash()).toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // 목 서비스에서도 지워졌다(다시 불러와도 없다).
+    expect((await myRequestService.listMyRequests()).map((i) => i.category.id)).toEqual([
+      'side-dish',
+    ]);
+  });
+
+  it('여러 개를 한 번에 지울 수 있고, 모두 지우면 빈 상태가 나온다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    await user.click(check(0));
+    await user.click(check(1));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    expect(await screen.findByText('아직 보낸 요청이 없어요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '가게 요청하기' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '요청했어요!' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('요청마다 각각 삭제를 호출한다', async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(myRequestService, 'deleteRequest');
+    await openWithTwo();
+    const ids = cards().map((_, index) => index);
+    await user.click(check(ids[0]!));
+    await user.click(check(ids[1]!));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    expect(new Set(spy.mock.calls.map(([id]) => id)).size).toBe(2);
+  });
+
+  it('일부만 실패하면 성공한 것만 빠지고, 확인창은 닫히고, 임시 문구가 목록 위에 나오며 실패한 요청은 선택된 채 남는다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    const [fruitId, sideDishId] = cards().map((_, i) => i); // 화면 순서: 과일(최근), 반찬
+    const items = await myRequestService.listMyRequests();
+    const failingId = items[1]!.request.id; // 반찬
+    const original = myRequestService.deleteRequest.bind(myRequestService);
+    vi.spyOn(myRequestService, 'deleteRequest').mockImplementation(async (id) => {
+      if (id === failingId) throw new Error('boom');
+      await original(id);
+    });
+    await user.click(check(fruitId!));
+    await user.click(check(sideDishId!));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(FAILED);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(cards()).toHaveLength(1);
+    expect(within(cards()[0]!).getByRole('heading', { name: '반찬가게' })).toBeInTheDocument();
+    expect(check(0)).toBeChecked();
+    expect(trash()).toBeEnabled();
+  });
+
+  it('전부 실패해도 같은 문구가 나오고 목록은 그대로다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(myRequestService, 'deleteRequest').mockRejectedValue(new Error('boom'));
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(FAILED);
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('실패 문구는 다시 고르면 사라진다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(myRequestService, 'deleteRequest').mockRejectedValue(new Error('boom'));
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+    await user.click(confirmButton());
+    await screen.findByRole('alert');
+
+    await user.click(check(0));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('삭제하는 동안 지우기·취소·휴지통·체크를 막고 호출은 한 번만 보낸다', async () => {
+    const user = userEvent.setup();
+    const { spy, release } = pendingDelete();
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    await user.click(confirmButton());
+    await user.click(confirmButton());
+    await user.dblClick(confirmButton());
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(confirmButton()).toHaveAttribute('aria-busy', 'true');
+    expect(cancelButton()).toBeDisabled();
+    expect(trash()).toBeDisabled();
+    expect(check(0)).toBeDisabled();
+
+    // 진행 중에는 Escape·배경 클릭으로도 닫히지 않는다.
+    await user.keyboard('{Escape}');
+    await user.click(dialog().parentElement!);
+    expect(dialog()).toBeInTheDocument();
+
+    release.resolve();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('같은 순간에 두 번 눌러도(화면이 다시 그려지기 전) 호출은 한 번만 보낸다', async () => {
+    const user = userEvent.setup();
+    const { spy, release } = pendingDelete();
+    await openMyRequests();
+    await user.click(check(0));
+    await user.click(trash());
+
+    const button = confirmButton();
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    release.resolve();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('삭제가 끝나면 막았던 체크가 다시 눌린다', async () => {
+    const user = userEvent.setup();
+    const { release } = pendingDelete();
+    await openWithTwo();
+    await user.click(check(0));
+    await user.click(trash());
+    await user.click(confirmButton());
+    expect(check(1)).toBeDisabled();
+
+    release.resolve();
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(check(0)).toBeEnabled();
+  });
+
+  it('지운 뒤 요약 카드는 남은 가장 최근 요청을 기준으로 바뀐다', async () => {
+    const user = userEvent.setup();
+    await openWithTwo();
+    expect(within(summaryCard()).getByText(FRUIT_SUMMARY)).toBeInTheDocument();
+    await user.click(check(0)); // 과일(가장 최근)
+    await user.click(trash());
+
+    await user.click(confirmButton());
+
+    await waitFor(() =>
+      expect(within(summaryCard()).getByText(SIDE_DISH_SUMMARY)).toBeInTheDocument(),
+    );
   });
 });

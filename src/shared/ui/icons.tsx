@@ -283,3 +283,16 @@ export function ChevronRightIcon() {
     </svg>
   );
 }
+
+/** 휴지통(삭제). SF Symbols(trash)를 복사하지 않고 직접 그렸다. 장식이다. */
+export function TrashIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" {...svgBase}>
+      <g {...ink} strokeWidth="1.6">
+        <path d="M3.5 6.5h17M9 6.5V4.2c0-.4.3-.7.7-.7h4.6c.4 0 .7.3.7.7v2.3" />
+        <path d="M5.8 6.5l.9 12.8c.1.9.8 1.7 1.8 1.7h7c1 0 1.7-.8 1.8-1.7l.9-12.8" />
+        <path d="M10 10.5v6.5M14 10.5v6.5" />
+      </g>
+    </svg>
+  );
+}

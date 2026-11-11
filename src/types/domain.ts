@@ -59,11 +59,16 @@ export interface StoreRequest {
 /** 제출할 요청. id 는 저장하는 쪽이 정한다. */
 export type NewStoreRequest = Omit<StoreRequest, 'id'>;
 
-/** 사장님이 주민 요청에 남긴 응답. 화면에는 "업체(지역): 메시지" 로 보여준다. */
+/**
+ * 사장님이 주민 요청에 남긴 응답(제안). 화면에는 "가게: 요일 시각, 장소에서 방문 판매해요" 로 보여준다.
+ * 서버가 주지 않았거나 올바르지 않은 값은 비워 둔다(지어내지 않는다).
+ */
 export interface MerchantResponse {
   merchantName: string;
-  areaName: string;
-  message: string;
+  /** 수령(방문 판매) 시각. 없거나 날짜로 해석되지 않으면 없음 */
+  pickupAt?: Date;
+  /** 수령(방문 판매) 장소. 없으면 없음 */
+  pickupPlace?: string;
 }
 
 /** 내 요청 화면의 한 항목. 요청 인원은 수요 데이터에서 계산한 해당 동네·업종의 전체 요청 인원이다. */

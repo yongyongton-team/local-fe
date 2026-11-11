@@ -1,10 +1,46 @@
 /* 요청 카드 (Figma 2:1660): 흰 배경 + 1px #999 윤곽선, 모서리 20px */
 .card {
+  position: relative;
   min-width: 0;
   padding: var(--space-3) var(--space-5) var(--space-2);
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+}
+
+/*
+ * 삭제할 요청을 고르는 체크 (Figma 41:152, 41:198). 체크 모양 하나이고 원은 없다.
+ * 고르지 않으면 연한 회색(#e4e4e4), 고르면 검정. 터치 영역은 44px 로 확장하고 시각 위치만 디자인을 따른다.
+ */
+.check {
+  position: absolute;
+  top: 0;
+  left: calc(var(--request-check-x) - var(--tap-target-min) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  cursor: pointer;
+}
+
+.checkMark {
+  display: flex;
+  color: var(--color-surface-muted);
+  border-radius: var(--radius-pill);
+}
+
+.checkInput:checked + .checkMark {
+  color: var(--color-text-primary);
+}
+
+.checkInput:focus-visible + .checkMark {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.checkInput:disabled + .checkMark {
+  opacity: 0.4;
 }
 
 .head {
@@ -66,6 +102,7 @@
 
 .responseMessage {
   margin-top: var(--space-1);
-  font-weight: var(--font-weight-medium);
+  /* Figma 41:152: 메시지는 Regular(400), 라벨은 SemiBold */
+  font-weight: var(--font-weight-regular);
   color: var(--color-text-secondary);
 }

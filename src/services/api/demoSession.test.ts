@@ -260,6 +260,21 @@ describe('데모 세션 보호', () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
+  it('요청 삭제(DELETE /requests/{id})도 데모 세션에서는 요청 없이 막힌다', async () => {
+    const { fn } = putMe();
+    storeDemo();
+    const client = newClient();
+    const { myRequestService } = createApiRequestServices({
+      listCategories: async () => [],
+      getClient: () => client,
+    });
+
+    await expect(myRequestService.deleteRequest('351')).rejects.toMatchObject({
+      code: 'DEMO_SESSION',
+    });
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   it('describeApiError: DEMO_SESSION 은 임시 안내 문구다(다른 parse 오류는 마지막 문구)', () => {
     expect(DEMO_WRITE_BLOCKED_MESSAGE).toBe(
       '데모 계정은 사장님 화면만 볼 수 있어요. 나가려면 주소 끝에 ?demo=off를 붙여 주세요.',

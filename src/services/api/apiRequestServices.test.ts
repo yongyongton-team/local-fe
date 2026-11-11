@@ -32,7 +32,9 @@ function newServices() {
 }
 
 type Handler = (call: StubCall, init: RequestInit) => Response | Promise<Response>;
-function stubServer(routes: { parse?: Handler; create?: Handler; mine?: Handler } = {}) {
+function stubServer(
+  routes: { parse?: Handler; create?: Handler; mine?: Handler; remove?: Handler } = {},
+) {
   return stubFetch((call, init) => {
     if (call.path === GUEST) return jsonResponse(200, { accessToken: 'tok-1', expiresIn: 3600 });
     if (call.path === '/api/v1/requests/parse') {
@@ -43,6 +45,9 @@ function stubServer(routes: { parse?: Handler; create?: Handler; mine?: Handler 
     }
     if (call.path === '/api/v1/me/requests')
       return routes.mine?.(call, init) ?? jsonResponse(200, []);
+    if (call.method === 'DELETE' && /^\/api\/v1\/requests\/[^/]+$/.test(call.path)) {
+      return routes.remove?.(call, init) ?? new Response(null, { status: 204 });
+    }
     return jsonResponse(404, { code: 'NOT_FOUND' });
   });
 }
@@ -302,6 +307,69 @@ describe('내 요청(myRequestService)', () => {
       kind: 'http',
       status: 500,
     });
+  });
+});
+
+describe('내 요청 삭제(myRequestService.deleteRequest)', () => {
+  const remove = (id: string) => newServices().myRequestService.deleteRequest(id);
+  const deletesIn = (calls: StubCall[]) => calls.filter((c) => c.method === 'DELETE');
+
+  it('DELETE /requests/{id} 를 서버 숫자 id 로, 본문 없이 토큰과 함께 보낸다', async () => {
+    const { calls } = stubServer();
+
+    await expect(remove('351')).resolves.toBeUndefined();
+
+    expect(deletesIn(calls)).toEqual([
+      {
+        method: 'DELETE',
+        path: '/api/v1/requests/351',
+        authorization: 'Bearer tok-1',
+        contentType: null,
+        body: null,
+      },
+    ]);
+  });
+
+  it('성공(204, 본문 없음)은 아무것도 돌려주지 않고 오류도 없다', async () => {
+    stubServer({ remove: () => new Response(null, { status: 204 }) });
+
+    await expect(remove('351')).resolves.toBeUndefined();
+  });
+
+  it('404 는 이미 지워진 요청이라 성공으로 본다(code 가 없어도 같다)', async () => {
+    stubServer({ remove: () => jsonResponse(404, { code: 'NOT_FOUND', message: '서버 원문' }) });
+    await expect(remove('351')).resolves.toBeUndefined();
+
+    stubServer({ remove: () => new Response('<html>nope</html>', { status: 404 }) });
+    await expect(remove('351')).resolves.toBeUndefined();
+  });
+
+  it.each([
+    [403, 'FORBIDDEN'],
+    [400, 'VALIDATION_ERROR'],
+    [500, 'INTERNAL'],
+  ])('%s 는 성공으로 보지 않고 status·code 를 가진 ApiError 로 던진다', async (status, code) => {
+    stubServer({ remove: () => jsonResponse(status, { code, message: '서버 원문' }) });
+
+    await expect(remove('351')).rejects.toMatchObject({ kind: 'http', status, code });
+  });
+
+  it('서버에 닿지 못하면 network 오류로 던진다', async () => {
+    stubServer({
+      remove: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+
+    await expect(remove('351')).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  it('id 가 숫자가 아니면 요청 없이 INVALID_ID 오류다', async () => {
+    const { calls } = stubServer();
+
+    await expect(remove('mock-request-1')).rejects.toMatchObject({ code: 'INVALID_ID' });
+
+    expect(deletesIn(calls)).toHaveLength(0);
   });
 });
 

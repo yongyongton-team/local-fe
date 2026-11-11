@@ -73,13 +73,13 @@ async function openList(app: App) {
 }
 
 describe('api 모드의 내 요청: 사장님 응답', () => {
-  it('제안이 있으면 "업체(지역): 제목" 으로 보여주고 "아직 응답이 없어요" 는 없다', async () => {
+  it('제안이 있으면 "가게: 요일 시각, 장소에서 방문 판매해요" 로 보여주고 "아직 응답이 없어요" 는 없다', async () => {
     stubServer(() => jsonResponse(200, [item({ offers: [offer()] })]));
     const app = await loadApp('api');
     const list = await openList(app);
 
     const group = app.within(list).getByRole('group', { name: '사장님 응답' });
-    expect(group).toHaveTextContent('싱싱과일(구성동): 내일 저녁 과일 상자');
+    expect(group).toHaveTextContent('싱싱과일: 화요일 오후 6시, 가게 앞에서 방문 판매해요');
     expect(app.within(list).queryByText(NO_RESPONSE)).not.toBeInTheDocument();
   });
 
@@ -100,7 +100,9 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     const list = await openList(app);
 
     expect(app.within(list).getAllByRole('group', { name: '사장님 응답' })).toHaveLength(1);
-    expect(app.within(list).getByText('첫번째가게(구성동): 첫 제안')).toBeInTheDocument();
+    expect(
+      app.within(list).getByText('첫번째가게: 화요일 오후 6시, 가게 앞에서 방문 판매해요'),
+    ).toBeInTheDocument();
     expect(app.screen.queryByText(/두번째가게|취소가게|모르는가게/)).not.toBeInTheDocument();
   });
 
@@ -139,13 +141,96 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     expect(app.within(list).getAllByText(NO_RESPONSE)).toHaveLength(3);
   });
 
-  it('가격·수령 정보 같은 값은 화면에 나오지 않는다(담을 자리가 없다)', async () => {
+  it('수령 시각·장소만 문구에 쓰고 제목·가격·마감 같은 값은 화면에 나오지 않는다', async () => {
     stubServer(() => jsonResponse(200, [item({ offers: [offer()] })]));
     const app = await loadApp('api');
     const list = await openList(app);
 
     await app.within(list).findByRole('group', { name: '사장님 응답' });
-    expect(app.screen.queryByText(/9,?900|가게 앞|2026-11-10/)).not.toBeInTheDocument();
+    expect(
+      app.screen.queryByText(/9,?900|내일 저녁 과일 상자|2026-11-10|마감/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('수령 시각이 없으면 시간 부분을, 장소가 없으면 장소 부분을 뺀다', async () => {
+    stubServer(() =>
+      jsonResponse(200, [
+        item({ id: 1, offers: [offer({ shopName: 'A가게', pickupAt: null })] }),
+        item({ id: 2, offers: [offer({ shopName: 'B가게', pickupPlace: null })] }),
+      ]),
+    );
+    const app = await loadApp('api');
+    const list = await openList(app);
+
+    expect(app.within(list).getByText('A가게: 가게 앞에서 방문 판매해요')).toBeInTheDocument();
+    expect(app.within(list).getByText('B가게: 화요일 오후 6시 방문 판매해요')).toBeInTheDocument();
+  });
+});
+
+describe('api 모드의 내 요청: 삭제', () => {
+  type Remove = (call: StubCall) => Response;
+  function stubWithDelete(remove: Remove) {
+    return stubFetch((call: StubCall) => {
+      if (call.path === '/api/v1/auth/guest') {
+        return jsonResponse(200, { accessToken: 'tok-1', expiresIn: 3600, isNew: true });
+      }
+      if (call.path === '/api/v1/categories') return jsonResponse(200, CATEGORIES);
+      if (call.path === '/api/v1/me/requests') {
+        return jsonResponse(200, [
+          item({ id: 351 }),
+          item({ id: 352, category: { id: 33, name: '태권도장' }, count: 3 }),
+        ]);
+      }
+      if (call.method === 'DELETE') return remove(call);
+      return jsonResponse(404, { code: 'NOT_FOUND' });
+    });
+  }
+  async function deleteFirst(app: App) {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    const list = await openList(app);
+    await user.click(app.within(list).getAllByRole('checkbox')[0]!);
+    await user.click(app.screen.getByRole('button', { name: '선택한 요청 지우기' }));
+    await user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '지우기' }),
+    );
+    return list;
+  }
+
+  it('DELETE /requests/{id} 를 보내고 204 이면 카드가 사라진다', async () => {
+    const { calls } = stubWithDelete(() => new Response(null, { status: 204 }));
+    const app = await loadApp('api');
+    const list = await deleteFirst(app);
+
+    await app.waitFor(() => expect(app.within(list).getAllByRole('article')).toHaveLength(1));
+    expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.path)).toEqual([
+      '/api/v1/requests/351',
+    ]);
+    expect(app.screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(app.screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('404(이미 지워진 요청)는 성공과 같이 카드가 사라진다', async () => {
+    stubWithDelete(() => jsonResponse(404, { code: 'NOT_FOUND', message: '서버 원문 노출 금지' }));
+    const app = await loadApp('api');
+    const list = await deleteFirst(app);
+
+    await app.waitFor(() => expect(app.within(list).getAllByRole('article')).toHaveLength(1));
+    expect(app.screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+  });
+
+  it('403 은 카드를 그대로 두고 임시 오류 문구를 보여준다(서버 message 는 쓰지 않는다)', async () => {
+    stubWithDelete(() => jsonResponse(403, { code: 'FORBIDDEN', message: '서버 원문 노출 금지' }));
+    const app = await loadApp('api');
+    const list = await deleteFirst(app);
+
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '일부 요청을 지우지 못했어요. 다시 시도해 주세요.',
+    );
+    expect(app.within(list).getAllByRole('article')).toHaveLength(2);
+    expect(app.screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
   });
 });
 

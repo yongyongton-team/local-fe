@@ -1,4 +1,5 @@
-import { MyRequestCard } from '@/features/my-requests/MyRequestCard';
+import { useState } from 'react';
+import { MyRequestList } from '@/features/my-requests/MyRequestList';
 import { ProgressSummaryCard } from '@/features/my-requests/ProgressSummaryCard';
 import { describeRequestSummary } from '@/features/my-requests/requestProgress';
 import { useMyRequests } from '@/features/my-requests/useMyRequests';
@@ -43,7 +44,10 @@ export function MyRequestsPage() {
   );
 }
 
-function Content({ items }: { items: MyRequest[] }) {
+function Content({ items: fetched }: { items: MyRequest[] }) {
+  // 이 화면에서 지운 요청. 목록을 다시 불러오지 않고 화면에서만 뺀다.
+  const [removedIds, setRemovedIds] = useState<ReadonlySet<string>>(new Set());
+  const items = fetched.filter((item) => !removedIds.has(item.request.id));
   const [latest] = items;
 
   if (!latest) {
@@ -74,13 +78,10 @@ function Content({ items }: { items: MyRequest[] }) {
         <Text as="h2" variant="title" id="my-requests-list">
           내 요청
         </Text>
-        <ul className={styles.cards}>
-          {items.map((item) => (
-            <li key={item.request.id}>
-              <MyRequestCard item={item} />
-            </li>
-          ))}
-        </ul>
+        <MyRequestList
+          items={items}
+          onRemoved={(ids) => setRemovedIds((prev) => new Set([...prev, ...ids]))}
+        />
       </section>
     </>
   );
