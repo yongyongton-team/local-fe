@@ -7,6 +7,11 @@ interface MobileLayoutProps {
   header?: ReactNode;
   /** 선택적인 하단 내비게이션. 고정 위치(fixed)여도 본문을 가리지 않도록 본문 하단 여백이 늘어난다. */
   bottomNav?: ReactNode;
+  /**
+   * 선택적인 우측 상단 요소. 화면의 로고 줄(로고 높이 43px)과 같은 높이의 오른쪽 끝에 놓인다.
+   * 화면(페이지)이 공통 상단 여백(--space-2)에서 시작해 로고를 맨 위에 그린다는 전제다.
+   */
+  corner?: ReactNode;
 }
 
 /**
@@ -15,9 +20,10 @@ interface MobileLayoutProps {
  * - iOS safe-area 와 하단 내비게이션 높이만큼 본문 여백을 확보한다.
  * 라우트 단위로 쓰려면 RootLayout 을 사용한다.
  */
-export function MobileLayout({ children, header, bottomNav }: MobileLayoutProps) {
+export function MobileLayout({ children, header, bottomNav, corner }: MobileLayoutProps) {
   return (
     <div className={styles.shell}>
+      {corner && <div className={styles.corner}>{corner}</div>}
       {header && <header className={styles.header}>{header}</header>}
       <main className={`${styles.content} ${bottomNav ? styles.withBottomNav : ''}`}>
         {children}

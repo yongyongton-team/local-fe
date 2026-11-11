@@ -82,12 +82,14 @@ describe('렌더링', () => {
     expect(within(mapRegion()).getByText('지도 연동 예정 · 예시 데이터')).toBeInTheDocument();
   });
 
-  it('검색 버튼과 하단 내비게이션이 없고 사람들 버튼 하나만 있다', async () => {
+  it('하단 내비게이션도 헤더 버튼(검색·이웃 보기)도 없고, 우측 상단의 내 정보 링크만 있다', async () => {
     await openFounder();
 
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '검색' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이웃 보기' })).toBeInTheDocument();
+    // 사람들+소리 물결 아이콘("이웃 보기" 임시 버튼)은 내 정보 아이콘으로 대신했다.
+    expect(screen.queryByRole('button', { name: '이웃 보기' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내 정보' })).toHaveAttribute('href', '/me');
   });
 
   it('역할·동네 선택 없이 직접 들어와도 렌더링한다', async () => {

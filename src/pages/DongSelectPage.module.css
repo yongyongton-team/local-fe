@@ -1,0 +1,128 @@
+/*
+ * 동네 선택 레이아웃 (Figma 41:75, 402×874 기준을 비율·여백으로 옮김).
+ * 높이를 고정하지 않는다. 동 목록 카드는 6행 높이까지만 커지고 그 안에서 스크롤하며,
+ * 하단 버튼은 화면 아래에 붙는다(내용이 길면 스크롤 끝에서 sticky 로 따라온다).
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 검색 입력: 윤곽선 1px #999, 모서리 20px, 높이 57px, 오른쪽에 돋보기 */
+.search {
+  position: relative;
+  margin-top: var(--search-gap-top);
+}
+
+.searchInput {
+  width: 100%;
+  min-height: var(--search-height);
+  padding: 0 calc(var(--search-icon-right) + 22px + var(--space-3)) 0 var(--search-pad-left);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: max(16px, 1rem);
+  font-weight: var(--font-weight-regular);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-search);
+  opacity: 0.87;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  right: var(--search-icon-right);
+  display: inline-flex;
+  color: var(--color-text-primary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* 구 칩(시각 높이 34px). 터치 영역(44px)이 위아래로 5px 씩 커서 간격을 그만큼 당긴다. */
+.districts {
+  margin-top: calc(14px - 5px);
+  /* 이 화면의 칩은 좌우 패딩 12px (Figma). */
+  --chip-padding-x: var(--space-3);
+}
+
+/* 동 목록 카드: 윤곽선 #c7c7c7, 모서리 12px. 6행 높이에서 안쪽 스크롤 */
+.listCard {
+  margin-top: calc(24px - 5px);
+  max-height: var(--dong-list-max-height);
+  overflow-y: auto;
+  border: 1px solid var(--color-border-list);
+  border-radius: var(--radius-list);
+  background: var(--color-surface);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--dong-row-pad-y) var(--dong-row-pad-x);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-dong);
+  font-weight: var(--font-weight-regular);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 선택된 동: 굵은 글씨 + 오른쪽 체크 */
+.rowActive {
+  font-weight: var(--font-weight-bold);
+}
+
+.check {
+  display: inline-flex;
+  flex: none;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--dong-row-pad-y) var(--dong-row-pad-x);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-dong);
+  color: var(--color-text-secondary);
+}
+
+/* 하단 고정 버튼: 짧은 화면에서는 맨 아래, 긴 화면에서는 스크롤하며 아래에 붙는다. */
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  padding-bottom: calc(var(--sticky-footer-gap) - var(--space-6) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-surface) var(--space-5));
+}
+
+.error {
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}

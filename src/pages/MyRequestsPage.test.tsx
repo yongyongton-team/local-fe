@@ -101,13 +101,14 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
     expect(summaryCard()).toBeInTheDocument();
   });
 
-  it('하단 내비의 가장 오른쪽(내 요청)이 현재 항목이다', async () => {
+  it('하단 내비의 세 번째(내 요청)가 현재 항목이고 네 번째(내 정보)는 아니다', async () => {
     await openMyRequests();
 
     const nav = within(screen.getByRole('navigation', { name: '주민 메뉴' }));
     expect(nav.getByRole('link', { name: '내 요청' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: '탐색' })).not.toHaveAttribute('aria-current');
     expect(nav.getByRole('link', { name: '가게 요청' })).not.toHaveAttribute('aria-current');
+    expect(nav.getByRole('link', { name: '내 정보' })).not.toHaveAttribute('aria-current');
   });
 });
 

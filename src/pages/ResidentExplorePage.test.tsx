@@ -56,11 +56,13 @@ describe('주민 탐색 화면 렌더링', () => {
     expect(screen.getByText(/지도 연동 예정 · 예시 데이터/)).toBeInTheDocument();
   });
 
-  it('검색과 이웃 보기 버튼은 접근 가능한 이름을 가진다', async () => {
+  it('검색 버튼은 접근 가능한 이름을 가지고, 우측 상단에 사람들(이웃 보기) 아이콘은 없다', async () => {
     await openResident();
 
     expect(screen.getByRole('button', { name: '검색' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이웃 보기' })).toBeInTheDocument();
+    // 사람들 아이콘은 내 정보 아이콘과 같은 그림이라 주민 화면에서 뺐다(주민의 진입점은 하단 내비).
+    expect(screen.queryByRole('button', { name: '이웃 보기' })).not.toBeInTheDocument();
+    expect(document.querySelector('path[d^="M6.45117 10.415"]')).toBeNull(); // 이전 사람들+소리 물결 SVG
   });
 
   it('+가게 요청하기 는 /resident/requests/new 로 연결된다', async () => {
@@ -177,7 +179,7 @@ describe('요청 카드', () => {
 });
 
 describe('하단 내비게이션(임시 매핑)', () => {
-  it('아이콘 3개가 이름을 가지고, 현재 항목만 aria-current="page" 이다', async () => {
+  it('아이콘 4개가 이름을 가지고, 현재 항목만 aria-current="page" 이다', async () => {
     await openResident();
     const nav = within(screen.getByRole('navigation', { name: '주민 메뉴' }));
 
@@ -185,6 +187,7 @@ describe('하단 내비게이션(임시 매핑)', () => {
       '탐색',
       '가게 요청',
       '내 요청',
+      '내 정보',
     ]);
     expect(nav.getByRole('link', { name: '탐색' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: '가게 요청' })).not.toHaveAttribute('aria-current');
@@ -196,6 +199,8 @@ describe('하단 내비게이션(임시 매핑)', () => {
       'href',
       '/resident/requests',
     );
+    expect(nav.getByRole('link', { name: '내 정보' })).toHaveAttribute('href', '/me');
+    expect(nav.getByRole('link', { name: '내 정보' })).not.toHaveAttribute('aria-current');
   });
 });
 

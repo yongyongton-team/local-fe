@@ -86,11 +86,13 @@ describe('렌더링', () => {
     expect(screen.queryByRole('link', { name: /동네 변경/ })).not.toBeInTheDocument();
   });
 
-  it('검색과 이웃 보기 버튼은 접근 가능한 이름을 가진다(동작은 아직 없다)', async () => {
+  it('검색 버튼은 접근 가능한 이름을 가지고(동작은 아직 없다), 이웃 보기 버튼은 없다', async () => {
     await openMerchant();
 
     expect(screen.getByRole('button', { name: '검색' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이웃 보기' })).toBeInTheDocument();
+    // 사람들+소리 물결 아이콘("이웃 보기" 임시 버튼)은 내 정보 아이콘으로 대신했다.
+    expect(screen.queryByRole('button', { name: '이웃 보기' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내 정보' })).toHaveAttribute('href', '/me');
   });
 
   it('역할·동네를 선택하지 않고 직접 들어와도 선택 안내 없이 렌더링한다', async () => {

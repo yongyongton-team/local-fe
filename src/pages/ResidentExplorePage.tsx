@@ -18,7 +18,7 @@ import type { AsyncState } from '@/shared/lib/useAsyncData';
 import { LinkButton } from '@/shared/ui/Button';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
-import { ChevronDownIcon, PeopleIcon, SearchIcon } from '@/shared/ui/icons';
+import { ChevronDownIcon, SearchIcon } from '@/shared/ui/icons';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
@@ -78,10 +78,10 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
             <ChevronDownIcon />
             <span className="visually-hidden"> 동네 변경, 첫 화면으로 이동</span>
           </Link>
-          {/* 검색·이웃 보기: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
+          {/* 검색: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
+          {/* 사람들 아이콘(이웃 보기)은 내 정보 아이콘과 같은 그림이라 주민 화면에서 뺐다. 주민의 진입점은 하단 내비다. */}
           <div className={styles.actions}>
             <IconButton label="검색" icon={<SearchIcon />} />
-            <IconButton label="이웃 보기" icon={<PeopleIcon />} />
           </div>
         </div>
       </header>

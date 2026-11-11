@@ -18,7 +18,7 @@ import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
-import { PeopleIcon, SearchIcon } from '@/shared/ui/icons';
+import { SearchIcon } from '@/shared/ui/icons';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Text } from '@/shared/ui/Text';
@@ -50,10 +50,9 @@ export function MerchantExplorePage() {
               ? `${profile.data.shopName} · ${profile.data.categoryName}`
               : ''}
           </p>
-          {/* 검색·사람들: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
+          {/* 검색: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
           <div className={styles.actions}>
             <IconButton label="검색" icon={<SearchIcon />} />
-            <IconButton label="이웃 보기" icon={<PeopleIcon />} />
           </div>
         </div>
       </header>

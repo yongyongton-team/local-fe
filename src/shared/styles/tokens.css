@@ -105,6 +105,7 @@
   --chip-height: 26px; /* [화면] 칩의 시각적 높이 */
   --tap-target-min: 44px; /* 터치 영역 최소 크기 */
   --logo-height: 43px; /* [화면] 서비스 로고 높이(너비 129px) */
+  --my-info-icon-width: 25px; /* [화면] "내 정보" 아이콘 너비(높이 26px) */
   --bottom-nav-height: 66px; /* [화면] */
   --bottom-nav-gap: 12px; /* [임시] */
   --layout-max-width: 430px; /* [임시] 화면 기준 402px 안팎. 고정 크기가 아님 */
@@ -193,6 +194,45 @@
   --dialog-button-width: 130px;
   /* [임시] 확인창 본문 줄 높이. 원본은 normal(Noto Sans KR 약 1.45배) */
   --line-height-dialog-body: 20px;
+
+  /* 내 정보(/me)·동네 선택(/me/dong) 화면 전용 */
+  /* [화면] 프로필 아바타 53px, 왼쪽에서 14px(본문 20px 기준 34px), 이름과의 간격 23px */
+  --profile-avatar-size: 53px;
+  --profile-inset-x: 14px;
+  /* [화면] 앱바 아래에서 아바타까지의 간격(앱바의 터치 영역 44px 를 뺀 값) */
+  --profile-gap-top: 10px;
+  /* [화면] 역할 칩 사이 간격 6px (구 칩은 8px) */
+  --role-chip-gap: 6px;
+  --profile-gap: 23px;
+  /* [화면] 닉네임 안내(12px)는 아바타보다 3px 왼쪽에서 시작한다(x=31) */
+  --profile-note-inset-x: 11px;
+  /* [화면] 이름 20px, "님" 16px */
+  --font-size-profile-name: 20px;
+  /* [화면] 일러스트(에셋 대기) 자리의 최소 높이. Figma 에서 칩과 카드 사이는 약 266px 이다. 줄어들 수 있다 */
+  --info-illustration-min-height: 120px;
+  /* [화면] 정보 카드: 높이 91px(행 2개), 글자는 카드 안쪽 33px, 오른쪽 20px, 행 간격 32px */
+  --info-card-pad-y: 14px;
+  --info-card-pad-left: 33px;
+  --info-card-pad-right: 20px;
+  --info-row-height: 32px;
+  /* [화면] 정보 행 값 글자: 14px, 색은 #737373 대신 보조 글자색 토큰을 쓴다 */
+  --font-size-info-value: 14px;
+  /* [화면] 동네 검색 입력: 높이 57px, 글자는 안쪽 29px, 돋보기는 오른쪽 */
+  --search-height: 57px;
+  --search-pad-left: 29px;
+  --search-icon-right: 21px;
+  /* [화면] 앱바 아래에서 검색 입력까지의 간격(앱바의 터치 영역 44px 를 뺀 값) */
+  --search-gap-top: 1px;
+  --font-size-search: 15px;
+  /* [화면] 동 목록 카드: 윤곽 #c7c7c7, 모서리 12px, 행 패딩 13px 14px, 6행이 보이는 높이 273px */
+  --color-border-list: #c7c7c7;
+  --radius-list: 12px;
+  --dong-row-pad-y: 13px;
+  --dong-row-pad-x: 14px;
+  --dong-list-max-height: 273px;
+  --font-size-dong: 15px;
+  /* [화면] 하단 고정 버튼 아래 간격: Figma 는 홈 인디케이터 영역을 빼고 33px */
+  --sticky-footer-gap: 33px;
 
   /* 사장님 탐색 화면(/merchant) 전용 */
   /* [화면] 반경 칩 폭. Figma 의 세 칩은 폭 약 80px 고정이고 글자가 가운데 있다 */

@@ -1,0 +1,13 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+  /* 아이콘(30px)의 오른쪽 끝이 로고가 왼쪽에서 들어간 만큼(--header-inset-x) 본문 오른쪽 끝에서 안쪽에 오도록 터치 영역을 바깥으로 민다. */
+  margin-right: calc(
+    -1 * ((var(--tap-target-min) - var(--my-info-icon-width)) / 2 - var(--header-inset-x))
+  );
+}
