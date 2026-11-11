@@ -8,6 +8,8 @@ interface BaseProps {
   disabled?: boolean;
   /** 시각적 높이. default 26px, large 34px. 눌리는 영역은 두 경우 모두 44px 이상이다. */
   size?: 'default' | 'large';
+  /** 선택된 칩 앞의 체크 아이콘을 보일지. 기본 true. 색으로만 구분하는 디자인(내 정보)에서 false. */
+  showCheck?: boolean;
 }
 
 /** 여러 선택지 중 하나만 고르는 칩. 네이티브 radio 를 쓰며 같은 name 끼리 한 그룹이다. */
@@ -32,7 +34,7 @@ export type ChoiceChipProps = RadioChipProps | ToggleChipProps;
  * 모든 칩을 tab 역할로 쓰지 않는다. tab 은 패널 전환 용도에만 쓴다.
  */
 export function ChoiceChip(props: ChoiceChipProps) {
-  const { children, selected, disabled, size = 'default' } = props;
+  const { children, selected, disabled, size = 'default', showCheck = true } = props;
   const visual = (
     <span
       className={[
@@ -43,7 +45,7 @@ export function ChoiceChip(props: ChoiceChipProps) {
         .filter(Boolean)
         .join(' ')}
     >
-      {selected && <CheckIcon />}
+      {selected && showCheck && <CheckIcon />}
       {children}
     </span>
   );

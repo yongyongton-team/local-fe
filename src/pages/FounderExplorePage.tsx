@@ -13,8 +13,6 @@ import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { founderService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
-import { IconButton } from '@/shared/ui/IconButton';
-import { PeopleIcon } from '@/shared/ui/icons';
 import { ListRowLink } from '@/shared/ui/ListRowLink';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
@@ -40,8 +38,6 @@ export function FounderExplorePage() {
           <Text as="h1" variant="title">
             입지 찾기
           </Text>
-          {/* 사람들: 동작이 정해지지 않아 렌더링만 한다. 이름은 사장님 화면과 같다(임시). */}
-          <IconButton label="이웃 보기" icon={<PeopleIcon />} />
         </div>
       </header>
 

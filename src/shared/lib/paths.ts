@@ -1,6 +1,10 @@
 /** 화면 이동에 쓰는 경로. 라우트 패턴(app/routes.tsx)과 짝을 이룬다. */
 export const paths = {
   home: '/',
+  /** 내 정보. 진입 링크는 아직 없다(디자인 대기). */
+  me: '/me',
+  /** 동네 선택(내 정보에서 들어간다) */
+  meDong: '/me/dong',
   resident: '/resident',
   residentRequestNew: '/resident/requests/new',
   residentRequests: '/resident/requests',

@@ -1,5 +1,6 @@
 .group {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--space-2);
+  /* 칩 사이 간격. 화면이 --chip-group-gap 으로 바꿀 수 있다. */
+  column-gap: var(--chip-group-gap, var(--space-2));
 }
