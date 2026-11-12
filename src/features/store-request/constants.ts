@@ -37,3 +37,6 @@ export const PARSE_DEBOUNCE_MS = 800;
 
 /** 이전 이름. 같은 값이다(PARSE_DEBOUNCE_MS 를 쓴다). */
 export const SUMMARY_DEBOUNCE_MS = PARSE_DEBOUNCE_MS;
+
+/** [임시] 시간대·빈도를 고르지 않고 보내려 할 때(또는 고르기 전에) 선택 영역 아래에 보이는 안내. 요청 작성과 간편 요청이 같이 쓴다. 디자인의 필수 오류 상태가 나오면 교체한다. */
+export const VISIT_REQUIRED_TEXT = '방문 시간대와 빈도를 골라 주세요.';

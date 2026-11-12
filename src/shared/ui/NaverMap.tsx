@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNaverMapScript } from '@/shared/lib/useNaverMapScript';
+import type { MapMarker } from '@/types/domain';
 import { MapPlaceholder, type MapPlaceholderProps } from './MapPlaceholder';
 import {
   fitToMarkers,
   hasCoordinates,
+  removeOverlay,
   syncMarkers,
   type GeoMarker,
   type MarkerOverlay,
@@ -28,6 +30,13 @@ export interface NaverMapProps extends MapPlaceholderProps {
    * 기본(false)은 처음 마커가 생길 때 한 번만 맞추고 이후(예: 칩 필터)에는 지도를 움직이지 않는다.
    */
   refitOnChange?: boolean;
+  /**
+   * 있으면 가게(검은 핀) 마커를 눌렀을 때 그 마커를 알린다(주민 탐색의 가게 정보). 다른 마커는 눌러도 반응이 없다.
+   * 없으면(사장님 지도 등) 마커는 눌리지 않는다. 자리표시자 지도(폴백)에서는 쓰지 않는다.
+   */
+  onStoreClick?: (marker: MapMarker) => void;
+  /** 있으면 지도의 빈 곳을 눌렀을 때 부른다(마커를 누른 경우는 부르지 않는다). */
+  onMapClick?: () => void;
 }
 
 /**
@@ -41,7 +50,12 @@ export interface NaverMapProps extends MapPlaceholderProps {
  *  - 마커는 있지만 위도·경도가 하나도 없다
  *  - SDK 호출이 예외를 던졌다(예: 인증 실패 직후 SDK 내부 상태가 깨진 경우). 앱 전체가 멈추지 않게 폴백으로 바꾼다.
  */
-export function NaverMap({ refitOnChange = false, ...props }: NaverMapProps) {
+export function NaverMap({
+  refitOnChange = false,
+  onStoreClick,
+  onMapClick,
+  ...props
+}: NaverMapProps) {
   const { status, reason } = useNaverMapScript();
   const [crashed, setCrashed] = useState(false);
   // 참조가 바뀌면 지도를 다시 만들게 되므로 안정적인 콜백으로 둔다.
@@ -95,6 +109,8 @@ export function NaverMap({ refitOnChange = false, ...props }: NaverMapProps) {
       label={label}
       summary={summary}
       refitOnChange={refitOnChange}
+      onStoreClick={onStoreClick}
+      onMapClick={onMapClick}
       onError={handleError}
     />
   );
@@ -106,6 +122,8 @@ interface MapCanvasProps {
   label: string;
   summary?: string;
   refitOnChange: boolean;
+  onStoreClick?: (marker: MapMarker) => void;
+  onMapClick?: () => void;
   /** SDK 호출이 예외를 던졌을 때(지도를 더는 쓸 수 없을 때) 한 번 알린다. */
   onError: () => void;
 }
@@ -119,7 +137,16 @@ function safely(action: () => void) {
   }
 }
 
-function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: MapCanvasProps) {
+function MapCanvas({
+  markers,
+  origin,
+  label,
+  summary,
+  refitOnChange,
+  onStoreClick,
+  onMapClick,
+  onError,
+}: MapCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
   const overlaysRef = useRef(new Map<string, MarkerOverlay>());
@@ -128,6 +155,22 @@ function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: 
   // 기준점(핀·원)과 시점 상태. origin 이 있을 때만 쓴다.
   const originRef = useRef<OriginOverlay | null>(null);
   const originViewRef = useRef<{ radiusKey: string; markerCount: number } | null>(null);
+  // 클릭 처리기는 최신 값을 ref 로 읽어, 처리기가 바뀌어도 마커·리스너를 다시 만들지 않는다.
+  const callbacksRef = useRef({ onStoreClick, onMapClick });
+  useEffect(() => {
+    callbacksRef.current = { onStoreClick, onMapClick };
+  });
+  // 마커를 누르면 지도 클릭이 이어서 올 수 있어, 같은 순간의 지도 클릭은 무시한다.
+  const markerClickedRef = useRef(false);
+  const storeClickable = onStoreClick !== undefined;
+  const mapClickable = onMapClick !== undefined;
+  const handleStoreClick = useCallback((marker: GeoMarker) => {
+    markerClickedRef.current = true;
+    window.setTimeout(() => {
+      markerClickedRef.current = false;
+    }, 0);
+    callbacksRef.current.onStoreClick?.(marker);
+  }, []);
 
   // 지도 인스턴스는 마운트할 때 한 번만 만들고, 언마운트(또는 StrictMode 의 재실행)에서 마커까지 정리한다.
   useEffect(() => {
@@ -160,7 +203,7 @@ function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: 
 
     return () => {
       observer?.disconnect();
-      overlays.forEach(({ marker }) => safely(() => marker.setMap(null)));
+      overlays.forEach((overlay) => safely(() => removeOverlay(overlay)));
       overlays.clear();
       const originOverlay = originRef.current;
       if (originOverlay) safely(() => removeOrigin(originOverlay));
@@ -181,7 +224,9 @@ function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: 
     const map = mapRef.current;
     if (!map) return;
     try {
-      syncMarkers(map, overlaysRef.current, markers);
+      syncMarkers(map, overlaysRef.current, markers, {
+        ...(storeClickable && { onStoreClick: handleStoreClick }),
+      });
       const key = markers
         .map((m) => m.id)
         .sort()
@@ -220,7 +265,18 @@ function MapCanvas({ markers, origin, label, summary, refitOnChange, onError }: 
     } catch {
       onError();
     }
-  }, [markers, origin, refitOnChange, onError]);
+  }, [markers, origin, refitOnChange, onError, storeClickable, handleStoreClick]);
+
+  // 지도의 빈 곳 클릭. 처리기가 있을 때만 리스너를 달고, 지도를 떠나거나 처리기가 없어지면 해제한다.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapClickable) return;
+    const listener = naver.maps.Event.addListener(map, 'click', () => {
+      if (markerClickedRef.current) return;
+      callbacksRef.current.onMapClick?.();
+    });
+    return () => safely(() => naver.maps.Event.removeListener(listener));
+  }, [mapClickable]);
 
   return (
     // 마커는 키보드 탐색 대상이 아니다. 같은 정보가 지도 아래 목록·요약(aria-live)에 있다.

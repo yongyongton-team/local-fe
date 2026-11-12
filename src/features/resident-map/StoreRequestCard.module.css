@@ -30,8 +30,20 @@
   color: var(--color-text-on-card-muted);
 }
 
+/* 아이콘만 있는 버튼·링크. 보이는 크기(22px)는 그대로 두고 터치 영역을 44px 로 넓히되 카드 높이는 키우지 않는다. */
 .status {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  /* 아이콘 오른쪽 끝이 카드 안쪽 오른쪽 여백(21px)에 오도록 터치 영역이 넓어진 만큼 당긴다. */
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
   color: var(--color-on-accent);
+  cursor: pointer;
 }

@@ -112,7 +112,10 @@ describe('api 모드의 주민 탐색 화면', () => {
     expect(cards[0]).not.toContain('대형마트');
     expect(cards[1]).toContain('과일 / 채소 가게');
     expect(cards[1]).toContain('주민 4명이 요청 / 대형마트 2.5km');
-    expect(cards[1]).toContain('내가 요청함');
+    // 내가 요청한 카드는 아이콘 링크의 이름으로 전달한다.
+    expect(
+      section.getAllByRole('listitem')[1]!.querySelector('a[aria-label="내 요청 보기"]'),
+    ).not.toBeNull();
 
     // 키가 없는 테스트 환경이라 자리표시자 지도가 그린다. 좌표가 있는 가게 하나만 마커다.
     const map = app.screen.getByRole('region', { name: '동네 지도(예시)' });

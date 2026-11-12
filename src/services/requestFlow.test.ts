@@ -33,6 +33,58 @@ describe('내 요청 목 서비스', () => {
   });
 });
 
+describe('간편 요청 목 서비스(submitQuick)', () => {
+  const quick = (categoryId: string) =>
+    requestSubmitter.submitQuick({
+      neighborhoodId: 'guseong',
+      categoryId,
+      visitTimes: ['weekday-evening'],
+      visitFrequency: 'weekly',
+    });
+
+  it('구성동 과일 29명 → 30명이 되는 요청은 기준 인원에 도달(reachedGoal)이고 알린 사장님 수를 돌려준다', async () => {
+    expect((await fruitReport())?.demand.requestCount).toBe(29);
+
+    await expect(quick('fruit-vegetable')).resolves.toEqual({
+      reachedGoal: true,
+      notifiedOwnerCount: expect.any(Number),
+    });
+
+    expect((await fruitReport())?.demand).toMatchObject({ requestCount: 30, requestedByMe: true });
+  });
+
+  it('기준 인원에 도달하지 않는 요청은 reachedGoal 이 false 이고 인원만 1 오른다', async () => {
+    const before = (await demandService.getReport('guseong', 'bakery'))?.demand.requestCount ?? 0;
+
+    await expect(quick('bakery')).resolves.toEqual({ reachedGoal: false });
+
+    expect((await demandService.getReport('guseong', 'bakery'))?.demand).toMatchObject({
+      requestCount: before + 1,
+      requestedByMe: true,
+    });
+  });
+
+  it('내 요청에는 문장과 조건이 없는 요청으로 들어간다', async () => {
+    await quick('fruit-vegetable');
+
+    const [latest] = await myRequestService.listMyRequests();
+    expect(latest?.request).toMatchObject({
+      categoryId: 'fruit-vegetable',
+      detail: '',
+      conditions: [],
+      visitTimes: ['weekday-evening'],
+      visitFrequency: 'weekly',
+    });
+  });
+
+  it('같은 업종을 다시 보내면 인원은 오르지 않고 reachedGoal 도 아니다', async () => {
+    await quick('fruit-vegetable');
+
+    await expect(quick('fruit-vegetable')).resolves.toEqual({ reachedGoal: false });
+    expect((await fruitReport())?.demand.requestCount).toBe(30);
+  });
+});
+
 describe('내 요청 목 서비스의 삭제', () => {
   it('요청을 목록에서 빼고 해당 동네·업종의 인원을 1 줄이며 "내가 요청함"을 해제한다', async () => {
     const submitted = await requestSubmitter.submit(fruit());

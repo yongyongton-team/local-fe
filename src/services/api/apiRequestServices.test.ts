@@ -248,6 +248,118 @@ describe('요청 생성(requestSubmitter)', () => {
   });
 });
 
+describe('간편 요청(requestSubmitter.submitQuick)', () => {
+  const INPUT = {
+    neighborhoodId: '22',
+    categoryId: '7',
+    visitTimes: ['weekday-evening', 'weekend'] as ('weekday-evening' | 'weekend')[],
+    visitFrequency: 'weekly' as const,
+  };
+  const quick = (input = INPUT) => newServices().requestSubmitter.submitQuick(input);
+  const posts = (calls: StubCall[]) =>
+    calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/requests');
+
+  it('POST /requests 본문은 {dongId, categoryId, timeSlots, frequency} 뿐이다(text·conditions 없음)', async () => {
+    const { calls } = stubServer({
+      create: () => jsonResponse(201, { request: { id: 351 }, count: 5, reachedGoal: false }),
+    });
+
+    await quick();
+
+    expect(posts(calls)).toHaveLength(1);
+    const body = JSON.parse(posts(calls)[0]!.body ?? '{}') as Record<string, unknown>;
+    expect(body).toEqual({
+      dongId: 22,
+      categoryId: 7,
+      timeSlots: ['WEEKDAY_EVENING', 'WEEKEND'],
+      frequency: 'WEEKLY_PLUS',
+    });
+    expect(body).not.toHaveProperty('text');
+    expect(body).not.toHaveProperty('conditions');
+    expect(posts(calls)[0]).toMatchObject({ authorization: 'Bearer tok-1' });
+  });
+
+  it('응답의 reachedGoal 과 notifiedOwnerCount 를 결과로 돌려준다', async () => {
+    stubServer({
+      create: () =>
+        jsonResponse(201, {
+          request: { id: 1 },
+          count: 30,
+          goal: 30,
+          reachedGoal: true,
+          notifiedOwnerCount: 3,
+        }),
+    });
+
+    await expect(quick()).resolves.toEqual({ reachedGoal: true, notifiedOwnerCount: 3 });
+  });
+
+  it.each([
+    [
+      'reachedGoal 이 false',
+      { reachedGoal: false, notifiedOwnerCount: 3 },
+      { reachedGoal: false, notifiedOwnerCount: 3 },
+    ],
+    ['reachedGoal 이 없음', {}, { reachedGoal: false }],
+    ['reachedGoal 이 문자열', { reachedGoal: 'true' }, { reachedGoal: false }],
+    ['notifiedOwnerCount 가 없음', { reachedGoal: true }, { reachedGoal: true }],
+    [
+      'notifiedOwnerCount 가 음수',
+      { reachedGoal: true, notifiedOwnerCount: -1 },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 소수',
+      { reachedGoal: true, notifiedOwnerCount: 1.5 },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 문자열',
+      { reachedGoal: true, notifiedOwnerCount: '3' },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 0',
+      { reachedGoal: true, notifiedOwnerCount: 0 },
+      { reachedGoal: true, notifiedOwnerCount: 0 },
+    ],
+  ])('결과 모양: %s', async (_name, response, expected) => {
+    stubServer({ create: () => jsonResponse(201, { request: { id: 1 }, ...response }) });
+
+    await expect(quick()).resolves.toEqual(expected);
+  });
+
+  it('응답 본문이 비어 있어도 reachedGoal 은 false 다', async () => {
+    stubServer({ create: () => new Response(null, { status: 201 }) });
+
+    await expect(quick()).resolves.toEqual({ reachedGoal: false });
+  });
+
+  it('409 ALREADY_REQUESTED 는 code 를 가진 ApiError 로 던진다(서버 message 는 쓰지 않는다)', async () => {
+    stubServer({
+      create: () => jsonResponse(409, { code: 'ALREADY_REQUESTED', message: '서버 원문' }),
+    });
+
+    await expect(quick()).rejects.toMatchObject({
+      kind: 'http',
+      status: 409,
+      code: 'ALREADY_REQUESTED',
+    });
+  });
+
+  it('동네·업종 id 가 숫자가 아니면 요청 없이 INVALID_ID 오류다', async () => {
+    const { calls } = stubServer();
+
+    await expect(quick({ ...INPUT, neighborhoodId: 'guseong' })).rejects.toMatchObject({
+      code: 'INVALID_ID',
+    });
+    await expect(quick({ ...INPUT, categoryId: 'fruit' })).rejects.toMatchObject({
+      code: 'INVALID_ID',
+    });
+    expect(posts(calls)).toHaveLength(0);
+  });
+});
+
 describe('내 요청(myRequestService)', () => {
   const ITEM = {
     id: 351,

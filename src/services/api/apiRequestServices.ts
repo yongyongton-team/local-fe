@@ -10,7 +10,9 @@ import { assertNotDemoSession } from './demoGuard';
 import { toServerId } from './ids';
 import {
   buildCreateRequestBody,
+  buildQuickRequestBody,
   mapCreateResponse,
+  mapQuickResponse,
   mapMyRequests,
   mapParseResponse,
 } from './mappers';
@@ -64,6 +66,16 @@ export function createApiRequestServices({
         body,
       });
       return mapCreateResponse(dto, input);
+    },
+    async submitQuick(input) {
+      // 공유 데모 계정으로 요청을 만들지 않는다.
+      assertNotDemoSession(getClient().session);
+      const body = buildQuickRequestBody(input);
+      const dto = await getClient().request<CreateResponseDto>('/requests', {
+        method: 'POST',
+        body,
+      });
+      return mapQuickResponse(dto);
     },
   };
 

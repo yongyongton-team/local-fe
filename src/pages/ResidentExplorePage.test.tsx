@@ -159,22 +159,30 @@ describe('요청 카드', () => {
     expect(bakery).not.toHaveTextContent('대형마트');
   });
 
-  it('"내가 요청함" 상태를 보이지 않는 텍스트로 전달한다(반찬만)', async () => {
+  it('내 요청 상태는 아이콘 컨트롤의 이름으로 전달한다: 요청한 카드는 "내 요청 보기" 링크, 아닌 카드는 "나도 요청" 버튼', async () => {
     await openResident();
     await waitFor(() => expect(cardItems()).toHaveLength(3));
     const [fruit, sideDish, bakery] = cardItems();
 
-    expect(sideDish).toHaveTextContent('내가 요청함');
-    expect(fruit).toHaveTextContent('내가 요청하지 않음');
-    expect(bakery).toHaveTextContent('내가 요청하지 않음');
+    expect(within(sideDish!).getByRole('link', { name: '내 요청 보기' })).toHaveAttribute(
+      'href',
+      '/resident/requests',
+    );
+    expect(within(fruit!).getByRole('button', { name: '나도 요청' })).toBeInTheDocument();
+    expect(within(bakery!).getByRole('button', { name: '나도 요청' })).toBeInTheDocument();
   });
 
-  it('카드 안에는 링크나 버튼이 없다(정보만 보여준다)', async () => {
+  it('카드는 눌러도 반응이 없고, 안에는 오른쪽 아이콘 컨트롤 하나뿐이다', async () => {
     await openResident();
     await waitFor(() => expect(cardItems()).toHaveLength(3));
 
-    cardItems().forEach((item) => expect(within(item).queryAllByRole('link')).toHaveLength(0));
-    cardItems().forEach((item) => expect(within(item).queryAllByRole('button')).toHaveLength(0));
+    cardItems().forEach((item) => {
+      const controls = [
+        ...within(item).queryAllByRole('link'),
+        ...within(item).queryAllByRole('button'),
+      ];
+      expect(controls).toHaveLength(1);
+    });
   });
 });
 

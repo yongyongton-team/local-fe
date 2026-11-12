@@ -26,7 +26,13 @@ export interface FakeMarker {
     map?: FakeMap;
     position: { lat: number; lng: number };
     icon: { content: HTMLElement; anchor: { x: number; y: number } };
+    /** 클릭할 수 있는 마커인지(주민 탐색의 가게 핀만 true) */
+    clickable?: boolean;
   };
+  /** addListener 로 등록된 이벤트 처리기(이벤트 이름별). 마커가 지도에서 떨어지면 해제되어야 한다. */
+  listeners: Record<string, (() => void)[]>;
+  /** 사용자가 마커를 누른 것처럼 click 이벤트를 낸다(clickable 이 아니면 아무 일도 없다). */
+  click: () => void;
   /** setMap(null) 로 지도에서 떼어졌는지 */
   removed: boolean;
   setMap: ReturnType<typeof vi.fn>;
@@ -73,6 +79,8 @@ export interface FakeNaver {
   attachedCircles: () => FakeCircle[];
   /** 지금 지도에 붙어 있는 마커 */
   attached: () => FakeMarker[];
+  /** 지금 등록되어 있는 이벤트 처리기 수(지도와 마커 전체). 정리(리스너 해제)를 확인하는 데 쓴다. */
+  listenerCount: () => number;
 }
 
 /** window.naver 에 가짜 SDK 를 주입한다. 테스트가 끝나면 setup.ts 가 지운다. */
@@ -88,6 +96,12 @@ export function installFakeNaver(): FakeNaver {
     circles: [],
     attachedCircles: () => fake.circles.filter((c) => !c.removed),
     attached: () => fake.markers.filter((m) => !m.removed),
+    listenerCount: () =>
+      [...fake.maps, ...fake.markers].reduce(
+        (sum, target) =>
+          sum + Object.values(target.listeners).reduce((n, list) => n + list.length, 0),
+        0,
+      ),
   };
 
   // erasableSyntaxOnly 때문에 생성자 매개변수 속성 대신 필드를 직접 선언한다.
@@ -150,6 +164,10 @@ export function installFakeNaver(): FakeNaver {
       const self = this as unknown as FakeMarker;
       self.options = options;
       self.removed = false;
+      self.listeners = {};
+      self.click = () => {
+        if (options.clickable) (self.listeners.click ?? []).forEach((listener) => listener());
+      };
       self.setMap = vi.fn((map: FakeMap | null) => {
         if (map === null) self.removed = true;
       });
@@ -182,12 +200,16 @@ export function installFakeNaver(): FakeNaver {
 
   // 실제 SDK 의 Event.addListener(target, name, handler) 와 removeListener(listeners)
   interface FakeListener {
-    target: FakeMap;
+    target: { listeners: Record<string, (() => void)[]> };
     name: string;
     handler: () => void;
   }
   const Event = {
-    addListener: (target: FakeMap, name: string, handler: () => void): FakeListener => {
+    addListener: (
+      target: { listeners: Record<string, (() => void)[]> },
+      name: string,
+      handler: () => void,
+    ): FakeListener => {
       (target.listeners[name] ??= []).push(handler);
       return { target, name, handler };
     },

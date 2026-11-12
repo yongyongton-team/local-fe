@@ -49,6 +49,8 @@
 
 /* 지도는 화면 전체 너비: 본문 좌우 여백(+safe-area)만큼 바깥으로 넓힌다. */
 .mapBleed {
+  /* 가게 정보 카드를 지도 아래쪽에 겹쳐 놓는 기준 */
+  position: relative;
   --map-radius: 0;
   margin-right: calc(-1 * max(var(--space-page), env(safe-area-inset-right)));
   margin-left: calc(-1 * max(var(--space-page), env(safe-area-inset-left)));

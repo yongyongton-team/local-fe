@@ -43,51 +43,77 @@ export function buildMarkerElement(marker: MapMarker): HTMLElement {
   return wrap;
 }
 
-const signatureOf = (marker: GeoMarker) =>
-  `${marker.kind}|${marker.label}|${marker.lat}|${marker.lng}|${marker.offset?.x ?? 0},${marker.offset?.y ?? 0}`;
+const signatureOf = (marker: GeoMarker, clickable: boolean) =>
+  `${marker.kind}|${marker.label}|${marker.lat}|${marker.lng}|${marker.offset?.x ?? 0},${marker.offset?.y ?? 0}|${clickable ? 'click' : ''}`;
 
 export interface MarkerOverlay {
   marker: naver.maps.Marker;
   signature: string;
+  /** 클릭 리스너. 클릭할 수 있는 마커(가게 핀 + onStoreClick)에만 있다. 지울 때 반드시 해제한다. */
+  listener?: naver.maps.MapEventListener;
+}
+
+export interface SyncMarkerOptions {
+  /**
+   * 있으면 가게(검은 핀, kind 'existing') 마커만 클릭할 수 있고 클릭하면 이 함수를 부른다.
+   * 없으면 모든 마커가 클릭할 수 없다(사장님 지도처럼 클릭이 필요 없는 지도).
+   * 요청·부족 지역 알약 같은 다른 마커는 어느 경우에도 클릭할 수 없다.
+   */
+  onStoreClick?: (marker: GeoMarker) => void;
+}
+
+/** 마커를 지도에서 떼고 클릭 리스너도 해제한다(누수 방지). SDK 정리 호출은 실패해도 멈추지 않는다. */
+export function removeOverlay(overlay: MarkerOverlay): void {
+  try {
+    if (overlay.listener) naver.maps.Event.removeListener(overlay.listener);
+  } finally {
+    overlay.marker.setMap(null);
+  }
 }
 
 /**
  * 지도 위의 마커를 next 에 맞춘다. 지도를 다시 만들지 않고 바뀐 마커만 더하거나 지운다.
- * 모양이 같은 마커는 그대로 두고, 사라진 마커는 지도에서 떼며, 내용이 바뀐 마커는 다시 만든다.
+ * 모양이 같은 마커는 그대로 두고, 사라진 마커는 지도에서 떼며(클릭 리스너도 해제), 내용이 바뀐 마커는 다시 만든다.
  */
 export function syncMarkers(
   map: naver.maps.Map,
   overlays: Map<string, MarkerOverlay>,
   next: readonly GeoMarker[],
+  { onStoreClick }: SyncMarkerOptions = {},
 ): void {
   const nextIds = new Set(next.map((m) => m.id));
   for (const [id, overlay] of overlays) {
     if (!nextIds.has(id)) {
-      overlay.marker.setMap(null);
+      removeOverlay(overlay);
       overlays.delete(id);
     }
   }
   for (const marker of next) {
-    const signature = signatureOf(marker);
+    const clickable = onStoreClick !== undefined && marker.kind === 'existing';
+    const signature = signatureOf(marker, clickable);
     const current = overlays.get(marker.id);
     if (current?.signature === signature) continue;
-    current?.marker.setMap(null);
+    if (current) removeOverlay(current);
+    const created = new naver.maps.Marker({
+      map,
+      position: new naver.maps.LatLng(marker.lat, marker.lng),
+      clickable,
+      // 가게 핀이 수백 개인 동네에서도 알약(요청·부족 가게)이 핀에 가려지지 않게 알약을 위에 그린다.
+      zIndex: marker.kind === 'existing' ? 0 : PILL_Z_INDEX,
+      icon: {
+        content: buildMarkerElement(marker),
+        // 자리표시자 지도와 같이 요소의 왼쪽 위가 좌표다. 자리표시자에서 겹치지 않게 잡은 배치 관계가
+        // 그대로 유지된다(가운데 기준으로 두면 넓은 알약이 옆 마커를 덮는다).
+        // offset 이 있으면 라벨을 그만큼 옮겨 그린다(anchor 는 반대 방향).
+        // (0 - x 로 쓴다: -(0) 은 -0 이 되어 좌표 비교가 어긋난다)
+        anchor: new naver.maps.Point(0 - (marker.offset?.x ?? 0), 0 - (marker.offset?.y ?? 0)),
+      },
+    });
     overlays.set(marker.id, {
       signature,
-      marker: new naver.maps.Marker({
-        map,
-        position: new naver.maps.LatLng(marker.lat, marker.lng),
-        clickable: false,
-        // 가게 핀이 수백 개인 동네에서도 알약(요청·부족 가게)이 핀에 가려지지 않게 알약을 위에 그린다.
-        zIndex: marker.kind === 'existing' ? 0 : PILL_Z_INDEX,
-        icon: {
-          content: buildMarkerElement(marker),
-          // 자리표시자 지도와 같이 요소의 왼쪽 위가 좌표다. 자리표시자에서 겹치지 않게 잡은 배치 관계가
-          // 그대로 유지된다(가운데 기준으로 두면 넓은 알약이 옆 마커를 덮는다).
-          // offset 이 있으면 라벨을 그만큼 옮겨 그린다(anchor 는 반대 방향).
-          // (0 - x 로 쓴다: -(0) 은 -0 이 되어 좌표 비교가 어긋난다)
-          anchor: new naver.maps.Point(0 - (marker.offset?.x ?? 0), 0 - (marker.offset?.y ?? 0)),
-        },
+      marker: created,
+      ...(clickable && {
+        listener: naver.maps.Event.addListener(created, 'click', () => onStoreClick(marker)),
       }),
     });
   }

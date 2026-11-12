@@ -23,6 +23,7 @@ import type {
 } from '@/types/domain';
 import { declutterOffsets } from '../mapCoordinates';
 import type { MerchantMapData } from '../merchantService';
+import type { QuickRequestInput, QuickRequestResult } from '../requestSubmitter';
 import type { RequestSummary } from '../requestSummarizer';
 import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
@@ -302,6 +303,7 @@ export function mapMapMarkers(
         ? { categoryId: String(categoryId) }
         : {}),
       label: name,
+      storeName: name,
       position: { x: ratio(lng, minLng, maxLng), y: 1 - ratio(lat, minLat, maxLat) },
       lat,
       lng,
@@ -430,6 +432,31 @@ export function mapCreateResponse(
   const id = request ? safeDomainId(request.id) : undefined;
   if (id === undefined) throw parseError('POST /requests 응답에 요청 id 가 없어요.');
   return { ...input, id };
+}
+
+/** 간편 요청 본문: {dongId, categoryId, timeSlots, frequency} 뿐이다(text·conditions 는 보내지 않는다). */
+export function buildQuickRequestBody(input: QuickRequestInput): CreateRequestBody {
+  return {
+    dongId: toServerId(input.neighborhoodId),
+    categoryId: toServerId(input.categoryId),
+    timeSlots: input.visitTimes.map((time) => TIME_SLOT_CODES[time]),
+    frequency: FREQUENCY_CODES[input.visitFrequency],
+  };
+}
+
+/**
+ * POST /requests 201 응답 → 간편 요청 결과. reachedGoal 이 true 일 때만 도달이다(없거나 다른 값이면 false).
+ * notifiedOwnerCount 는 0 이상의 정수일 때만 쓰고 아니면 없음이다. 요청 id 는 쓰지 않는다.
+ */
+export function mapQuickResponse(dto: CreateResponseDto | undefined): QuickRequestResult {
+  const body: CreateResponseDto = isObject(dto) ? dto : {};
+  const notified = asNumber(body.notifiedOwnerCount);
+  return {
+    reachedGoal: body.reachedGoal === true,
+    ...(notified !== undefined && Number.isInteger(notified) && notified >= 0
+      ? { notifiedOwnerCount: notified }
+      : {}),
+  };
 }
 
 /** ISO 8601 문자열 → Date. 올바르지 않으면 undefined */
