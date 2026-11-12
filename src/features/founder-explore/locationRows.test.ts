@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { LocationRank, StoreCategory } from '@/types/domain';
+import type { LocationRank, PublicData, StoreCategory } from '@/types/domain';
 import {
   buildMapSummary,
   buildRankMarkers,
   describeLocationRow,
+  describePublicData,
   resolveCategoryId,
 } from './locationRows';
 
@@ -48,6 +49,91 @@ describe('describeLocationRow', () => {
 
     expect(text.detail).toBe('요청 29명 · 같은 업종 0곳');
     expect(text.accessibleName).toBe('1. 구성동, 요청 29명, 같은 업종 0곳');
+  });
+});
+
+const pd = (overrides: Partial<PublicData> = {}): PublicData => ({
+  population: 10000,
+  expectedCount: 6.7,
+  dongStoreCount: 4,
+  verdict: 'SHORT',
+  verdictLabel: '[임의] 부족해요',
+  ...overrides,
+});
+
+describe('describePublicData', () => {
+  it('"기대 N곳 · 실제 M곳"과 서버 판정 문구를 " · "로 잇는다', () => {
+    expect(describePublicData(pd())).toBe('기대 7곳 · 실제 4곳 · [임의] 부족해요');
+  });
+
+  it.each([
+    [6.7, 7],
+    [10.5, 11],
+    [9, 9],
+    [0.4, 0],
+    [2.49, 2],
+  ])('기대 %s곳은 %s곳으로 반올림하고, 실제 가게 수는 그대로다', (expected, shown) => {
+    expect(describePublicData(pd({ expectedCount: expected, dongStoreCount: 12 }))).toBe(
+      `기대 ${shown}곳 · 실제 12곳 · [임의] 부족해요`,
+    );
+  });
+
+  it('NOT_JUDGED 는 숫자가 있어도 숫자 없이 판정 문구만 보인다', () => {
+    const line = describePublicData(
+      pd({ verdict: 'NOT_JUDGED', expectedCount: 0, dongStoreCount: 0 }),
+    );
+
+    expect(line).toBe('[임의] 부족해요');
+    expect(
+      describePublicData(pd({ verdict: 'NOT_JUDGED', expectedCount: 5, dongStoreCount: 2 })),
+    ).toBe('[임의] 부족해요');
+  });
+
+  it('publicData 가 없으면 아무것도 없다', () => {
+    expect(describePublicData(undefined)).toBeNull();
+    expect(describePublicData({})).toBeNull();
+  });
+
+  it('숫자 둘 중 하나라도 없거나 올바르지 않으면 숫자를 숨기고 판정 문구만 보인다', () => {
+    expect(describePublicData(pd({ expectedCount: undefined }))).toBe('[임의] 부족해요');
+    expect(describePublicData(pd({ dongStoreCount: undefined }))).toBe('[임의] 부족해요');
+    expect(describePublicData(pd({ expectedCount: Number.NaN }))).toBe('[임의] 부족해요');
+    expect(describePublicData(pd({ dongStoreCount: -1 }))).toBe('[임의] 부족해요');
+  });
+
+  it('판정 문구가 없으면 숫자만, 둘 다 없으면 null 이다', () => {
+    expect(describePublicData(pd({ verdictLabel: undefined }))).toBe('기대 7곳 · 실제 4곳');
+    expect(describePublicData(pd({ verdictLabel: '  ' }))).toBe('기대 7곳 · 실제 4곳');
+    expect(
+      describePublicData(pd({ verdictLabel: undefined, expectedCount: undefined })),
+    ).toBeNull();
+  });
+
+  it('부족하지 않다는 판정(NOT_SHORT)과 모르는 판정 값도 숨기지 않는다', () => {
+    expect(describePublicData(pd({ verdict: 'NOT_SHORT' }))).toContain('기대 7곳');
+    expect(describePublicData(pd({ verdict: 'SOMETHING_NEW' }))).toContain('기대 7곳');
+  });
+});
+
+describe('describeLocationRow 의 공공데이터 줄', () => {
+  it('extra 와 접근 가능한 이름에 한 문장으로 들어가고, detail 은 그대로다', () => {
+    const text = describeLocationRow(rank({ publicData: pd() }));
+
+    expect(text.detail).toBe('요청 29명 · 같은 업종 0곳 · 대형마트 2.4km');
+    expect(text.extra).toBe('기대 7곳 · 실제 4곳 · [임의] 부족해요');
+    expect(text.accessibleName).toBe(
+      '1. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2.4km, 기대 7곳 · 실제 4곳 · [임의] 부족해요',
+    );
+  });
+
+  it('공공데이터가 없으면 extra 속성 자체가 없다', () => {
+    expect('extra' in describeLocationRow(rank())).toBe(false);
+  });
+
+  it('요청 0명 행도 기존 문구 그대로 "요청 0명"이다', () => {
+    expect(describeLocationRow(rank({ requestCount: 0 })).detail).toBe(
+      '요청 0명 · 같은 업종 0곳 · 대형마트 2.4km',
+    );
   });
 });
 
