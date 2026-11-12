@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { useSearchParams } from 'react-router';
 import { CATEGORY_PARAM } from '@/features/founder-explore/constants';
+import { FOUNDER_COPY } from '@/features/founder-explore/copy';
 import {
   buildMapSummary,
   buildRankMarkers,
@@ -23,7 +24,8 @@ import styles from './FounderExplorePage.module.css';
 
 /**
  * 예비 창업자용 입지 찾기 (Figma node 2:1903).
- * 선택한 업종에 대해 요청 인원이 많은 동네를 순위로 보여준다. 업종은 URL 쿼리(?category=)에도 보관한다.
+ * 선택한 업종에 대해 인구에 비해 가게가 부족한 동네를 서버가 준 순서 그대로 순위로 보여준다(다시 정렬하지 않는다).
+ * 업종은 URL 쿼리(?category=)에도 보관한다.
  * 역할 선택은 접근 권한이 아니므로 선택된 역할·동네 없이 직접 들어와도 렌더링한다. 하단 내비게이션은 없다.
  * 동네 리포트(/founder/areas/:areaId/report)는 이 화면의 범위가 아니다. 행은 링크로만 연결한다.
  */
@@ -101,7 +103,7 @@ function Explorer({
 
       <section className={styles.listSection} aria-labelledby={`${selectId}-list`}>
         <h2 className={styles.sectionTitle} id={`${selectId}-list`}>
-          요청은 많고 가게는 없는 동네
+          {FOUNDER_COPY.rankSectionTitle}
         </h2>
         <Text variant="caption">용인시 행정동 순위</Text>
         {ranks.status === 'loading' && <p role="status">불러오는 중이에요.</p>}
@@ -121,6 +123,7 @@ function Explorer({
                       to={paths.founderAreaReport(item.neighborhood.id, categoryId)}
                       title={text.title}
                       detail={text.detail}
+                      extra={text.extra}
                       accessibleName={text.accessibleName}
                     />
                   </li>

@@ -34,17 +34,40 @@ const RANK_ITEMS = [
     sameCategoryStoreCount: 0,
     nearestMartKm: 2.4,
     score: 29,
+    // [임의] 테스트용 값. 실제 서버 값이 아니다.
+    publicData: {
+      population: 20000,
+      expectedCount: 10.5,
+      dongStoreCount: 3,
+      verdict: 'SHORT',
+      verdictLabel: '[임의] 가게가 부족해요',
+    },
   },
+  // 서버 순서는 점수 순서가 아니다: 요청 0명·낮은 점수가 2위에 오고, 점수가 더 높은 행이 아래에 있다.
   {
     rank: 2,
+    dongId: 16,
+    name: '영덕2동',
+    requestCount: 0,
+    sameCategoryStoreCount: 0,
+    score: 3,
+    publicData: {
+      population: 15000,
+      expectedCount: 6.7,
+      dongStoreCount: 4,
+      verdict: 'NEXT_DONG',
+      verdictLabel: '[임의] 옆 동네에 가게가 있어요',
+    },
+  },
+  {
+    rank: 3,
     dongId: 28,
     name: '보정동',
     requestCount: 14,
     sameCategoryStoreCount: 2,
     nearestMartKm: 0.6,
-    score: 4,
+    score: 99,
   },
-  { rank: 3, dongId: 16, name: '영덕2동', requestCount: 0, sameCategoryStoreCount: 0, score: 0 },
 ];
 const REPORT = {
   dong: { id: 22, name: '구성동', gu: '기흥구' },
@@ -80,11 +103,11 @@ function stubServer(routes: { categories?: Handler; rankings?: Handler; report?:
     return jsonResponse(404, { code: 'NOT_FOUND' });
   });
 }
-/** 순위 섹션(제목 "요청은 많고 가게는 없는 동네") 안의 목록 */
+/** 순위 섹션(제목 "인구에 비해 가게가 부족한 동네") 안의 목록 */
 const rankSection = (app: { screen: Rtl['screen']; within: Rtl['within'] }) =>
   app.within(
     app.screen
-      .getByRole('heading', { level: 2, name: '요청은 많고 가게는 없는 동네' })
+      .getByRole('heading', { level: 2, name: '인구에 비해 가게가 부족한 동네' })
       .closest('section')!,
   );
 const rankingCalls = (calls: StubCall[]) =>
@@ -111,10 +134,16 @@ describe('api 모드의 입지 찾기', () => {
 
     await app.screen.findByRole('link', { name: /1\. 구성동/ });
     const rows = rankSection(app).getAllByRole('link');
-    // 요청 0명 동네(영덕2동)는 숨기므로 2행이다.
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveAccessibleName(/1\. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2\.4km/);
-    expect(rows[1]).toHaveAccessibleName(/2\. 보정동, 요청 14명/);
+    // 요청 0명 동네(영덕2동)도 숨기지 않고, 점수가 더 높은 3위 행을 위로 올리지도 않는다.
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveAccessibleName(
+      '1. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2.4km, 기대 11곳 · 실제 3곳 · [임의] 가게가 부족해요',
+    );
+    expect(rows[1]).toHaveAccessibleName(
+      '2. 영덕2동, 요청 0명, 같은 업종 0곳, 기대 7곳 · 실제 4곳 · [임의] 옆 동네에 가게가 있어요',
+    );
+    // 공공데이터가 없는 행은 기존 문구 그대로다.
+    expect(rows[2]).toHaveAccessibleName('3. 보정동, 요청 14명, 같은 업종 2곳, 대형마트 0.6km');
     expect(rows[0]).toHaveAttribute('href', '/founder/areas/22/report?category=7');
 
     expect(rankingCalls(calls)).toHaveLength(1);
@@ -126,7 +155,7 @@ describe('api 모드의 입지 찾기', () => {
     const app = await loadApp('api');
     app.renderApp(['/founder']);
     await app.screen.findByRole('link', { name: /1\. 구성동/ });
-    expect(rankSection(app).getAllByRole('link')).toHaveLength(2);
+    expect(rankSection(app).getAllByRole('link')).toHaveLength(3);
 
     expect(
       app.screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),

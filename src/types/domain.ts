@@ -247,6 +247,25 @@ export interface AreaDetail {
  * 예비 창업자용 입지 순위의 한 줄: 선택한 업종에 대한 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다.
  * position 은 동네의 지도상 위치(지금은 자리표시자 지도 대비 상대좌표)라 업종이 바뀌어도 같다.
  */
+/** 공공데이터 판정 값. 알려진 값 5가지에 문자열 폴백을 더해 서버가 새 값을 추가해도 깨지지 않게 한다. */
+export type PublicDataVerdict =
+  'SHORT' | 'SOME_NEARBY' | 'NEXT_DONG' | 'NOT_SHORT' | 'NOT_JUDGED' | (string & {});
+
+/**
+ * 순위 항목의 공공데이터 지표(인구 대비 기대 가게 수와 판정). 서버가 주지 않았거나 일부가 비면 그 필드만 없다.
+ * 서버 값을 가공하지 않는다: expectedCount 는 소수 그대로이고(반올림은 표시 단계), verdictLabel 은 서버 문구다.
+ */
+export interface PublicData {
+  population?: number;
+  /** 인구로 기대하는 가게 수. 소수일 수 있다. */
+  expectedCount?: number;
+  /** 이 동의 실제 가게 수 */
+  dongStoreCount?: number;
+  verdict?: PublicDataVerdict;
+  /** 서버가 쓴 판정 문구. 프론트에서 만들지 않는다. */
+  verdictLabel?: string;
+}
+
 export interface LocationRank {
   /** 1부터 시작하는 순위 */
   rank: number;
@@ -268,6 +287,8 @@ export interface LocationRank {
    */
   lat?: number;
   lng?: number;
+  /** 공공데이터 지표. 서버가 주지 않았거나 비어 있으면 없다. */
+  publicData?: PublicData;
 }
 
 /**

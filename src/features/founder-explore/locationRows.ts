@@ -1,10 +1,17 @@
-import type { LocationRank, MapMarker, StoreCategory } from '@/types/domain';
+import { VERDICT_NOT_JUDGED } from '@/shared/lib/publicData';
+import type { LocationRank, MapMarker, PublicData, StoreCategory } from '@/types/domain';
+import { FOUNDER_COPY } from './copy';
 
 export interface LocationRowText {
   /** 굵은 제목. 예: 1. 구성동 */
   title: string;
   /** 작은 둘째 줄. 예: 요청 29명 · 같은 업종 0곳 · 대형마트 2.4km */
   detail: string;
+  /**
+   * 공공데이터 줄. 예: 기대 7곳 · 실제 9곳 · {서버 판정 문구}. 공공데이터가 없으면 없다(기존 행과 같다).
+   * 판정 문구가 길면 줄바꿈된다.
+   */
+  extra?: string;
   /** 링크의 접근 가능한 이름. 한 문장으로 읽힌다. */
   accessibleName: string;
 }
@@ -17,6 +24,29 @@ function hypermarketPart(item: LocationRank): string | null {
   return item.nearestHypermarketKm === undefined ? null : `대형마트 ${item.nearestHypermarketKm}km`;
 }
 
+const isCount = (value: number | undefined): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+/**
+ * 공공데이터 줄. "기대 N곳 · 실제 M곳"과 서버의 판정 문구(verdictLabel)를 " · "로 잇는다.
+ * - 숫자는 판정이 NOT_JUDGED 가 아니고 expectedCount·dongStoreCount 가 둘 다 유효한 숫자일 때만 보인다.
+ *   expectedCount 는 소수라 가장 가까운 정수로 반올림해서 보인다(6.7 → 7, 10.5 → 11). 실제 가게 수는 그대로다.
+ * - NOT_JUDGED 이면 숫자 없이 판정 문구만 보인다. 판정 문구가 없으면 그 부분을 뺀다.
+ * - publicData 가 없거나 보일 것이 없으면 null 이다. 부족하지 않다는 판정(NOT_SHORT 등)도 숨기지 않는다.
+ */
+export function describePublicData(data: PublicData | undefined): string | null {
+  if (!data) return null;
+  const label = data.verdictLabel?.trim();
+  const numbers =
+    data.verdict !== VERDICT_NOT_JUDGED &&
+    isCount(data.expectedCount) &&
+    isCount(data.dongStoreCount)
+      ? FOUNDER_COPY.expectedActual(Math.round(data.expectedCount), data.dongStoreCount)
+      : null;
+  const line = [numbers, label].filter((part): part is string => !!part).join(' · ');
+  return line === '' ? null : line;
+}
+
 /** 순위 행의 문구. 수치는 모두 데이터에서 만든다. 주민이 입력한 원문 문장은 쓰지 않는다. */
 export function describeLocationRow(item: LocationRank): LocationRowText {
   const parts = [
@@ -24,10 +54,15 @@ export function describeLocationRow(item: LocationRank): LocationRowText {
     `같은 업종 ${item.nearbySameCategoryCount}곳`,
     hypermarketPart(item),
   ].filter((part): part is string => part !== null);
+  const extra = describePublicData(item.publicData);
   return {
     title: rankLabel(item),
     detail: parts.join(' · '),
-    accessibleName: `${rankLabel(item)}, ${parts.join(', ')}`,
+    ...(extra !== null && { extra }),
+    // 숫자와 판정 문구는 한 문장으로 읽힌다.
+    accessibleName: [`${rankLabel(item)}, ${parts.join(', ')}`, extra]
+      .filter((part): part is string => part !== null)
+      .join(', '),
   };
 }
 

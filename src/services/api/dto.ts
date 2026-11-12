@@ -187,7 +187,21 @@ export interface MyRequestDto {
   offers?: Nullable<OfferDto[]>;
 }
 
-/** GET /founder/rankings 의 항목. 구(gu)와 좌표는 없다. score 는 서버가 순위를 매기는 값이라 화면이 쓰지 않는다. */
+/** GET /founder/rankings 항목의 공공데이터. expectedCount 는 소수(double)로 온다. 모든 필드가 없거나 null 일 수 있다. */
+export interface PublicDataDto {
+  population?: Nullable<number>;
+  expectedCount?: Nullable<number>;
+  dongStoreCount?: Nullable<number>;
+  /** SHORT | SOME_NEARBY | NEXT_DONG | NOT_SHORT | NOT_JUDGED (새 값이 올 수 있다) */
+  verdict?: Nullable<string>;
+  /** 서버가 쓴 판정 문구 */
+  verdictLabel?: Nullable<string>;
+}
+
+/**
+ * GET /founder/rankings 의 항목. 구(gu)와 좌표는 없다. score 는 서버 정렬에 쓰는 값이라 화면이 쓰지 않는다
+ * (서버 순서는 score 순이 아니다). 순서와 rank 는 서버 값을 그대로 쓴다.
+ */
 export interface RankingItemDto {
   rank?: Nullable<number>;
   dongId?: Nullable<number>;
@@ -196,6 +210,7 @@ export interface RankingItemDto {
   sameCategoryStoreCount?: Nullable<number>;
   nearestMartKm?: Nullable<number>;
   score?: Nullable<number>;
+  publicData?: Nullable<PublicDataDto>;
 }
 
 export interface FounderRankingDto {

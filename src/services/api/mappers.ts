@@ -15,6 +15,7 @@ import type {
   Neighborhood,
   NeighborhoodReport,
   NewStoreRequest,
+  PublicData,
   StoreCategory,
   StoreRequest,
   UserRole,
@@ -543,14 +544,6 @@ export function mapMyRequests(
   });
 }
 
-/**
- * 순위에 올릴지 정하는 규칙(한 곳). 서버 순위는 요청이 0명인 동네까지 전부 준다(동 39곳).
- * true(현재)이면 요청이 1명 이상인 동네만 남기고 순위 번호를 보이는 행 기준으로 1부터 다시 매긴다
- * (서버 rank 는 score 순서라 0명 동네가 빠지면 번호가 건너뛴다. 예: 반찬은 요청 있는 동네가 서버 3위 하나뿐이라 1위가 된다).
- * false 이면 서버가 준 목록과 순위를 그대로 보여준다.
- */
-export const HIDE_ZERO_REQUEST_RANKS = true;
-
 const requiredCount = (value: unknown, what: string): number => {
   const count = asNumber(value);
   if (count === undefined || count < 0) throw parseError(`${what} 가 숫자가 아니에요.`);
@@ -558,39 +551,62 @@ const requiredCount = (value: unknown, what: string): number => {
 };
 
 /**
- * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서를 그대로 쓰고, 순위(rank)는 서버 값을 쓴다(없으면 서버 순서의 번호).
- * 요청 0명 동네를 숨기면(HIDE_ZERO_REQUEST_RANKS) 순위는 보이는 행 기준으로 다시 매긴다.
+ * 공공데이터(publicData) → 도메인. 숫자 필드는 0 이상의 유한한 숫자일 때만 담고 아니면 비운다(expectedCount 는 소수 그대로, 반올림은
+ * 표시 단계에서 한다). verdict·verdictLabel 은 비어 있지 않은 문자열일 때만 담고 서버 값을 그대로 쓴다(알 수 없는 값도 그대로).
+ * 객체가 아니거나 쓸 수 있는 필드가 하나도 없으면 없음(undefined)이다.
+ */
+export function mapPublicData(raw: unknown): PublicData | undefined {
+  if (!isObject(raw)) return undefined;
+  const count = (value: unknown) => {
+    const n = asNumber(value);
+    return n !== undefined && n >= 0 ? n : undefined;
+  };
+  const text = (value: unknown) =>
+    typeof value === 'string' && value.trim() !== '' ? value : undefined;
+  const population = count(raw.population);
+  const expectedCount = count(raw.expectedCount);
+  const dongStoreCount = count(raw.dongStoreCount);
+  const verdict = text(raw.verdict);
+  const verdictLabel = text(raw.verdictLabel);
+  const data: PublicData = {
+    ...(population !== undefined && { population }),
+    ...(expectedCount !== undefined && { expectedCount }),
+    ...(dongStoreCount !== undefined && { dongStoreCount }),
+    ...(verdict !== undefined && { verdict }),
+    ...(verdictLabel !== undefined && { verdictLabel }),
+  };
+  return Object.keys(data).length > 0 ? data : undefined;
+}
+
+/**
+ * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서를 그대로 쓰고(재정렬·필터 없음, 요청 0명 항목도 남긴다),
+ * 순위(rank)는 서버 값을 쓴다(없으면 서버 순서의 번호).
  * - 동네 id 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 이름이 없으면 parse 오류.
  *   서버 순위에는 구(gu)가 없어 district 는 빈 문자열이다.
  * - requestCount·sameCategoryStoreCount 가 숫자가 아니면 parse 오류다(지어내지 않는다). nearestMartKm 이 없으면 비운다.
- * - 서버 순위에는 좌표가 없어 lat·lng·position 을 만들어 넣지 않는다. score 는 쓰지 않는다.
+ * - 서버 순위에는 좌표가 없어 lat·lng·position 을 만들어 넣지 않는다. score 는 쓰지 않는다(서버 순서는 score 순이 아니다).
+ * - publicData 는 있으면 mapPublicData 로 옮기고, 없거나 비어 있으면 필드 자체가 없다.
  * 응답이 객체가 아니거나 items 가 배열이 아니면 parse 오류.
  */
-export function mapRankings(
-  dto: FounderRankingDto | undefined,
-  /** 테스트용으로 규칙을 바꿔 끼울 수 있다. 기본은 HIDE_ZERO_REQUEST_RANKS */
-  hideZeroRequests: boolean = HIDE_ZERO_REQUEST_RANKS,
-): LocationRank[] {
+export function mapRankings(dto: FounderRankingDto | undefined): LocationRank[] {
   if (!isObject(dto) || !Array.isArray(dto.items)) {
     throw parseError('GET /founder/rankings 응답에 items 가 없어요.');
   }
-  const ranks = dto.items.map((raw, index): LocationRank => {
+  return dto.items.map((raw, index): LocationRank => {
     const item = isObject(raw) ? raw : {};
     const name = asString(item.name);
     if (name === '') throw parseError('GET /founder/rankings 항목에 이름이 없어요.');
     const km = asNumber(item.nearestMartKm);
+    const publicData = mapPublicData(item.publicData);
     return {
       rank: asNumber(item.rank) ?? index + 1,
       neighborhood: { id: toDomainId(item.dongId), district: '', name },
       requestCount: requiredCount(item.requestCount, 'requestCount'),
       nearbySameCategoryCount: requiredCount(item.sameCategoryStoreCount, 'sameCategoryStoreCount'),
       ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
+      ...(publicData !== undefined && { publicData }),
     };
   });
-  if (!hideZeroRequests) return ranks;
-  return ranks
-    .filter((item) => item.requestCount > 0)
-    .map((item, index) => ({ ...item, rank: index + 1 }));
 }
 
 /**
