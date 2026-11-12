@@ -26,6 +26,12 @@
 }
 
 /* [화면] 가게 정보: SemiBold 16px */
+.shopLink {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
 .shop {
   min-width: 0;
   padding-left: var(--header-inset-x);

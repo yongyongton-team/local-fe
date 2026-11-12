@@ -17,6 +17,7 @@ describe('사장님 목 서비스', () => {
       categoryId: FRUIT,
       categoryName: '과일·채소',
       district: '기흥구',
+      dongId: 'guseong',
     });
   });
 

@@ -414,12 +414,12 @@ describe('제출 후 내 요청 화면', () => {
     await user.click(sendButton());
 
     expect(await screen.findByRole('heading', { level: 1, name: '내 요청' })).toBeInTheDocument();
-    // 과일/채소 요청이 29 → 30명이 되어 "결정 필요" 상태의 요약 카드가 보인다.
+    // 과일/채소 요청이 29 → 30명이 되어 요약 카드가 보인다.
     const card = within(await screen.findByRole('region', { name: '요청했어요!' }));
     expect(
       card.getByText('구성동에서 과일·채소 가게를 원하는 주민이 30명이 됐어요.'),
     ).toBeInTheDocument();
-    expect(card.getByText('결정 필요')).toBeInTheDocument();
+    expect(card.getByText('30명이 모였어요!')).toBeInTheDocument();
     expect(screen.getByText('구성동 · 평일 저녁 · 주 1번 이상')).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: '주민 메뉴' })).getByRole('link', {

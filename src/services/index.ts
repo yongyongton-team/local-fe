@@ -3,6 +3,7 @@ import { createApiDemandService } from './api/apiDemandService';
 import { createApiFounderService } from './api/apiFounderService';
 import { createApiMerchantService } from './api/apiMerchantService';
 import { createApiMeService } from './api/apiMeService';
+import { createApiOfferService } from './api/apiOfferService';
 import { createApiRequestServices } from './api/apiRequestServices';
 import { isDemoLoginEnabled, resolveDataSource } from './api/config';
 import type { AuthService } from './authService';
@@ -13,6 +14,7 @@ import { mockAreaDescriptionGenerator } from './mockAreaDescriptionGenerator';
 import { mockDemandService } from './mockDemandService';
 import { mockFounderService } from './mockFounderService';
 import { mockMerchantService } from './mockMerchantService';
+import { mockOfferService } from './mockOfferService';
 import { mockMyRequestService } from './mockMyRequestService';
 import { mockReportDescriptionGenerator } from './mockReportDescriptionGenerator';
 import { mockRequestSubmitter } from './mockRequestSubmitter';
@@ -21,6 +23,7 @@ import type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './rep
 import type { FounderService } from './founderService';
 import type { MeService } from './meService';
 import type { MerchantService } from './merchantService';
+import type { OfferService } from './offerService';
 import type { MyRequestService } from './myRequestService';
 import type { RequestSubmitter } from './requestSubmitter';
 import type { RequestSummarizer } from './requestSummarizer';
@@ -35,6 +38,7 @@ export type {
   MerchantService,
 } from './merchantService';
 export type { MyRequestService } from './myRequestService';
+export type { OfferService } from './offerService';
 export { isNoShopError, NoShopError } from './merchantService';
 export type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './reportDescription';
 export type { RequestSubmitter } from './requestSubmitter';
@@ -46,7 +50,7 @@ export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
  * 동네·업종 목록과 주민 조회(demandService 의 listNeighborhoods·listCategories·getDefaultCategoryId·
  * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService),
  * 예비 창업자(founderService·reportDescriptionGenerator),
- * 사장님(merchantService·areaDescriptionGenerator)뿐이다. 나머지 서비스와 메서드는
+ * 사장님(merchantService·areaDescriptionGenerator·offerService)뿐이다. 나머지 서비스와 메서드는
  * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
  */
 const dataSource = resolveDataSource(
@@ -115,6 +119,10 @@ export const founderService: FounderService =
 /** 창업자 동네 리포트 "왜 이 동네인가요?" 문장. api 모드는 서버가 쓴 문장, mock 은 템플릿 목. */
 export const reportDescriptionGenerator: ReportDescriptionGenerator =
   apiFounderServices?.reportDescriptionGenerator ?? mockReportDescriptionGenerator;
+
+/** 사장님 방문 판매 제안 목록·보내기. api 모드는 GET /owner/offers·POST /offers(데모 세션은 쓰기 차단), mock 은 메모리 목. */
+export const offerService: OfferService =
+  dataSource === 'api' ? createApiOfferService() : mockOfferService;
 
 /** 인증. api 모드는 게스트 로그인(+ 플래그가 켜진 경우 사장님 데모 로그인), mock 은 아무것도 하지 않는다. */
 export const authService: AuthService =

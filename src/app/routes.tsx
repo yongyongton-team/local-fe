@@ -4,6 +4,8 @@ import { FounderExplorePage } from '@/pages/FounderExplorePage';
 import { DongSelectPage } from '@/pages/DongSelectPage';
 import { HomePage } from '@/pages/HomePage';
 import { MerchantAreaDetailPage } from '@/pages/MerchantAreaDetailPage';
+import { MerchantOfferNewPage } from '@/pages/MerchantOfferNewPage';
+import { MerchantOffersPage } from '@/pages/MerchantOffersPage';
 import { MerchantExplorePage } from '@/pages/MerchantExplorePage';
 import { MyInfoPage } from '@/pages/MyInfoPage';
 import { MyRequestsPage } from '@/pages/MyRequestsPage';
@@ -40,6 +42,8 @@ export function createRoutes(extraRoutes: RouteObject[] = []): RouteObject[] {
       children: [
         { path: 'merchant', element: <MerchantExplorePage /> },
         { path: 'merchant/areas/:areaId', element: <MerchantAreaDetailPage /> },
+        { path: 'merchant/offers', element: <MerchantOffersPage /> },
+        { path: 'merchant/offers/new', element: <MerchantOfferNewPage /> },
         { path: 'founder', element: <FounderExplorePage /> },
         { path: 'founder/areas/:areaId/report', element: <FounderAreaReportPage /> },
       ],

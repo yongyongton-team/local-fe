@@ -6,8 +6,8 @@ import styles from './ProgressSummaryCard.module.css';
 
 /**
  * 가장 최근에 보낸 요청의 진행 상황 카드. (추정)
- * 디자인에 있던 진행 영역의 빨간 점선 테두리와 카드 하단의 "가장 가까운 업종을 선택해 주세요!"는
- * 의도 확인이 필요해 구현하지 않았다.
+ * 시안의 빨간 점선 테두리·"결정 필요" 알약·카드 하단의 "가장 가까운 업종을 선택해 주세요!"는
+ * 디자이너의 주석이라 화면에 내지 않는다.
  */
 export function ProgressSummaryCard({ item }: { item: MyRequest }) {
   const titleId = useId();
@@ -22,13 +22,9 @@ export function ProgressSummaryCard({ item }: { item: MyRequest }) {
       <p className={styles.description}>{describeRequestSummary(item)}</p>
 
       <div className={styles.progress}>
-        <div className={styles.status}>
-          {/* 색뿐 아니라 텍스트로도 전달한다. 표시 조건(기준 인원 도달)은 임시 규칙이다. */}
-          {progress.reached && <span className={styles.pill}>결정 필요</span>}
-          <p id={labelId} className={styles.count}>
-            {progress.label}
-          </p>
-        </div>
+        <p id={labelId} className={styles.count}>
+          {progress.label}
+        </p>
         <div
           role="progressbar"
           aria-labelledby={labelId}
