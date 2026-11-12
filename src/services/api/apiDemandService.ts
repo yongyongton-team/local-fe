@@ -26,9 +26,9 @@ function memoizeUntilFailure<T>(load: () => Promise<T>): () => Promise<T> {
 }
 
 /**
- * 수요 서비스의 부분 API 구현. 동네 목록(GET /dongs), 업종 목록(GET /categories)과 주민 조회
- * (GET /dongs/{id}/gaps, GET /dongs/{id}/map)만 실제 서버이고, 나머지 메서드(전 동네 리포트 등)는 base(목) 구현을 쓴다.
- * 목 메서드는 slug id 기준이라, 여기서 만든 숫자 id 로 부르면 비어 있거나 없는 동네로 처리된다.
+ * 수요 서비스의 API 구현. 동네 목록(GET /dongs), 업종 목록(GET /categories)과 주민 조회
+ * (GET /dongs/{id}/gaps, GET /dongs/{id}/map)와 기본 업종이며 DemandService 의 모든 메서드가 서버를 쓴다.
+ * base(목)는 시그니처를 맞추려고 받을 뿐 지금은 어떤 메서드도 base 로 대체되지 않는다.
  * 동네·업종 목록은 바뀌지 않는 참조 데이터라 세션 동안 한 번만 불러 나눠 쓴다(실패하면 다음 호출에서 다시).
  */
 export function createApiDemandService(

@@ -86,7 +86,7 @@ afterEach(() => {
   rtl = null;
 });
 
-const mapRegion = (app: App) => app.screen.getByRole('region', { name: '동네 지도(예시)' });
+const mapRegion = (app: App) => app.screen.getByRole('region', { name: '동네 지도' });
 const mapTexts = (app: App) =>
   app
     .within(mapRegion(app))

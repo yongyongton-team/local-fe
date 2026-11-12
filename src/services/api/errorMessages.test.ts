@@ -6,7 +6,13 @@ import {
   type ApiErrorCode,
   type ApiErrorKind,
 } from './apiError';
-import { ERROR_MESSAGES_BY_CODE, FALLBACK_ERROR_MESSAGE, describeApiError } from './errorMessages';
+import {
+  ERROR_MESSAGES_BY_CODE,
+  FALLBACK_ERROR_MESSAGE,
+  VALIDATION_MESSAGES_BY_CONTEXT,
+  describeApiError,
+  type ErrorContext,
+} from './errorMessages';
 
 const http = (status: number, code?: ApiErrorCode, message = '서버가 준 문구'): ApiError =>
   new ApiError({ kind: 'http', status, code, message });
@@ -118,5 +124,73 @@ describe('describeApiError', () => {
 
     expect(text).not.toContain('서버 문구');
     expect(text).not.toContain('존재하지 않는 동입니다');
+  });
+});
+
+describe('describeApiError: 맥락별 VALIDATION_ERROR 문구', () => {
+  const GENERIC = ERROR_MESSAGES_BY_CODE.VALIDATION_ERROR;
+  const CONTEXTS = [
+    ['offer', '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.'],
+    ['request', '요청 내용을 다시 확인해 주세요. 시간대와 이용 빈도를 선택했는지 살펴봐 주세요.'],
+    ['shop', '가게 정보를 다시 확인해 주세요. 가게 이름, 업종, 위치를 살펴봐 주세요.'],
+    ['parse', '요청 문장을 다시 확인해 주세요.'],
+  ] as const satisfies readonly (readonly [ErrorContext, string])[];
+
+  it.each(CONTEXTS)('%s 맥락이면 그 맥락의 문구다', (context, expected) => {
+    expect(describeApiError(http(400, 'VALIDATION_ERROR'), context)).toBe(expected);
+    expect(VALIDATION_MESSAGES_BY_CONTEXT[context]).toBe(expected);
+  });
+
+  it('맥락을 주지 않으면 기존 문구 그대로다(내 정보 저장·동네 선택)', () => {
+    expect(describeApiError(http(400, 'VALIDATION_ERROR'))).toBe(GENERIC);
+    expect(describeApiError(http(400, 'VALIDATION_ERROR'), undefined)).toBe(GENERIC);
+  });
+
+  it('맥락 문구는 서로 다르고 기존 문구와도 다르다', () => {
+    const all = [GENERIC, ...CONTEXTS.map(([, text]) => text)];
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it('코드가 없는 400 도 VALIDATION_ERROR 로 보고 맥락 문구를 쓴다', () => {
+    expect(describeApiError(http(400), 'offer')).toBe(VALIDATION_MESSAGES_BY_CONTEXT.offer);
+  });
+
+  it('서버 message 는 맥락이 있어도 쓰지 않는다', () => {
+    const text = describeApiError(
+      http(400, 'VALIDATION_ERROR', '서버 원문 가격은 음수일 수 없음'),
+      'offer',
+    );
+
+    expect(text).not.toContain('서버 원문');
+    expect(text).toBe(VALIDATION_MESSAGES_BY_CONTEXT.offer);
+  });
+
+  it('VALIDATION_ERROR 가 아닌 오류의 문구와 동작은 맥락과 상관없이 그대로다', () => {
+    for (const [context] of CONTEXTS) {
+      expect(describeApiError(http(404, 'NOT_FOUND'), context)).toBe(
+        ERROR_MESSAGES_BY_CODE.NOT_FOUND,
+      );
+      expect(describeApiError(http(403, 'FORBIDDEN'), context)).toBe(
+        ERROR_MESSAGES_BY_CODE.FORBIDDEN,
+      );
+      expect(describeApiError(http(401, 'UNAUTHORIZED'), context)).toBe(
+        ERROR_MESSAGES_BY_CODE.UNAUTHORIZED,
+      );
+      expect(describeApiError(http(409, 'ALREADY_REQUESTED'), context)).toBe(
+        ERROR_MESSAGES_BY_CODE.ALREADY_REQUESTED,
+      );
+      expect(describeApiError(http(502, 'AI_UNAVAILABLE'), context)).toBe(
+        ERROR_MESSAGES_BY_CODE.AI_UNAVAILABLE,
+      );
+      expect(describeApiError(http(500), context)).toBe(FALLBACK_ERROR_MESSAGE);
+      expect(describeApiError(of('network'), context)).toBe(describeApiError(of('network')));
+      expect(describeApiError(of('timeout'), context)).toBe(describeApiError(of('timeout')));
+      expect(describeApiError(of('parse'), context)).toBe(FALLBACK_ERROR_MESSAGE);
+      expect(describeApiError(new Error('x'), context)).toBe(FALLBACK_ERROR_MESSAGE);
+    }
+  });
+
+  it('5xx 는 VALIDATION_ERROR 코드여도 마지막 문구다(맥락과 상관없이)', () => {
+    expect(describeApiError(http(500, 'VALIDATION_ERROR'), 'offer')).toBe(FALLBACK_ERROR_MESSAGE);
   });
 });

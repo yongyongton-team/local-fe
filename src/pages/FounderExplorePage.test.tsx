@@ -150,6 +150,24 @@ describe('렌더링', () => {
     expect(within(mapRegion()).getByText('지도 연동 예정 · 예시 데이터')).toBeInTheDocument();
   });
 
+  it('서비스가 remote(API 모드)이면 지도 영역 이름에 "(예시)"가 없고 mock 안내 대신 "지도를 불러오지 못했어요"가 보인다', async () => {
+    const service = founderService as { remote: boolean };
+    const original = service.remote;
+    service.remote = true;
+    try {
+      await openFounder();
+
+      const region = screen.getByRole('region', { name: '입지 후보 지도' });
+      expect(
+        screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),
+      ).not.toBeInTheDocument();
+      expect(within(region).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+      expect(screen.queryByText('지도 연동 예정 · 예시 데이터')).not.toBeInTheDocument();
+    } finally {
+      service.remote = original;
+    }
+  });
+
   it('하단 내비게이션도 헤더 버튼(검색·이웃 보기)도 없고, 우측 상단의 내 정보 링크만 있다', async () => {
     await openFounder();
 

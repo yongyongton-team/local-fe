@@ -157,9 +157,7 @@ describe('api 모드의 입지 찾기', () => {
     await app.screen.findByRole('link', { name: /1\. 구성동/ });
     expect(rankSection(app).getAllByRole('link')).toHaveLength(3);
 
-    expect(
-      app.screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),
-    ).not.toBeInTheDocument();
+    expect(app.screen.queryByRole('region', { name: '입지 후보 지도' })).not.toBeInTheDocument();
     expect(app.screen.queryByText(/기준 동네 .*곳 표시 중/)).not.toBeInTheDocument();
   });
 

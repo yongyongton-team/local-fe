@@ -98,12 +98,12 @@ describe('mock 모드(기본)', () => {
 });
 
 describe('api 모드', () => {
-  it('인증·me·동네/업종 목록·주민 조회·요청 작성·내 요청·창업자·사장님만 API 구현이고, 나머지 서비스와 메서드는 모드와 무관하게 목이다', async () => {
+  it('인증·me·수요(동네/업종 목록·주민 조회)·요청 작성·내 요청·창업자·사장님 서비스가 API 구현이다', async () => {
     const { services, mocks } = await loadServices({ source: 'api', base: 'https://api.test' });
 
     expect(services.authService).not.toBe(mocks.auth);
     expect(services.meService).not.toBe(mocks.me);
-    // 수요 서비스는 동네·업종 목록만 API 이고 나머지 메서드는 목 구현을 그대로 가리킨다.
+    // 수요 서비스는 모든 메서드가 API 구현이다(동네·업종 목록, 주민 조회, 기본 업종).
     expect(services.demandService).not.toBe(mocks.demand);
     expect(services.demandService.listNeighborhoods).not.toBe(mocks.demand.listNeighborhoods);
     expect(services.demandService.listCategories).not.toBe(mocks.demand.listCategories);
@@ -113,8 +113,6 @@ describe('api 모드', () => {
     );
     expect(services.demandService.listMapMarkers).not.toBe(mocks.demand.listMapMarkers);
     expect(services.demandService.getDefaultCategoryId).not.toBe(mocks.demand.getDefaultCategoryId);
-    expect(services.demandService.listReports).toBe(mocks.demand.listReports);
-    expect(services.demandService.getReport).toBe(mocks.demand.getReport);
     // 사장님 가게 정보·동네 수요·상세는 API 구현이다(6단계).
     expect(services.merchantService).not.toBe(mocks.merchant);
     expect([services.merchantService.remote, mocks.merchant.remote]).toEqual([true, false]);

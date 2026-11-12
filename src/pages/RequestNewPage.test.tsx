@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProviders } from '@/app/providers';
 import { routes } from '@/app/routes';
-import { SUMMARY_DEBOUNCE_MS } from '@/features/store-request/constants';
+import { PARSE_DEBOUNCE_MS } from '@/features/store-request/constants';
 import { useSelection } from '@/features/selection/SelectionContext';
 import { requestSubmitter } from '@/services';
 import type { StoreRequest } from '@/types/domain';
@@ -42,7 +42,7 @@ const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 /** 입력이 멈춘 뒤의 정리 지연을 흘려보낸다. */
 const flushSummary = () =>
   act(async () => {
-    await vi.advanceTimersByTimeAsync(SUMMARY_DEBOUNCE_MS + 10);
+    await vi.advanceTimersByTimeAsync(PARSE_DEBOUNCE_MS + 10);
   });
 
 const textbox = () => screen.getByRole('textbox', { name: '어떤 가게가 생기면 갈까요?' });

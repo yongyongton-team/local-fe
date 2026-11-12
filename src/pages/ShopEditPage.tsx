@@ -167,7 +167,7 @@ function ShopForm({ me, categories }: { me: Me; categories: StoreCategory[] }) {
       });
     } catch (e) {
       // 서버 message 는 쓰지 않는다. 오류 종류·코드로 정한 문구만 보여준다.
-      setError(describeApiError(e));
+      setError(describeApiError(e, 'shop'));
       savingRef.current = false;
       setSaving(false);
       return;

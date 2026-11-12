@@ -420,6 +420,26 @@ describe('내 가게: 저장', () => {
     expect(saveButton()).toBeEnabled();
   });
 
+  it('400 VALIDATION_ERROR 는 가게 저장 맥락의 문구이고 서버 message 는 보이지 않는다', async () => {
+    vi.spyOn(meService, 'saveShop').mockRejectedValue(
+      new ApiError({
+        kind: 'http',
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: '서버 원문 노출 금지',
+      }),
+    );
+    const { user } = await openShop(merchantMe({ shop: SAVED }));
+
+    await user.click(saveButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '가게 정보를 다시 확인해 주세요. 가게 이름, 업종, 위치를 살펴봐 주세요.',
+    );
+    expect(screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/역할과 동네/)).not.toBeInTheDocument();
+  });
+
   it('네트워크 오류는 연결 확인 문구를 보여준다', async () => {
     vi.spyOn(meService, 'saveShop').mockRejectedValue(
       new ApiError({ kind: 'network', message: 'x' }),

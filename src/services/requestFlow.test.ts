@@ -13,6 +13,12 @@ const fruit = (overrides: Partial<NewStoreRequest> = {}): NewStoreRequest => ({
   ...overrides,
 });
 
+/** 한 동네·업종의 리포트. 없으면 null. */
+const reportOf = async (neighborhoodId: string, categoryId: string) =>
+  (await demandService.listReportsByNeighborhood(neighborhoodId)).find(
+    (report) => report.category.id === categoryId,
+  ) ?? null;
+
 const fruitReport = async () =>
   (await demandService.listReportsByNeighborhood('guseong')).find(
     (report) => report.category.id === 'fruit-vegetable',
@@ -54,11 +60,11 @@ describe('간편 요청 목 서비스(submitQuick)', () => {
   });
 
   it('기준 인원에 도달하지 않는 요청은 reachedGoal 이 false 이고 인원만 1 오른다', async () => {
-    const before = (await demandService.getReport('guseong', 'bakery'))?.demand.requestCount ?? 0;
+    const before = (await reportOf('guseong', 'bakery'))?.demand.requestCount ?? 0;
 
     await expect(quick('bakery')).resolves.toEqual({ reachedGoal: false });
 
-    expect((await demandService.getReport('guseong', 'bakery'))?.demand).toMatchObject({
+    expect((await reportOf('guseong', 'bakery'))?.demand).toMatchObject({
       requestCount: before + 1,
       requestedByMe: true,
     });
@@ -184,8 +190,8 @@ describe('요청 제출', () => {
   it('다른 동네의 같은 업종은 별개의 요청이고 해당 동네 인원만 오른다', async () => {
     await requestSubmitter.submit(fruit({ neighborhoodId: 'mabuk' }));
 
-    const mabuk = await demandService.getReport('mabuk', 'fruit-vegetable');
-    const guseong = await demandService.getReport('guseong', 'fruit-vegetable');
+    const mabuk = await reportOf('mabuk', 'fruit-vegetable');
+    const guseong = await reportOf('guseong', 'fruit-vegetable');
     expect(mabuk?.demand.requestCount).toBe(10);
     expect(guseong?.demand.requestCount).toBe(29);
     expect(await myRequestService.listMyRequests()).toHaveLength(2);
@@ -194,7 +200,7 @@ describe('요청 제출', () => {
   it('수요 데이터가 없던 동네·업종이면 새로 만들어 1명으로 시작한다', async () => {
     await requestSubmitter.submit(fruit({ neighborhoodId: 'bojeong', categoryId: 'bakery' }));
 
-    const report = await demandService.getReport('bojeong', 'bakery');
+    const report = await reportOf('bojeong', 'bakery');
     expect(report?.demand).toMatchObject({ requestCount: 1, requestedByMe: true });
   });
 });

@@ -90,7 +90,7 @@ export function QuickRequestDialog({
         onSent(category.id, false);
         setOutcome({ kind: 'already', message: describeApiError(e) });
       } else {
-        setError(describeApiError(e));
+        setError(describeApiError(e, 'request'));
       }
     } finally {
       submittingRef.current = false;

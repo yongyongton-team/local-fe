@@ -194,10 +194,14 @@ describe('api 모드의 사장님 수요 화면', () => {
     app.renderApp(['/merchant']);
     await areaList(app).findAllByRole('link');
 
-    const map = app.screen.getByRole('region', { name: '수요 지도(예시)' });
+    const map = app.screen.getByRole('region', { name: '수요 지도' });
     await app.waitFor(() => expect(app.within(map).getByText('과일 요청 29')).toBeInTheDocument());
     expect(app.within(map).queryByText('과일 요청 14')).not.toBeInTheDocument();
     expect(app.within(map).getByText('내 가게 위치')).toBeInTheDocument();
+    // API 모드에서는 mock 이라는 말이 없다.
+    expect(app.screen.queryByRole('region', { name: '수요 지도(예시)' })).not.toBeInTheDocument();
+    expect(app.within(map).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(app.screen.queryByText(/지도 연동 예정|예시 데이터/)).not.toBeInTheDocument();
   });
 
   it('가게가 없으면(shop null) 안내만 보여주고 /owner/demand 는 요청하지 않는다', async () => {
