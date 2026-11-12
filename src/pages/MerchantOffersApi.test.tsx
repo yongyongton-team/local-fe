@@ -228,7 +228,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({ dongId: 23, categoryId: 7 });
   });
 
-  it('데모 세션은 POST /offers 가 서버로 나가지 않고 차단 안내가 나온다', async () => {
+  it('데모 세션도 POST /offers 를 서버로 보내고(차단 없음) 알림 인원을 알린다', async () => {
     localStorage.setItem(
       'yyt.session',
       JSON.stringify({ token: 'tok-demo', expiresAt: Date.now() + 1e7, demo: true }),
@@ -241,8 +241,9 @@ describe('api 모드의 방문 판매 제안 작성', () => {
 
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
-    expect(await app.screen.findByRole('alert')).toHaveTextContent('데모 계정은 사장님 화면만');
-    expect(callsTo(calls, '/api/v1/offers', 'POST')).toHaveLength(0);
+    expect(await app.screen.findByText('알림 보낸 주민 4명')).toBeInTheDocument();
+    expect(callsTo(calls, '/api/v1/offers', 'POST')).toHaveLength(1);
+    expect(app.screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
   });
 
   it('서버 400 은 코드별 문구이고 서버 message 는 보이지 않는다', async () => {

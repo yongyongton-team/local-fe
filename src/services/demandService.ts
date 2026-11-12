@@ -1,4 +1,10 @@
-import type { MapMarker, Neighborhood, NeighborhoodReport, StoreCategory } from '@/types/domain';
+import type {
+  MapMarker,
+  MapOverview,
+  Neighborhood,
+  NeighborhoodReport,
+  StoreCategory,
+} from '@/types/domain';
 
 /**
  * 업종 선택 UI 가 확정되기 전까지 화면이 공통으로 쓰는 기본 업종.
@@ -20,4 +26,9 @@ export interface DemandService {
   ): Promise<NeighborhoodReport[]>;
   /** 한 동네의 지도 마커. 문구는 수요 데이터에서 파생한다. 없는 동네면 빈 배열 */
   listMapMarkers(neighborhoodId: string, signal?: AbortSignal): Promise<MapMarker[]>;
+  /**
+   * 한 동네의 지도 마커와 "주민이 요청한 가게"(요청이 있는 업종 중 그 동네의 gaps 와 겹치지 않는 것, 요청 많은 순).
+   * API 는 같은 응답(GET /dongs/{id}/map) 한 번으로 둘을 만든다. 없는 동네면 둘 다 빈 배열.
+   */
+  getMapOverview(neighborhoodId: string, signal?: AbortSignal): Promise<MapOverview>;
 }

@@ -364,3 +364,17 @@ export interface NewOffer {
 export interface OfferSent {
   notifiedResidentCount?: number;
 }
+
+/** 주민 지도 화면의 "주민이 요청한 가게": 주민 요청이 있는데 그 동네의 "없는 가게"(gaps)에는 없는 업종. */
+export interface RequestedStore {
+  category: StoreCategory;
+  /** 서버(목)가 준 요청 인원. 화면에서 임의로 더하지 않는다. */
+  requestCount: number;
+}
+
+/** 동네 지도 한 번의 응답에서 만드는 화면 데이터: 지도 마커와 "주민이 요청한 가게". */
+export interface MapOverview {
+  markers: MapMarker[];
+  /** 요청 많은 순 */
+  requestedStores: RequestedStore[];
+}
