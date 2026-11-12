@@ -328,3 +328,12 @@ export function StoreSignIcon() {
     </svg>
   );
 }
+
+/** 닫기(×). 장식이다(이름은 감싸는 버튼의 label 이 전달한다). */
+export function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" {...svgBase}>
+      <path d="M6 6l12 12M18 6L6 18" {...ink} strokeWidth="2" />
+    </svg>
+  );
+}

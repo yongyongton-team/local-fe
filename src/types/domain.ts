@@ -135,8 +135,13 @@ export interface MapMarker {
   kind: MapMarkerKind;
   /** 업종이 있는 마커만 가진다. */
   categoryId?: string;
-  /** 표시 문구. 글자가 보이지 않는 마커(existing)에서는 보조 기술용 텍스트로 쓴다. */
+  /** 표시 문구. 글자가 보이지 않는 마커(existing)에서는 보조 기술용 텍스트로 쓴다. 가게 이름이 아니다(storeName 을 쓴다). */
   label: string;
+  /**
+   * 가게(existing) 마커의 가게 이름. 누르면 보여주는 가게 정보 카드가 쓴다. 서버가 이름을 주지 않았거나 비어 있으면
+   * 빈 문자열이거나 없다. 가게가 아닌 마커나 이름을 모르는 마커에는 없다.
+   */
+  storeName?: string;
   /** 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표 */
   position: MapPosition;
   /**

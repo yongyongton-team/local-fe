@@ -260,6 +260,26 @@ describe('데모 세션 보호', () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
+  it('간편 요청(POST /requests)도 데모 세션에서는 요청 없이 막힌다', async () => {
+    const { fn } = putMe();
+    storeDemo();
+    const client = newClient();
+    const { requestSubmitter } = createApiRequestServices({
+      listCategories: async () => [],
+      getClient: () => client,
+    });
+
+    await expect(
+      requestSubmitter.submitQuick({
+        neighborhoodId: '22',
+        categoryId: '7',
+        visitTimes: ['weekend'],
+        visitFrequency: 'weekly',
+      }),
+    ).rejects.toMatchObject({ code: 'DEMO_SESSION' });
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   it('요청 삭제(DELETE /requests/{id})도 데모 세션에서는 요청 없이 막힌다', async () => {
     const { fn } = putMe();
     storeDemo();
