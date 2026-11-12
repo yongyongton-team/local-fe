@@ -281,34 +281,37 @@ describe('방문 판매 제안 작성: 제출', () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  it('데모 세션이면 서버에 보내지 않고 차단 안내를 보인다', async () => {
+  it('데모 세션이어도 화면에서 막지 않고 서비스로 보낸다(시연 사장님은 제안을 보낼 수 있다)', async () => {
     const user = userEvent.setup();
     vi.spyOn(authService, 'isDemoSession').mockReturnValue(true);
-    const create = vi.spyOn(offerService, 'createOffer').mockResolvedValue({});
+    const create = vi
+      .spyOn(offerService, 'createOffer')
+      .mockResolvedValue({ notifiedResidentCount: 2 });
+    await openForm();
+    await fillValid(user);
+
+    await user.click(submit());
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('dialog', { name: '제안을 보냈어요' })).toBeInTheDocument();
+    expect(screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
+  });
+
+  it('서버가 거절하면(예: 데모 주민·창업자의 403) 기존 오류 문구로 보이고 데모 차단 문구는 없다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(authService, 'isDemoSession').mockReturnValue(true);
+    vi.spyOn(offerService, 'createOffer').mockRejectedValue(
+      new ApiError({ kind: 'http', status: 403, code: 'FORBIDDEN', message: '서버 원문' }),
+    );
     await openForm();
     await fillValid(user);
 
     await user.click(submit());
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '데모 계정은 사장님 화면만 볼 수 있어요. 나가려면 주소 끝에 ?demo=off를 붙여 주세요.',
+      '이 화면을 볼 수 있는 역할이 아니에요. 처음 화면에서 역할을 다시 선택해 주세요.',
     );
-    expect(create).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('서비스가 DEMO_SESSION 으로 막아도 같은 차단 안내를 보인다', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(offerService, 'createOffer').mockRejectedValue(
-      new ApiError({ kind: 'parse', code: 'DEMO_SESSION', message: '내부 문구' }),
-    );
-    await openForm();
-    await fillValid(user);
-
-    await user.click(submit());
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('데모 계정은 사장님 화면만');
-    expect(screen.queryByText('내부 문구')).not.toBeInTheDocument();
+    expect(screen.queryByText(/데모 계정은 사장님 화면만|서버 원문/)).not.toBeInTheDocument();
   });
 
   it('서버 오류는 describeApiError 의 한국어 문구로만 보이고(서버 message 는 안 보임) 다시 보낼 수 있다', async () => {

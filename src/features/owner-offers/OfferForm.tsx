@@ -1,11 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  authService,
-  DEMO_WRITE_BLOCKED_MESSAGE,
-  describeApiError,
-  offerService,
-} from '@/services';
+import { describeApiError, offerService } from '@/services';
 import { formatMonthDay24h, formatMonthDayMeridiem, parseKstInput } from '@/shared/lib/kstDate';
 import { paths } from '@/shared/lib/paths';
 import { Button } from '@/shared/ui/Button';
@@ -68,12 +63,6 @@ export function OfferForm({ context }: { context: OfferContext }) {
     const deadlineAt = parseKstInput(values.deadlineAt);
     if (!pickupAt || !deadlineAt) return;
     setError(null);
-
-    // 데모 세션(공유 계정)은 제안을 만들지 않는다(POST /offers 없음). 서비스에도 같은 방어가 있다.
-    if (authService.isDemoSession()) {
-      setError(DEMO_WRITE_BLOCKED_MESSAGE);
-      return;
-    }
 
     submittingRef.current = true;
     setSubmitting(true);

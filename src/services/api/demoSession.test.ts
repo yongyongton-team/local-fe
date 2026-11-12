@@ -3,6 +3,7 @@ import { jsonResponse, stubFetch, fakeJwt } from '@/test/apiStub';
 import { createApiAuthService } from './apiAuthService';
 import { createApiClient } from './apiClient';
 import { createApiMeService } from './apiMeService';
+import { createApiOfferService } from './apiOfferService';
 import { createApiRequestServices } from './apiRequestServices';
 import { isDemoLoginEnabled } from './config';
 import { assertNotDemoSession } from './demoGuard';
@@ -293,6 +294,55 @@ describe('데모 세션 보호', () => {
       code: 'DEMO_SESSION',
     });
     expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('회귀: 데모 세션에서 POST /offers 만 허용되고 나머지 쓰기(PUT /me, PUT /me/shop, POST /requests 일반·간편, DELETE /requests/{id})는 요청 없이 막힌다', async () => {
+    const { calls } = putMe();
+    storeDemo();
+    const client = newClient();
+    const me = createApiMeService(() => client);
+    const { requestSubmitter, myRequestService } = createApiRequestServices({
+      listCategories: async () => [],
+      getClient: () => client,
+    });
+    const blocked = [
+      () => me.saveSelection('merchant', '22'),
+      () => me.saveShop({ shopName: 's', categoryId: '7', lat: 37.3, lng: 127.1 }),
+      () =>
+        requestSubmitter.submit({
+          neighborhoodId: '22',
+          categoryId: '7',
+          detail: '',
+          conditions: [],
+          visitTimes: ['weekend'],
+          visitFrequency: 'weekly',
+        }),
+      () =>
+        requestSubmitter.submitQuick({
+          neighborhoodId: '22',
+          categoryId: '7',
+          visitTimes: ['weekend'],
+          visitFrequency: 'weekly',
+        }),
+      () => myRequestService.deleteRequest('351'),
+    ];
+
+    for (const write of blocked) {
+      await expect(write()).rejects.toMatchObject({ code: 'DEMO_SESSION' });
+    }
+    expect(calls).toHaveLength(0);
+
+    await createApiOfferService(() => client).createOffer({
+      neighborhoodId: '22',
+      categoryId: '7',
+      title: 't',
+      price: 1000,
+      minOrders: 1,
+      pickupAt: new Date('2026-11-15T10:00:00+09:00'),
+      pickupPlace: 'p',
+      deadlineAt: new Date('2026-11-14T18:00:00+09:00'),
+    });
+    expect(calls.map((c) => [c.method, c.path])).toEqual([['POST', '/api/v1/offers']]);
   });
 
   it('describeApiError: DEMO_SESSION 은 임시 안내 문구다(다른 parse 오류는 마지막 문구)', () => {
