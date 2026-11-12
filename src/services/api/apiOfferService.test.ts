@@ -204,14 +204,26 @@ describe('createApiOfferService', () => {
     });
   });
 
-  it('데모 세션에서는 POST /offers 를 요청 없이 막는다', async () => {
+  it('데모 세션에서도 POST /offers 를 막지 않고 서버로 보낸다', async () => {
     storeSession(true);
-    const { fn } = stubFetch(() => jsonResponse(201, {}));
+    const { calls } = stubFetch(() => jsonResponse(201, { notifiedResidentCount: 3 }));
+    const client = newClient();
+
+    await expect(createApiOfferService(() => client).createOffer(input)).resolves.toEqual({
+      notifiedResidentCount: 3,
+    });
+    expect(calls.map((c) => [c.method, c.path])).toEqual([['POST', '/api/v1/offers']]);
+  });
+
+  it('데모 세션에서 서버가 거절하면(403) 그 오류를 그대로 던진다(DEMO_SESSION 이 아니다)', async () => {
+    storeSession(true);
+    stubFetch(() => jsonResponse(403, { code: 'FORBIDDEN', message: '서버 원문' }));
     const client = newClient();
 
     await expect(createApiOfferService(() => client).createOffer(input)).rejects.toMatchObject({
-      code: 'DEMO_SESSION',
+      kind: 'http',
+      status: 403,
+      code: 'FORBIDDEN',
     });
-    expect(fn).not.toHaveBeenCalled();
   });
 });

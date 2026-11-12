@@ -10,7 +10,7 @@ export interface OfferService {
   /** 내가 보낸 제안. 서버(목은 최근 보낸 순) 순서 그대로다. 사장님만 부를 수 있다. */
   listOwnerOffers(signal?: AbortSignal): Promise<OwnerOffer[]>;
   /**
-   * 제안을 보낸다. 데모 세션에서는 서버에 쓰지 않고 DEMO_SESSION ApiError 를 던진다.
+   * 제안을 보낸다. 데모 세션도 막지 않는다(서버가 판단한다).
    * 알림을 받은 주민 수(notifiedResidentCount)는 서버가 주지 않았거나 올바르지 않으면 없다.
    */
   createOffer(input: NewOffer): Promise<OfferSent>;
