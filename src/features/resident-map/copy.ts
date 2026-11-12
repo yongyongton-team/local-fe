@@ -25,3 +25,12 @@ export const STORE_INFO_COPY = {
   /** 가게 이름도 업종도 알 수 없을 때(서버가 주지 않았을 때)의 임시 문구. TODO(디자인 확정 필요) */
   unknown: '가게 정보를 불러오지 못했어요',
 } as const;
+
+/**
+ * "주민이 요청한 가게" 섹션(요청은 있지만 "우리 동네에 없는 가게"에는 없는 업종). 시안이 없어 모두 임시다.
+ * TODO(디자인 확정 후 교체): 시안이 나오면 여기서만 바꾼다.
+ */
+export const REQUESTED_STORES_COPY = {
+  title: '주민이 요청한 가게',
+  description: '다른 주민도 요청했어요 · 요청 많은 순',
+} as const;

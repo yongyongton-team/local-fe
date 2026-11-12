@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { MapMarker, NeighborhoodReport } from '@/types/domain';
-import { applyOverridesToMarkers, applyOverridesToReports } from './quickRequestOverrides';
+import type { MapMarker, NeighborhoodReport, RequestedStore } from '@/types/domain';
+import {
+  applyOverridesToMarkers,
+  applyOverridesToReports,
+  applyOverridesToRequestedStores,
+} from './quickRequestOverrides';
 
 const report = (categoryId: string, count: number, requestedByMe = false): NeighborhoodReport => ({
   neighborhood: { id: '1', district: '기흥구', name: '구성동' },
@@ -88,5 +92,51 @@ describe('applyOverridesToMarkers', () => {
 
     expect(applyOverridesToMarkers(markers, { a: { extra: 0 } })).toEqual(markers);
     expect(applyOverridesToMarkers(markers, { a: { extra: 1 } })[1]!.label).toBe('요청');
+  });
+});
+
+describe('applyOverridesToRequestedStores', () => {
+  const store = (categoryId: string, requestCount: number): RequestedStore => ({
+    category: report(categoryId, 0).category,
+    requestCount,
+  });
+
+  it('반영할 것이 없으면 같은 배열을 돌려준다', () => {
+    const stores = [store('a', 12)];
+    expect(applyOverridesToRequestedStores(stores, {})).toBe(stores);
+  });
+
+  it('보낸 업종의 인원만 더한다(없는 가게 카드와 같은 규칙)', () => {
+    const result = applyOverridesToRequestedStores([store('a', 12), store('b', 6)], {
+      b: { extra: 1 },
+    });
+
+    expect(result.map((s) => [s.category.id, s.requestCount])).toEqual([
+      ['a', 12],
+      ['b', 7],
+    ]);
+  });
+
+  it('이미 요청해 둔 것(extra 0)은 인원이 그대로다', () => {
+    const [a] = applyOverridesToRequestedStores([store('a', 12)], { a: { extra: 0 } });
+
+    expect(a!.requestCount).toBe(12);
+  });
+
+  it('더한 뒤에도 요청 많은 순을 유지하고 같으면 원래 순서를 지킨다', () => {
+    const result = applyOverridesToRequestedStores([store('a', 6), store('b', 6), store('c', 7)], {
+      b: { extra: 1 },
+      c: { extra: 0 },
+    });
+
+    // b(6+1)와 c(7)가 같은 7명이면 원래 순서(b, c)를 지키고 a(6)는 아래다.
+    expect(result.map((s) => s.category.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('원본을 바꾸지 않는다', () => {
+    const original = store('a', 5);
+    applyOverridesToRequestedStores([original], { a: { extra: 1 } });
+
+    expect(original.requestCount).toBe(5);
   });
 });

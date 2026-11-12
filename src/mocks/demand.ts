@@ -136,6 +136,18 @@ export const mockDistrictBounds: readonly { district: string; bounds: GeoBounds 
 /** Figma 지도 영역(402×288)의 좌상단 px 좌표를 0~1 상대좌표로 바꾼다. */
 const at = (x: number, y: number): MapPosition => ({ x: x / 402, y: y / 288 });
 
+/**
+ * [임의] 목 지도 응답의 gaps: 동네별로 "주민 요청이 있는데 그 동네에 같은 업종 가게가 없는" 업종 id.
+ * 수요 데이터에서 요청이 있는 업종 중 여기에 없는 것이 "주민이 요청한 가게"가 된다.
+ * 실제 서버처럼 구성동은 과일/채소만 gap 으로 두어 반찬·빵(요청만 있는 업종)이 그 목록에 나온다.
+ * 지도 알약과 "우리 동네에 없는 가게" 카드는 Figma 그대로(구성동 세 업종 모두 없는 가게)라 이 값과 어긋난다. 목 데이터의 한계다.
+ */
+export const mockMapGapCategoryIds: Readonly<Record<string, readonly string[]>> = {
+  guseong: ['fruit-vegetable'],
+  bojeong: [],
+  mabuk: ['fruit-vegetable'],
+};
+
 export const mockMarkerPlacements: MockMarkerPlacement[] = [
   // 구성동: Figma 에서 읽은 위치 (마커 크기는 요청 89×26 / 89×26 / 73×26, 없는 가게 89×26 / 59×26 / 59×26, 핀 17×21)
   {
