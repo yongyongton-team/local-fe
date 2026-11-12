@@ -1,4 +1,5 @@
 .shell {
+  position: relative;
   width: 100%;
   max-width: var(--layout-max-width);
   margin-inline: auto;
@@ -31,4 +32,18 @@
   padding-bottom: calc(
     var(--space-6) + var(--bottom-nav-height) + var(--bottom-nav-gap) + env(safe-area-inset-bottom)
   );
+}
+
+/*
+ * 우측 상단 요소(corner)의 자리: 로고 줄과 같은 높이의 오른쪽 끝.
+ * 위치 = 셸 위쪽 여백(.shell) + 화면의 위쪽 여백(--space-2, 각 화면 .screen)이고 높이는 로고 높이다.
+ * 스크롤하면 로고처럼 함께 올라간다.
+ */
+.corner {
+  position: absolute;
+  top: calc(max(var(--space-4), env(safe-area-inset-top)) + var(--space-2));
+  right: max(var(--space-page), env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  height: var(--logo-height);
 }

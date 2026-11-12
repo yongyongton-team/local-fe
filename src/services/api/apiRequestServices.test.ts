@@ -32,7 +32,9 @@ function newServices() {
 }
 
 type Handler = (call: StubCall, init: RequestInit) => Response | Promise<Response>;
-function stubServer(routes: { parse?: Handler; create?: Handler; mine?: Handler } = {}) {
+function stubServer(
+  routes: { parse?: Handler; create?: Handler; mine?: Handler; remove?: Handler } = {},
+) {
   return stubFetch((call, init) => {
     if (call.path === GUEST) return jsonResponse(200, { accessToken: 'tok-1', expiresIn: 3600 });
     if (call.path === '/api/v1/requests/parse') {
@@ -43,6 +45,9 @@ function stubServer(routes: { parse?: Handler; create?: Handler; mine?: Handler 
     }
     if (call.path === '/api/v1/me/requests')
       return routes.mine?.(call, init) ?? jsonResponse(200, []);
+    if (call.method === 'DELETE' && /^\/api\/v1\/requests\/[^/]+$/.test(call.path)) {
+      return routes.remove?.(call, init) ?? new Response(null, { status: 204 });
+    }
     return jsonResponse(404, { code: 'NOT_FOUND' });
   });
 }
@@ -243,6 +248,118 @@ describe('요청 생성(requestSubmitter)', () => {
   });
 });
 
+describe('간편 요청(requestSubmitter.submitQuick)', () => {
+  const INPUT = {
+    neighborhoodId: '22',
+    categoryId: '7',
+    visitTimes: ['weekday-evening', 'weekend'] as ('weekday-evening' | 'weekend')[],
+    visitFrequency: 'weekly' as const,
+  };
+  const quick = (input = INPUT) => newServices().requestSubmitter.submitQuick(input);
+  const posts = (calls: StubCall[]) =>
+    calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/requests');
+
+  it('POST /requests 본문은 {dongId, categoryId, timeSlots, frequency} 뿐이다(text·conditions 없음)', async () => {
+    const { calls } = stubServer({
+      create: () => jsonResponse(201, { request: { id: 351 }, count: 5, reachedGoal: false }),
+    });
+
+    await quick();
+
+    expect(posts(calls)).toHaveLength(1);
+    const body = JSON.parse(posts(calls)[0]!.body ?? '{}') as Record<string, unknown>;
+    expect(body).toEqual({
+      dongId: 22,
+      categoryId: 7,
+      timeSlots: ['WEEKDAY_EVENING', 'WEEKEND'],
+      frequency: 'WEEKLY_PLUS',
+    });
+    expect(body).not.toHaveProperty('text');
+    expect(body).not.toHaveProperty('conditions');
+    expect(posts(calls)[0]).toMatchObject({ authorization: 'Bearer tok-1' });
+  });
+
+  it('응답의 reachedGoal 과 notifiedOwnerCount 를 결과로 돌려준다', async () => {
+    stubServer({
+      create: () =>
+        jsonResponse(201, {
+          request: { id: 1 },
+          count: 30,
+          goal: 30,
+          reachedGoal: true,
+          notifiedOwnerCount: 3,
+        }),
+    });
+
+    await expect(quick()).resolves.toEqual({ reachedGoal: true, notifiedOwnerCount: 3 });
+  });
+
+  it.each([
+    [
+      'reachedGoal 이 false',
+      { reachedGoal: false, notifiedOwnerCount: 3 },
+      { reachedGoal: false, notifiedOwnerCount: 3 },
+    ],
+    ['reachedGoal 이 없음', {}, { reachedGoal: false }],
+    ['reachedGoal 이 문자열', { reachedGoal: 'true' }, { reachedGoal: false }],
+    ['notifiedOwnerCount 가 없음', { reachedGoal: true }, { reachedGoal: true }],
+    [
+      'notifiedOwnerCount 가 음수',
+      { reachedGoal: true, notifiedOwnerCount: -1 },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 소수',
+      { reachedGoal: true, notifiedOwnerCount: 1.5 },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 문자열',
+      { reachedGoal: true, notifiedOwnerCount: '3' },
+      { reachedGoal: true },
+    ],
+    [
+      'notifiedOwnerCount 가 0',
+      { reachedGoal: true, notifiedOwnerCount: 0 },
+      { reachedGoal: true, notifiedOwnerCount: 0 },
+    ],
+  ])('결과 모양: %s', async (_name, response, expected) => {
+    stubServer({ create: () => jsonResponse(201, { request: { id: 1 }, ...response }) });
+
+    await expect(quick()).resolves.toEqual(expected);
+  });
+
+  it('응답 본문이 비어 있어도 reachedGoal 은 false 다', async () => {
+    stubServer({ create: () => new Response(null, { status: 201 }) });
+
+    await expect(quick()).resolves.toEqual({ reachedGoal: false });
+  });
+
+  it('409 ALREADY_REQUESTED 는 code 를 가진 ApiError 로 던진다(서버 message 는 쓰지 않는다)', async () => {
+    stubServer({
+      create: () => jsonResponse(409, { code: 'ALREADY_REQUESTED', message: '서버 원문' }),
+    });
+
+    await expect(quick()).rejects.toMatchObject({
+      kind: 'http',
+      status: 409,
+      code: 'ALREADY_REQUESTED',
+    });
+  });
+
+  it('동네·업종 id 가 숫자가 아니면 요청 없이 INVALID_ID 오류다', async () => {
+    const { calls } = stubServer();
+
+    await expect(quick({ ...INPUT, neighborhoodId: 'guseong' })).rejects.toMatchObject({
+      code: 'INVALID_ID',
+    });
+    await expect(quick({ ...INPUT, categoryId: 'fruit' })).rejects.toMatchObject({
+      code: 'INVALID_ID',
+    });
+    expect(posts(calls)).toHaveLength(0);
+  });
+});
+
 describe('내 요청(myRequestService)', () => {
   const ITEM = {
     id: 351,
@@ -302,6 +419,69 @@ describe('내 요청(myRequestService)', () => {
       kind: 'http',
       status: 500,
     });
+  });
+});
+
+describe('내 요청 삭제(myRequestService.deleteRequest)', () => {
+  const remove = (id: string) => newServices().myRequestService.deleteRequest(id);
+  const deletesIn = (calls: StubCall[]) => calls.filter((c) => c.method === 'DELETE');
+
+  it('DELETE /requests/{id} 를 서버 숫자 id 로, 본문 없이 토큰과 함께 보낸다', async () => {
+    const { calls } = stubServer();
+
+    await expect(remove('351')).resolves.toBeUndefined();
+
+    expect(deletesIn(calls)).toEqual([
+      {
+        method: 'DELETE',
+        path: '/api/v1/requests/351',
+        authorization: 'Bearer tok-1',
+        contentType: null,
+        body: null,
+      },
+    ]);
+  });
+
+  it('성공(204, 본문 없음)은 아무것도 돌려주지 않고 오류도 없다', async () => {
+    stubServer({ remove: () => new Response(null, { status: 204 }) });
+
+    await expect(remove('351')).resolves.toBeUndefined();
+  });
+
+  it('404 는 이미 지워진 요청이라 성공으로 본다(code 가 없어도 같다)', async () => {
+    stubServer({ remove: () => jsonResponse(404, { code: 'NOT_FOUND', message: '서버 원문' }) });
+    await expect(remove('351')).resolves.toBeUndefined();
+
+    stubServer({ remove: () => new Response('<html>nope</html>', { status: 404 }) });
+    await expect(remove('351')).resolves.toBeUndefined();
+  });
+
+  it.each([
+    [403, 'FORBIDDEN'],
+    [400, 'VALIDATION_ERROR'],
+    [500, 'INTERNAL'],
+  ])('%s 는 성공으로 보지 않고 status·code 를 가진 ApiError 로 던진다', async (status, code) => {
+    stubServer({ remove: () => jsonResponse(status, { code, message: '서버 원문' }) });
+
+    await expect(remove('351')).rejects.toMatchObject({ kind: 'http', status, code });
+  });
+
+  it('서버에 닿지 못하면 network 오류로 던진다', async () => {
+    stubServer({
+      remove: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+
+    await expect(remove('351')).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  it('id 가 숫자가 아니면 요청 없이 INVALID_ID 오류다', async () => {
+    const { calls } = stubServer();
+
+    await expect(remove('mock-request-1')).rejects.toMatchObject({ code: 'INVALID_ID' });
+
+    expect(deletesIn(calls)).toHaveLength(0);
   });
 });
 

@@ -5,14 +5,16 @@ import styles from './Button.module.css';
 /**
  * - primary: 검정 배경 + 흰 텍스트. 화면의 주된 행동(시작하기, 요청 보내기 등)
  * - highlight: 라임 배경 + 검정 텍스트. 눈에 띄게 권하는 보조 행동
+ * - neutral: 옅은 회색 배경 + 검정 텍스트. 취소처럼 덜 강조하는 행동
  */
-type Variant = 'primary' | 'highlight';
+type Variant = 'primary' | 'highlight' | 'neutral';
 
 /**
  * - large: 높이 60px, 하단의 넓은 주요 버튼
+ * - medium: 높이 50px. 대화상자의 버튼
  * - small: 시각적 높이 36px. 터치 영역은 44px 로 확장된다.
  */
-type Size = 'large' | 'small';
+type Size = 'large' | 'medium' | 'small';
 
 interface StyleProps {
   variant?: Variant;

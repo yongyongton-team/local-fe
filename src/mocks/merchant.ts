@@ -10,6 +10,8 @@ export const mockMerchantProfile: Omit<MerchantProfile, 'categoryName'> = {
   shopName: '싱싱과일',
   categoryId: 'fruit-vegetable',
   district: '기흥구',
+  // [임의] 가게가 있는 동네(구성동). 서버에서는 GET /me 의 shop.dong 이다.
+  dongId: 'guseong',
 };
 
 /** Figma 지도 영역(402×288)의 좌상단 px 좌표를 0~1 상대좌표로 바꾼다. */

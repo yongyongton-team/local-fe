@@ -5,6 +5,7 @@ import {
   REQUEST_MAX_LENGTH,
   REQUEST_PLACEHOLDER,
   VISIT_FREQUENCY_OPTIONS,
+  VISIT_REQUIRED_TEXT,
   VISIT_TIME_OPTIONS,
 } from '@/features/store-request/constants';
 import {
@@ -67,9 +68,6 @@ const SUBMIT_HINT_ID = 'request-submit-hint';
 
 /** 목 모드(ApiError 가 아닌 오류)의 기존 제출 실패 문구 */
 const SUBMIT_FAILED_TEXT = '요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.';
-
-/** [임시] 시간대·빈도를 고르지 않고 보내려 할 때 선택 영역 아래에 보이는 안내. 디자인의 필수 오류 상태가 나오면 교체한다. */
-const VISIT_REQUIRED_TEXT = '방문 시간대와 빈도를 골라 주세요.';
 
 function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
   const navigate = useNavigate();
@@ -150,7 +148,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
     } catch (error) {
       // 입력은 그대로 유지하고 오류 문구만 보여준다. 입력 문장은 기록하지 않는다.
       setSubmitting(false);
-      setSubmitError(isApiError(error) ? describeApiError(error) : SUBMIT_FAILED_TEXT);
+      setSubmitError(isApiError(error) ? describeApiError(error, 'request') : SUBMIT_FAILED_TEXT);
       return;
     }
     void navigate(paths.residentRequests);

@@ -1,0 +1,158 @@
+/*
+ * 내 정보 레이아웃 (Figma 41:31, 402×874 기준을 비율·여백으로 옮김).
+ * 높이를 고정하지 않는다. 일러스트 자리가 남는 높이를 채우고, 좁은 화면에서는 줄어든다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 프로필: 아바타 + 이름·ID, 아래에 닉네임 안내 */
+.profile {
+  margin-top: var(--profile-gap-top);
+}
+
+.profileRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--profile-gap);
+  padding-left: var(--profile-inset-x);
+}
+
+.avatar {
+  display: flex;
+  flex: none;
+  width: var(--profile-avatar-size);
+  height: var(--profile-avatar-size);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  /* [화면] 이름은 아바타 위쪽에서 6px 아래에서 시작한다(글자 상자 기준 보정 3px 포함) */
+  padding-top: 9px;
+}
+
+.nickname,
+.id {
+  margin: 0;
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* [화면] 이름 Medium 20px + "님" 16px, ID Regular 16px */
+.nickname {
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-medium);
+}
+
+.nicknameText {
+  font-size: var(--font-size-profile-name);
+}
+
+.id {
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-regular);
+}
+
+.note {
+  margin: calc(var(--space-3) - 3px) 0 0;
+  padding-left: var(--profile-note-inset-x);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+}
+
+/* "나는" + 역할 칩 */
+.roles {
+  margin-top: calc(var(--space-6) - 3px);
+  /* 이 화면의 칩은 좌우 패딩 12px, 칩 사이 6px (Figma). */
+  --chip-padding-x: var(--space-3);
+  --chip-group-gap: var(--role-chip-gap);
+}
+
+.roleLabel {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 칩의 터치 영역(44px)이 시각 높이(34px)보다 5px 씩 커서 위쪽 간격을 그만큼 당긴다. */
+.roles > [role='radiogroup'] {
+  margin-top: calc(var(--space-2) - 5px);
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 정보 카드: 윤곽선 1px #999, 모서리 20px, 행 오른쪽의 > */
+.card {
+  margin: 0;
+  padding: var(--info-card-pad-y) var(--info-card-pad-right) var(--info-card-pad-y)
+    var(--info-card-pad-left);
+  list-style: none;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--info-row-height);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+/* 행 전체가 링크라 터치 영역을 넓힌다(보이는 크기는 그대로). */
+.rowLink {
+  position: relative;
+}
+
+.rowLink::after {
+  content: '';
+  position: absolute;
+  inset: -6px calc(-1 * var(--info-card-pad-right)) -6px calc(-1 * var(--info-card-pad-left));
+}
+
+.rowLabel {
+  flex: none;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 값은 오른쪽에 붙고, 길면 줄바꿈한다. */
+.rowValue {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-info-value);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-primary);
+}

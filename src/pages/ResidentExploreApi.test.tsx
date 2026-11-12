@@ -112,12 +112,19 @@ describe('api 모드의 주민 탐색 화면', () => {
     expect(cards[0]).not.toContain('대형마트');
     expect(cards[1]).toContain('과일 / 채소 가게');
     expect(cards[1]).toContain('주민 4명이 요청 / 대형마트 2.5km');
-    expect(cards[1]).toContain('내가 요청함');
+    // 내가 요청한 카드는 아이콘 링크의 이름으로 전달한다.
+    expect(
+      section.getAllByRole('listitem')[1]!.querySelector('a[aria-label="내 요청 보기"]'),
+    ).not.toBeNull();
 
     // 키가 없는 테스트 환경이라 자리표시자 지도가 그린다. 좌표가 있는 가게 하나만 마커다.
-    const map = app.screen.getByRole('region', { name: '동네 지도(예시)' });
+    const map = app.screen.getByRole('region', { name: '동네 지도' });
     await app.waitFor(() => expect(app.within(map).getAllByRole('listitem')).toHaveLength(1));
     expect(app.within(map).getByText('구성 청과')).toBeInTheDocument();
+    // API 모드에서는 mock 이라는 말이 없다: 접근성 이름에 "(예시)"가 없고, 지도 안내는 "지도를 불러오지 못했어요"다.
+    expect(app.screen.queryByRole('region', { name: '동네 지도(예시)' })).not.toBeInTheDocument();
+    expect(app.within(map).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(app.screen.queryByText(/지도 연동 예정|예시 데이터/)).not.toBeInTheDocument();
 
     expect(calls.map((c) => c.path)).toEqual(
       expect.arrayContaining(['/api/v1/dongs/22/gaps', '/api/v1/dongs/22/map']),
@@ -134,7 +141,7 @@ describe('api 모드의 주민 탐색 화면', () => {
     await startResident(app);
 
     expect(await app.screen.findByText('조건에 맞는 가게가 아직 없어요')).toBeInTheDocument();
-    expect(app.screen.getByRole('region', { name: '동네 지도(예시)' })).toBeInTheDocument();
+    expect(app.screen.getByRole('region', { name: '동네 지도' })).toBeInTheDocument();
   });
 
   it('404 NOT_FOUND 는 "선택한 동네를 찾을 수 없어요" 문구를 보여준다', async () => {
@@ -220,6 +227,8 @@ describe('mock 모드의 주민 탐색 화면', () => {
     await app.waitFor(() =>
       expect(app.within(map).getAllByRole('listitem').length).toBeGreaterThan(0),
     );
+    // mock 모드는 기존 문구 그대로다.
+    expect(app.within(map).getByText('지도 연동 예정 · 예시 데이터')).toBeInTheDocument();
     expect(fn).not.toHaveBeenCalled();
   });
 });
@@ -236,5 +245,22 @@ describe('describeLoadError', () => {
     );
     expect(describeLoadError(new Error('boom'))).toBe(GENERIC_RETRY_TEXT);
     expect(GENERIC_RETRY_TEXT).toBe('잠시 후 다시 시도해 주세요.');
+  });
+
+  it('맥락을 주면 VALIDATION_ERROR 만 그 맥락의 문구가 되고, ApiError 가 아닌 오류는 그대로다', async () => {
+    const { describeLoadError, GENERIC_RETRY_TEXT } =
+      await import('@/features/resident-map/loadErrorText');
+    const { ApiError } = await import('@/services/api/apiError');
+
+    const invalid = new ApiError({
+      kind: 'http',
+      status: 400,
+      code: 'VALIDATION_ERROR',
+      message: 'x',
+    });
+    const notFound = new ApiError({ kind: 'http', status: 404, code: 'NOT_FOUND', message: 'x' });
+    expect(describeLoadError(invalid, 'parse')).toBe('요청 문장을 다시 확인해 주세요.');
+    expect(describeLoadError(notFound, 'parse')).toBe(describeLoadError(notFound));
+    expect(describeLoadError(new Error('boom'), 'parse')).toBe(GENERIC_RETRY_TEXT);
   });
 });

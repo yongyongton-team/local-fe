@@ -29,4 +29,22 @@ export const mockMyRequestService: MyRequestService = {
     }
     return items;
   },
+  async deleteRequest(requestId) {
+    const db = getDb();
+    const index = db.requests.findIndex(({ request }) => request.id === requestId);
+    // 이미 없으면 지워진 것과 같다.
+    if (index < 0) return;
+
+    const [removed] = db.requests.splice(index, 1);
+    if (!removed) return;
+    // 제출(mockRequestSubmitter)이 올린 인원을 되돌린다. 내 요청은 동네·업종마다 하나라 "내가 요청함"도 해제한다.
+    const { neighborhoodId, categoryId } = removed.request;
+    const summary = db.summaries.find(
+      (s) => s.neighborhoodId === neighborhoodId && s.categoryId === categoryId,
+    );
+    if (summary) {
+      summary.requestCount = Math.max(0, summary.requestCount - 1);
+      summary.requestedByMe = false;
+    }
+  },
 };

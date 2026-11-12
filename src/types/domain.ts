@@ -59,11 +59,16 @@ export interface StoreRequest {
 /** 제출할 요청. id 는 저장하는 쪽이 정한다. */
 export type NewStoreRequest = Omit<StoreRequest, 'id'>;
 
-/** 사장님이 주민 요청에 남긴 응답. 화면에는 "업체(지역): 메시지" 로 보여준다. */
+/**
+ * 사장님이 주민 요청에 남긴 응답(제안). 화면에는 "가게: 요일 시각, 장소에서 방문 판매해요" 로 보여준다.
+ * 서버가 주지 않았거나 올바르지 않은 값은 비워 둔다(지어내지 않는다).
+ */
 export interface MerchantResponse {
   merchantName: string;
-  areaName: string;
-  message: string;
+  /** 수령(방문 판매) 시각. 없거나 날짜로 해석되지 않으면 없음 */
+  pickupAt?: Date;
+  /** 수령(방문 판매) 장소. 없으면 없음 */
+  pickupPlace?: string;
 }
 
 /** 내 요청 화면의 한 항목. 요청 인원은 수요 데이터에서 계산한 해당 동네·업종의 전체 요청 인원이다. */
@@ -130,8 +135,13 @@ export interface MapMarker {
   kind: MapMarkerKind;
   /** 업종이 있는 마커만 가진다. */
   categoryId?: string;
-  /** 표시 문구. 글자가 보이지 않는 마커(existing)에서는 보조 기술용 텍스트로 쓴다. */
+  /** 표시 문구. 글자가 보이지 않는 마커(existing)에서는 보조 기술용 텍스트로 쓴다. 가게 이름이 아니다(storeName 을 쓴다). */
   label: string;
+  /**
+   * 가게(existing) 마커의 가게 이름. 누르면 보여주는 가게 정보 카드가 쓴다. 서버가 이름을 주지 않았거나 비어 있으면
+   * 빈 문자열이거나 없다. 가게가 아닌 마커나 이름을 모르는 마커에는 없다.
+   */
+  storeName?: string;
   /** 자리표시자 지도(MapPlaceholder)가 쓰는 지도 영역 대비 상대좌표 */
   position: MapPosition;
   /**
@@ -156,6 +166,8 @@ export interface MerchantProfile {
   categoryName: string;
   /** 예: 기흥구 */
   district: string;
+  /** 가게가 있는 동네 id. 서버가 주지 않으면 없다(제안 화면은 이때 동네를 알 수 없다). */
+  dongId?: string;
 }
 
 /** 사장님 탐색 화면의 동네 한 줄: 내 업종을 원하는 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다. */
@@ -237,6 +249,25 @@ export interface AreaDetail {
  * 예비 창업자용 입지 순위의 한 줄: 선택한 업종에 대한 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다.
  * position 은 동네의 지도상 위치(지금은 자리표시자 지도 대비 상대좌표)라 업종이 바뀌어도 같다.
  */
+/** 공공데이터 판정 값. 알려진 값 5가지에 문자열 폴백을 더해 서버가 새 값을 추가해도 깨지지 않게 한다. */
+export type PublicDataVerdict =
+  'SHORT' | 'SOME_NEARBY' | 'NEXT_DONG' | 'NOT_SHORT' | 'NOT_JUDGED' | (string & {});
+
+/**
+ * 순위 항목의 공공데이터 지표(인구 대비 기대 가게 수와 판정). 서버가 주지 않았거나 일부가 비면 그 필드만 없다.
+ * 서버 값을 가공하지 않는다: expectedCount 는 소수 그대로이고(반올림은 표시 단계), verdictLabel 은 서버 문구다.
+ */
+export interface PublicData {
+  population?: number;
+  /** 인구로 기대하는 가게 수. 소수일 수 있다. */
+  expectedCount?: number;
+  /** 이 동의 실제 가게 수 */
+  dongStoreCount?: number;
+  verdict?: PublicDataVerdict;
+  /** 서버가 쓴 판정 문구. 프론트에서 만들지 않는다. */
+  verdictLabel?: string;
+}
+
 export interface LocationRank {
   /** 1부터 시작하는 순위 */
   rank: number;
@@ -258,6 +289,8 @@ export interface LocationRank {
    */
   lat?: number;
   lng?: number;
+  /** 공공데이터 지표. 서버가 주지 않았거나 비어 있으면 없다. */
+  publicData?: PublicData;
 }
 
 /**
@@ -288,4 +321,46 @@ export interface MeShop {
 /** 서버 상태 확인 결과(GET /health). 값은 서버가 준 문자열만 담는다. */
 export interface Health {
   details: Record<string, string>;
+}
+
+/** 제안 상태. 서버 명세 기준이며 모르는 값은 상태 없음으로 다룬다. */
+export type OfferStatus = 'OPEN' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED' | 'DONE';
+
+/**
+ * 사장님이 보낸 방문 판매 제안(GET /owner/offers 의 한 항목).
+ * price·pickupAt 은 서버가 아직 주지 않을 수 있어 선택이다. 없으면 화면은 그 행만 그리지 않는다.
+ */
+export interface OwnerOffer {
+  id: string;
+  title: string;
+  /** 모르는 상태이면 없다 */
+  status?: OfferStatus;
+  price?: number;
+  /** 받는 날(수령 시각). 없거나 해석하지 못하면 없다 */
+  pickupAt?: Date;
+  /** 주문 마감. 없거나 해석하지 못하면 없다 */
+  deadlineAt?: Date;
+  /** 예약한 주민 수 */
+  orderCount: number;
+  /** 확정에 필요한 최소 주문 수 */
+  minOrders: number;
+}
+
+/** 보낼 제안(POST /offers). 동네·업종은 호출하는 쪽이 정한다. 날짜는 시각이 있는 Date 다. */
+export interface NewOffer {
+  neighborhoodId: string;
+  categoryId: string;
+  title: string;
+  /** 비면 없다 */
+  description?: string;
+  price: number;
+  minOrders: number;
+  pickupAt: Date;
+  pickupPlace: string;
+  deadlineAt: Date;
+}
+
+/** 제안을 보낸 결과. 알림을 받은 주민 수는 서버가 준 값이 올바를 때만 있다. */
+export interface OfferSent {
+  notifiedResidentCount?: number;
 }

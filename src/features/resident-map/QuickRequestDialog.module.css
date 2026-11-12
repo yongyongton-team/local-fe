@@ -1,0 +1,43 @@
+/* 간편 요청 창(시안 없음): 확인창과 같은 틀(Modal)·토큰으로 만든 짧은 입력 창 */
+.close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* 어떤 요청에 대한 창인지: "동 이름 · 업종" */
+.target {
+  margin: var(--space-1) 0 0;
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.hint {
+  margin: var(--space-3) 0 0;
+  font: var(--font-caption);
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: var(--space-3) 0 0;
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+.result {
+  margin: var(--space-3) 0 0;
+  font: var(--font-contents);
+  color: var(--color-text-primary);
+}
+
+.actions {
+  margin-top: var(--space-4);
+}

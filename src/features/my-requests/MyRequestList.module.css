@@ -1,0 +1,38 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/*
+ * 목록 위 줄 (Figma 41:152): 왼쪽 "요청 선택하기", 오른쪽 휴지통.
+ * 버튼이 44px 라 줄 높이도 44px 이고, 이 줄 바로 아래에 카드가 이어진다(Figma 에서도 줄 가운데와 카드 위가 같은 간격).
+ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* 휴지통 아이콘의 중심이 본문 오른쪽 끝에서 18px 안쪽에 오도록 버튼 여백만큼 당긴다(Figma). */
+.trash {
+  display: flex;
+  margin-right: calc(var(--space-1) * -1);
+}
+
+.error {
+  margin: 0 0 var(--space-3);
+  color: var(--color-danger);
+  font: var(--font-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

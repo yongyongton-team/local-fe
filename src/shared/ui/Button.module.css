@@ -25,10 +25,20 @@
   color: var(--color-on-accent);
 }
 
+.neutral {
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
 /* 여러 줄 텍스트에서도 높이가 늘어나도록 height 가 아니라 min-height 를 쓴다. */
 .large {
   min-height: var(--button-height-large);
   font-size: var(--font-size-button-large);
+}
+
+.medium {
+  min-height: var(--button-height-medium);
+  font-size: var(--font-size-button-medium);
 }
 
 .small {

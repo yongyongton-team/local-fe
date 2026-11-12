@@ -56,11 +56,13 @@ describe('주민 탐색 화면 렌더링', () => {
     expect(screen.getByText(/지도 연동 예정 · 예시 데이터/)).toBeInTheDocument();
   });
 
-  it('검색과 이웃 보기 버튼은 접근 가능한 이름을 가진다', async () => {
+  it('검색 버튼은 접근 가능한 이름을 가지고, 우측 상단에 사람들(이웃 보기) 아이콘은 없다', async () => {
     await openResident();
 
     expect(screen.getByRole('button', { name: '검색' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이웃 보기' })).toBeInTheDocument();
+    // 사람들 아이콘은 내 정보 아이콘과 같은 그림이라 주민 화면에서 뺐다(주민의 진입점은 하단 내비).
+    expect(screen.queryByRole('button', { name: '이웃 보기' })).not.toBeInTheDocument();
+    expect(document.querySelector('path[d^="M6.45117 10.415"]')).toBeNull(); // 이전 사람들+소리 물결 SVG
   });
 
   it('+가게 요청하기 는 /resident/requests/new 로 연결된다', async () => {
@@ -157,27 +159,35 @@ describe('요청 카드', () => {
     expect(bakery).not.toHaveTextContent('대형마트');
   });
 
-  it('"내가 요청함" 상태를 보이지 않는 텍스트로 전달한다(반찬만)', async () => {
+  it('내 요청 상태는 아이콘 컨트롤의 이름으로 전달한다: 요청한 카드는 "내 요청 보기" 링크, 아닌 카드는 "나도 요청" 버튼', async () => {
     await openResident();
     await waitFor(() => expect(cardItems()).toHaveLength(3));
     const [fruit, sideDish, bakery] = cardItems();
 
-    expect(sideDish).toHaveTextContent('내가 요청함');
-    expect(fruit).toHaveTextContent('내가 요청하지 않음');
-    expect(bakery).toHaveTextContent('내가 요청하지 않음');
+    expect(within(sideDish!).getByRole('link', { name: '내 요청 보기' })).toHaveAttribute(
+      'href',
+      '/resident/requests',
+    );
+    expect(within(fruit!).getByRole('button', { name: '나도 요청' })).toBeInTheDocument();
+    expect(within(bakery!).getByRole('button', { name: '나도 요청' })).toBeInTheDocument();
   });
 
-  it('카드 안에는 링크나 버튼이 없다(정보만 보여준다)', async () => {
+  it('카드는 눌러도 반응이 없고, 안에는 오른쪽 아이콘 컨트롤 하나뿐이다', async () => {
     await openResident();
     await waitFor(() => expect(cardItems()).toHaveLength(3));
 
-    cardItems().forEach((item) => expect(within(item).queryAllByRole('link')).toHaveLength(0));
-    cardItems().forEach((item) => expect(within(item).queryAllByRole('button')).toHaveLength(0));
+    cardItems().forEach((item) => {
+      const controls = [
+        ...within(item).queryAllByRole('link'),
+        ...within(item).queryAllByRole('button'),
+      ];
+      expect(controls).toHaveLength(1);
+    });
   });
 });
 
 describe('하단 내비게이션(임시 매핑)', () => {
-  it('아이콘 3개가 이름을 가지고, 현재 항목만 aria-current="page" 이다', async () => {
+  it('아이콘 4개가 이름을 가지고, 현재 항목만 aria-current="page" 이다', async () => {
     await openResident();
     const nav = within(screen.getByRole('navigation', { name: '주민 메뉴' }));
 
@@ -185,6 +195,7 @@ describe('하단 내비게이션(임시 매핑)', () => {
       '탐색',
       '가게 요청',
       '내 요청',
+      '내 정보',
     ]);
     expect(nav.getByRole('link', { name: '탐색' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: '가게 요청' })).not.toHaveAttribute('aria-current');
@@ -196,6 +207,8 @@ describe('하단 내비게이션(임시 매핑)', () => {
       'href',
       '/resident/requests',
     );
+    expect(nav.getByRole('link', { name: '내 정보' })).toHaveAttribute('href', '/me');
+    expect(nav.getByRole('link', { name: '내 정보' })).not.toHaveAttribute('aria-current');
   });
 });
 

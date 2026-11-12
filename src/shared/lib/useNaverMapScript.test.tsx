@@ -54,6 +54,9 @@ describe('useNaverMapScript', () => {
     expect(NAVER_MAP_KEY_PARAM).toBe('ncpKeyId');
     expect(`${url.origin}${url.pathname}`).toBe('https://oapi.map.naver.com/openapi/v3/maps.js');
     expect(url.searchParams.get(NAVER_MAP_KEY_PARAM)).toBe('test key/1');
+    // 주소 검색(내 가게 위치)에 쓰는 geocoder 서브모듈을 함께 불러온다. Client Secret 은 쓰지 않는다.
+    expect(url.searchParams.get('submodules')).toBe('geocoder');
+    expect(url.search).not.toMatch(/secret/i);
     expect(scripts()[0]!.async).toBe(true);
   });
 

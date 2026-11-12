@@ -13,15 +13,61 @@ const summary = async (categoryId: string) =>
   ]);
 
 describe('입지 순위 목 서비스', () => {
-  it('과일/채소: 구성동 → 보정동 → 마북동, 수요 데이터 값을 그대로 쓴다', async () => {
-    expect(await summary(FRUIT)).toEqual([
-      [1, '구성동', 29, 0, 2.4],
-      [2, '보정동', 14, 1, 1.9],
-      [3, '마북동', 9, 0, 3.1],
+  it('과일/채소: 목 서버가 정한 순서 그대로이고(요청 0명 예시동이 2위), 실제 동네는 수요 데이터 값을 그대로 쓴다', async () => {
+    const rows = await summary(FRUIT);
+
+    expect(rows.map((r) => [r[0], r[1], r[2]])).toEqual([
+      [1, '구성동', 29],
+      [2, '예시동 가', 0],
+      [3, '보정동', 14],
+      [4, '마북동', 9],
+      [5, '예시동 나', 2],
+      [6, '예시동 다', 1],
+      [7, '예시동 라', 3],
     ]);
+    expect(rows[0]).toEqual([1, '구성동', 29, 0, 2.4]);
+    expect(rows[2]).toEqual([3, '보정동', 14, 1, 1.9]);
+    expect(rows[3]).toEqual([4, '마북동', 9, 0, 3.1]);
   });
 
-  it('업종별로 필터한다: 데이터가 있는 동네만 나오고 순위는 1부터 다시 매겨진다', async () => {
+  it('요청 수로 다시 정렬하지 않는다: 요청이 더 많은 동네가 아래에 있어도 서버 순서 그대로다', async () => {
+    const rows = await founderService.listLocationRanks(FRUIT);
+
+    const counts = rows.map((r) => r.requestCount);
+    expect(counts).not.toEqual([...counts].sort((a, b) => b - a));
+    expect(rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('공공데이터: 판정 5가지, 소수 expectedCount, 숫자 없는 NOT_JUDGED, 공공데이터 없는 항목이 모두 있다', async () => {
+    const rows = await founderService.listLocationRanks(FRUIT);
+
+    expect(new Set(rows.map((r) => r.publicData?.verdict).filter(Boolean))).toEqual(
+      new Set(['SHORT', 'SOME_NEARBY', 'NEXT_DONG', 'NOT_SHORT', 'NOT_JUDGED']),
+    );
+    expect(rows.some((r) => !Number.isInteger(r.publicData?.expectedCount ?? 0))).toBe(true);
+    expect(rows.find((r) => r.neighborhood.name === '마북동')).not.toHaveProperty('publicData');
+    const notJudged = rows.find((r) => r.publicData?.verdict === 'NOT_JUDGED')!;
+    expect([notJudged.publicData?.expectedCount, notJudged.publicData?.dongStoreCount]).toEqual([
+      0, 0,
+    ]);
+    // 목 안의 임의 문구다(실서버 문구가 아니다).
+    expect(
+      rows.every(
+        (r) => !r.publicData?.verdictLabel || r.publicData.verdictLabel.startsWith('[임의]'),
+      ),
+    ).toBe(true);
+  });
+
+  it('공공데이터를 바꿔도 목 원본은 바뀌지 않는다(복사본)', async () => {
+    const [first] = await founderService.listLocationRanks(FRUIT);
+    if (first?.publicData) first.publicData.verdictLabel = '바뀜';
+
+    expect((await founderService.listLocationRanks(FRUIT))[0]?.publicData?.verdictLabel).not.toBe(
+      '바뀜',
+    );
+  });
+
+  it('업종별로 필터한다: 수요 데이터가 있는 동네만 나오고 순위는 1부터 이어진다', async () => {
     expect(await summary('side-dish')).toEqual([[1, '구성동', 12, 0, undefined]]);
     expect(await summary('bakery')).toEqual([[1, '구성동', 6, 0, undefined]]);
   });
@@ -69,7 +115,7 @@ describe('입지 순위 목 서비스', () => {
       visitTimes: [],
     });
 
-    // 구성동 12명 다음에 보정동 1명이 2위로 들어오고, 위치는 동네의 값 그대로다.
+    // 목 서버의 순서(구성동 → 보정동)대로 보정동이 2위로 들어온다. 요청 수로 다시 정렬하지 않는다.
     const ranks = await founderService.listLocationRanks('side-dish');
     expect(ranks.map((r) => [r.rank, r.neighborhood.name, r.requestCount])).toEqual([
       [1, '구성동', 12],
@@ -186,8 +232,13 @@ describe('입지 순위의 지도 좌표(서비스 계층)', () => {
   it('순위 항목마다 동네 중심 좌표(임시)가 위도·경도로 내려온다', async () => {
     const ranks = await founderService.listLocationRanks(FRUIT);
 
-    expect(ranks).toHaveLength(3);
-    for (const rank of ranks) {
+    // 예시동(목 동네에 없는 행)은 위치 정보가 없어 좌표도 없다. 실제 동네 3곳만 좌표가 있다.
+    const real = ranks.filter((r) => r.neighborhood.district !== '');
+    expect(real).toHaveLength(3);
+    expect(
+      ranks.filter((r) => r.neighborhood.district === '').every((r) => r.lat === undefined),
+    ).toBe(true);
+    for (const rank of real) {
       const center = mockNeighborhoodCenters.find((c) => c.neighborhoodId === rank.neighborhood.id);
       expect(rank.lat).toBe(center?.lat);
       expect(rank.lng).toBe(center?.lng);
@@ -205,7 +256,9 @@ describe('입지 순위의 지도 좌표(서비스 계층)', () => {
     const guseong = (ranks: typeof fruit) => ranks.find((r) => r.neighborhood.id === 'guseong');
 
     expect([side[0]?.lat, side[0]?.lng]).toEqual([guseong(fruit)?.lat, guseong(fruit)?.lng]);
-    expect(new Set(fruit.map((r) => `${r.lat}|${r.lng}`)).size).toBe(3);
+    expect(
+      new Set(fruit.filter((r) => r.lat !== undefined).map((r) => `${r.lat}|${r.lng}`)).size,
+    ).toBe(3);
   });
 
   it('자리표시자용 상대좌표(position)도 그대로 유지한다', async () => {

@@ -14,9 +14,13 @@ export function renderApp(
   initialIndex?: number,
 ) {
   const router = createMemoryRouter(routes, { initialEntries, initialIndex });
-  return render(
-    <AppProviders>
-      <RouterProvider router={router} />
-    </AppProviders>,
-  );
+  // router 를 함께 돌려줘서 테스트가 현재 주소를 읽거나 화면을 이동시킬 수 있다.
+  return {
+    ...render(
+      <AppProviders>
+        <RouterProvider router={router} />
+      </AppProviders>,
+    ),
+    router,
+  };
 }

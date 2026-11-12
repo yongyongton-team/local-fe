@@ -97,6 +97,76 @@ describe('폴백(MapPlaceholder)', () => {
   });
 });
 
+describe('폴백 문구: remote(API 모드)에서는 mock 이라는 말이 없다', () => {
+  const MOCK_NOTICE = '지도 연동 예정 · 예시 데이터';
+
+  it('키가 없으면 "지도 연동 예정 · 예시 데이터" 대신 "지도를 불러오지 못했어요"를 보여준다', () => {
+    render(<NaverMap remote markers={[A]} label="동네 지도" />);
+
+    const region = screen.getByRole('region', { name: '동네 지도' });
+    expect(within(region).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+    expect(region).toHaveTextContent('과일 요청 1');
+  });
+
+  it('스크립트를 불러오는 동안은 "지도를 불러오는 중이에요"를 보여준다', () => {
+    useKey();
+    render(<NaverMap remote markers={[A]} label="지도" />);
+
+    expect(scripts()).toHaveLength(1);
+    expect(screen.getByText('지도를 불러오는 중이에요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오지 못했어요')).not.toBeInTheDocument();
+  });
+
+  it('스크립트 로드에 실패하면 "지도를 불러오지 못했어요"이고 불러오는 중 문구는 사라진다', () => {
+    useKey();
+    render(<NaverMap remote markers={[A]} label="지도" />);
+
+    act(() => {
+      scripts()[0]!.dispatchEvent(new Event('error'));
+    });
+
+    expect(screen.getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+  });
+
+  it('지도를 그릴 수 없는 마커(위도·경도 없음)이면 "지도를 불러오지 못했어요"이다', async () => {
+    useKey();
+    installFakeNaver();
+    const noGeo: MapMarker = { ...A, lat: undefined, lng: undefined };
+    render(<NaverMap remote markers={[noGeo]} label="지도" />);
+
+    expect(await screen.findByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+  });
+
+  it('remote 가 아니면(mock 모드) 키가 없을 때 기존 "지도 연동 예정 · 예시 데이터"이고 불러오는 중 문구는 없다', () => {
+    render(<NaverMap markers={[A]} label="지도" />);
+
+    expect(screen.getByText(MOCK_NOTICE)).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+  });
+
+  it('remote 가 아니면 키가 있어 불러오는 동안에도 기존 문구다(불러오는 중 문구로 바꾸지 않는다)', () => {
+    useKey();
+    render(<NaverMap markers={[A]} label="지도" />);
+
+    expect(screen.getByText(MOCK_NOTICE)).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+  });
+});
+
+describe('MAP_COPY.regionLabel', () => {
+  it('mock 에서만 "(예시)"를 붙인다', async () => {
+    const { MAP_COPY } = await import('./copy');
+
+    expect(MAP_COPY.regionLabel('동네 지도', false)).toBe('동네 지도(예시)');
+    expect(MAP_COPY.regionLabel('동네 지도', true)).toBe('동네 지도');
+  });
+});
+
 // CSS 모듈 변환 없이 소스 그대로 읽는다(Vitest 는 프로젝트 루트에서 실행된다).
 const mapCss = readFileSync('src/shared/ui/NaverMap.module.css', 'utf8');
 
@@ -834,5 +904,167 @@ describe('반경 제한 없음 + 보여줄 범위(areaBounds, 예: 기흥구 전
     expect(bounds.ne.lat).toBeCloseTo(37.3, 5);
     expect(bounds.sw.lat).toBeCloseTo(37.298, 5);
     expect(options.right).toBe(16 + 140);
+  });
+});
+
+describe('가게 핀 클릭(onStoreClick)', () => {
+  const store = (id: string, label: string, lat = 37.299, lng = 127.106): MapMarker => ({
+    id,
+    kind: 'existing',
+    label,
+    position: { x: 0.5, y: 0.5 },
+    categoryId: '7',
+    lat,
+    lng,
+  });
+  const S1 = store('store-1', '구성 청과');
+  const S2 = store('store-2', '꽃나라', 37.301, 127.109);
+  const pins = (fake: ReturnType<typeof installFakeNaver>) =>
+    fake.attached().filter((m) => m.options.clickable);
+
+  it('onStoreClick 이 없으면 어떤 마커도 클릭할 수 없고 리스너도 없다(사장님 지도처럼)', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[S1, A, B]} label="지도" />);
+
+    expect(fake.attached()).toHaveLength(3);
+    expect(fake.attached().every((m) => m.options.clickable === false)).toBe(true);
+    expect(fake.listenerCount()).toBe(0);
+  });
+
+  it('onStoreClick 이 있으면 가게 핀만 클릭할 수 있고, 요청·부족 지역 알약은 눌러도 반응이 없다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const onStoreClick = vi.fn();
+    render(<NaverMap markers={[S1, A, B]} label="지도" onStoreClick={onStoreClick} />);
+
+    expect(pins(fake)).toHaveLength(1);
+    fake.attached().forEach((m) => m.click());
+
+    expect(onStoreClick).toHaveBeenCalledTimes(1);
+    expect(onStoreClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'store-1', label: '구성 청과' }),
+    );
+    expect(fake.listenerCount()).toBe(1); // 가게 핀의 click 하나
+  });
+
+  it('처리기가 바뀌어도 마커를 다시 만들지 않고 최신 처리기를 부른다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(<NaverMap markers={[S1]} label="지도" onStoreClick={first} />);
+    const created = fake.markers.length;
+
+    rerender(<NaverMap markers={[S1]} label="지도" onStoreClick={second} />);
+    pins(fake)[0]!.click();
+
+    expect(fake.markers).toHaveLength(created);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('지도 데이터에서 사라진 가게 핀의 리스너는 해제된다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(
+      <NaverMap markers={[S1, S2]} label="지도" onStoreClick={vi.fn()} />,
+    );
+    expect(fake.listenerCount()).toBe(2);
+
+    rerender(<NaverMap markers={[S2]} label="지도" onStoreClick={vi.fn()} />);
+
+    expect(fake.listenerCount()).toBe(1);
+    expect(pins(fake)).toHaveLength(1);
+  });
+
+  it('onStoreClick 을 없애면(클릭이 필요 없어지면) 가게 핀의 리스너도 해제되고 클릭할 수 없다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { rerender } = render(<NaverMap markers={[S1]} label="지도" onStoreClick={vi.fn()} />);
+    expect(fake.listenerCount()).toBe(1);
+
+    rerender(<NaverMap markers={[S1]} label="지도" />);
+
+    expect(fake.listenerCount()).toBe(0);
+    expect(fake.attached().every((m) => m.options.clickable === false)).toBe(true);
+  });
+
+  it('화면을 떠나면(언마운트) 마커·지도 리스너가 모두 해제된다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const { unmount } = render(
+      <NaverMap markers={[S1, S2, A]} label="지도" onStoreClick={vi.fn()} onMapClick={vi.fn()} />,
+    );
+    expect(fake.listenerCount()).toBe(3); // 가게 핀 2 + 지도 클릭 1
+
+    unmount();
+
+    expect(fake.listenerCount()).toBe(0);
+    expect(fake.attached()).toHaveLength(0);
+  });
+
+  it('StrictMode 에서도 리스너가 중복으로 남지 않는다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(
+      <StrictMode>
+        <NaverMap markers={[S1]} label="지도" onStoreClick={vi.fn()} onMapClick={vi.fn()} />
+      </StrictMode>,
+    );
+
+    expect(fake.listenerCount()).toBe(2);
+  });
+});
+
+describe('지도 빈 곳 클릭(onMapClick)', () => {
+  it('지도의 빈 곳을 누르면 처리기를 부른다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const onMapClick = vi.fn();
+    render(<NaverMap markers={[A]} label="지도" onMapClick={onMapClick} />);
+
+    act(() => fake.maps[0]!.emit('click'));
+
+    expect(onMapClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('가게 핀을 누른 같은 순간의 지도 클릭은 무시한다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    const onMapClick = vi.fn();
+    const onStoreClick = vi.fn();
+    const store: MapMarker = {
+      id: 'store-1',
+      kind: 'existing',
+      label: '구성 청과',
+      position: { x: 0.5, y: 0.5 },
+      lat: 37.299,
+      lng: 127.106,
+    };
+    render(
+      <NaverMap
+        markers={[store]}
+        label="지도"
+        onStoreClick={onStoreClick}
+        onMapClick={onMapClick}
+      />,
+    );
+
+    act(() => {
+      fake.attached()[0]!.click();
+      fake.maps[0]!.emit('click');
+    });
+
+    expect(onStoreClick).toHaveBeenCalledTimes(1);
+    expect(onMapClick).not.toHaveBeenCalled();
+  });
+
+  it('처리기가 없으면 지도 클릭 리스너를 달지 않는다', () => {
+    useKey();
+    const fake = installFakeNaver();
+    render(<NaverMap markers={[A]} label="지도" />);
+
+    expect(fake.maps[0]!.listeners.click ?? []).toHaveLength(0);
   });
 });

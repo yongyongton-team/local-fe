@@ -15,7 +15,7 @@ async function openFounder(path = '/founder') {
   return view;
 }
 const rankRows = () =>
-  within(screen.getByRole('region', { name: '요청은 많고 가게는 없는 동네' })).queryAllByRole(
+  within(screen.getByRole('region', { name: '인구에 비해 가게가 부족한 동네' })).queryAllByRole(
     'listitem',
   );
 const mapRegion = () => screen.getByRole('region', { name: '입지 후보 지도(예시)' });
@@ -33,7 +33,7 @@ describe('렌더링', () => {
     expect(screen.getByRole('heading', { level: 1, name: '입지 찾기' })).toBeInTheDocument();
     expect(select()).toHaveDisplayValue('과일 / 채소 가게');
     expect(
-      screen.getByRole('heading', { level: 2, name: '요청은 많고 가게는 없는 동네' }),
+      screen.getByRole('heading', { level: 2, name: '인구에 비해 가게가 부족한 동네' }),
     ).toBeInTheDocument();
     expect(screen.getByText('용인시 행정동 순위')).toBeInTheDocument();
   });
@@ -48,25 +48,93 @@ describe('렌더링', () => {
     ).toEqual(['과일 / 채소 가게', '반찬가게', '빵집']);
   });
 
-  it('순위 행 3개(구성동 → 보정동 → 마북동)와 문구를 보여준다', async () => {
+  it('순위 행 7개를 목 서버 순서 그대로 보여주고 번호는 서버 순위다(요청 0명 동네가 2위)', async () => {
     await openFounder();
 
     const rows = rankRows();
-    expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('1. 구성동');
+    expect(rows.map((row) => row.querySelector('a')?.textContent?.split('요청')[0])).toEqual([
+      '1. 구성동',
+      '2. 예시동 가',
+      '3. 보정동',
+      '4. 마북동',
+      '5. 예시동 나',
+      '6. 예시동 다',
+      '7. 예시동 라',
+    ]);
     expect(rows[0]).toHaveTextContent('요청 29명 · 같은 업종 0곳 · 대형마트 2.4km');
-    expect(rows[1]).toHaveTextContent('2. 보정동');
-    expect(rows[1]).toHaveTextContent('요청 14명 · 같은 업종 1곳 · 대형마트 1.9km');
-    expect(rows[2]).toHaveTextContent('3. 마북동');
-    expect(rows[2]).toHaveTextContent('요청 9명 · 같은 업종 0곳 · 대형마트 3.1km');
+    expect(rows[2]).toHaveTextContent('요청 14명 · 같은 업종 1곳 · 대형마트 1.9km');
+    expect(rows[3]).toHaveTextContent('요청 9명 · 같은 업종 0곳 · 대형마트 3.1km');
+  });
+
+  it('요청 수로 다시 정렬하지 않는다: 요청이 더 많은 행이 아래에 있어도 그대로다', async () => {
+    await openFounder();
+
+    const counts = rankRows().map((row) => Number(/요청 (\d+)명/.exec(row.textContent ?? '')?.[1]));
+    expect(counts).toEqual([29, 0, 14, 9, 2, 1, 3]);
+    expect(counts).not.toEqual([...counts].sort((a, b) => b - a));
+  });
+
+  it('요청 0명 동네도 숨기지 않고 기존 줄 그대로 "요청 0명"으로 보인다', async () => {
+    await openFounder();
+
+    const row = rankRows()[1]!;
+    expect(row).toHaveTextContent('2. 예시동 가');
+    expect(row).toHaveTextContent('요청 0명 · 같은 업종 0곳');
+  });
+
+  it('공공데이터 줄: "기대 N곳 · 실제 M곳"(기대는 반올림, 실제는 그대로)과 서버 판정 문구', async () => {
+    await openFounder();
+
+    const rows = rankRows();
+    // 10.5 → 11, 6.7 → 7, 9 → 9, 7.2 → 7
+    expect(rows[0]).toHaveTextContent('기대 11곳 · 실제 3곳 · [임의] 가게가 많이 부족해요');
+    expect(rows[1]).toHaveTextContent('기대 8곳 · 실제 5곳 · [임의] 근처에 가게가 조금 있어요');
+    expect(rows[2]).toHaveTextContent('기대 7곳 · 실제 4곳 · [임의] 옆 동네에 가게가 있어요');
+    expect(rows[4]).toHaveTextContent('기대 9곳 · 실제 12곳 · [임의] 부족하지 않아요');
+    expect(rows[6]).toHaveTextContent(
+      '기대 7곳 · 실제 2곳 · [임의] 인구에 비해 가게가 많이 부족하고',
+    );
+  });
+
+  it('NOT_JUDGED 는 숫자 없이 판정 문구만 보인다', async () => {
+    await openFounder();
+
+    const row = rankRows()[5]!;
+    expect(row).toHaveTextContent('[임의] 공공데이터가 부족해 판단하지 못했어요');
+    expect(row).not.toHaveTextContent('기대');
+    expect(row).not.toHaveTextContent('실제');
+  });
+
+  it('공공데이터가 없는 행은 기존 두 줄 그대로이고 아무것도 더 보이지 않는다', async () => {
+    await openFounder();
+
+    const row = rankRows()[3]!;
+    expect(row).toHaveTextContent('4. 마북동');
+    expect(row).not.toHaveTextContent('기대');
+    expect(row).not.toHaveTextContent('[임의]');
+    expect(row.textContent).toBe('4. 마북동요청 9명 · 같은 업종 0곳 · 대형마트 3.1km');
+  });
+
+  it('부족하지 않다는 판정(NOT_SHORT) 행도 접거나 거르지 않고 보인다', async () => {
+    await openFounder();
+
+    expect(screen.getByRole('link', { name: /^5\. 예시동 나/ })).toBeInTheDocument();
+    expect(rankRows()).toHaveLength(7);
   });
 
   it('순위 목록은 ol 이고 행 링크 이름이 한 문장으로 읽히며 행 안에는 링크 하나뿐이다', async () => {
     await openFounder();
 
     expect(rankRows()[0]!.closest('ol')).not.toBeNull();
+    // 숫자와 판정 문구까지 한 문장으로 읽힌다.
     expect(
-      screen.getByRole('link', { name: '1. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2.4km' }),
+      screen.getByRole('link', {
+        name: '1. 구성동, 요청 29명, 같은 업종 0곳, 대형마트 2.4km, 기대 11곳 · 실제 3곳 · [임의] 가게가 많이 부족해요',
+      }),
+    ).toBeInTheDocument();
+    // 공공데이터가 없는 행은 기존 이름 그대로다.
+    expect(
+      screen.getByRole('link', { name: '4. 마북동, 요청 9명, 같은 업종 0곳, 대형마트 3.1km' }),
     ).toBeInTheDocument();
     rankRows().forEach((row) => {
       expect(within(row).getAllByRole('link')).toHaveLength(1);
@@ -74,20 +142,40 @@ describe('렌더링', () => {
     });
   });
 
-  it('지도 알약 3개는 번호 라벨이고 지도에는 이름·요약·임시 표시가 있다', async () => {
+  it('지도 알약 3개는 서버 순위 번호 라벨이고(위치가 없는 예시동은 알약이 없다) 지도에는 이름·요약·임시 표시가 있다', async () => {
     await openFounder();
 
-    expect(pills().map((p) => p.textContent)).toEqual(['1. 구성동', '2. 보정동', '3. 마북동']);
+    expect(pills().map((p) => p.textContent)).toEqual(['1. 구성동', '3. 보정동', '4. 마북동']);
     await waitFor(() => expect(live()).toHaveTextContent('과일 / 채소 가게 기준 동네 3곳 표시 중'));
     expect(within(mapRegion()).getByText('지도 연동 예정 · 예시 데이터')).toBeInTheDocument();
   });
 
-  it('검색 버튼과 하단 내비게이션이 없고 사람들 버튼 하나만 있다', async () => {
+  it('서비스가 remote(API 모드)이면 지도 영역 이름에 "(예시)"가 없고 mock 안내 대신 "지도를 불러오지 못했어요"가 보인다', async () => {
+    const service = founderService as { remote: boolean };
+    const original = service.remote;
+    service.remote = true;
+    try {
+      await openFounder();
+
+      const region = screen.getByRole('region', { name: '입지 후보 지도' });
+      expect(
+        screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),
+      ).not.toBeInTheDocument();
+      expect(within(region).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+      expect(screen.queryByText('지도 연동 예정 · 예시 데이터')).not.toBeInTheDocument();
+    } finally {
+      service.remote = original;
+    }
+  });
+
+  it('하단 내비게이션도 헤더 버튼(검색·이웃 보기)도 없고, 우측 상단의 내 정보 링크만 있다', async () => {
     await openFounder();
 
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '검색' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이웃 보기' })).toBeInTheDocument();
+    // 사람들+소리 물결 아이콘("이웃 보기" 임시 버튼)은 내 정보 아이콘으로 대신했다.
+    expect(screen.queryByRole('button', { name: '이웃 보기' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내 정보' })).toHaveAttribute('href', '/me');
   });
 
   it('역할·동네 선택 없이 직접 들어와도 렌더링한다', async () => {
@@ -119,7 +207,7 @@ describe('링크', () => {
       'href',
       '/founder/areas/guseong/report?category=fruit-vegetable',
     );
-    expect(screen.getByRole('link', { name: /^3\. 마북동/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^4\. 마북동/ })).toHaveAttribute(
       'href',
       '/founder/areas/mabuk/report?category=fruit-vegetable',
     );
@@ -129,14 +217,14 @@ describe('링크', () => {
     const user = userEvent.setup();
     await openFounder();
 
-    await user.click(screen.getByRole('link', { name: /^2\. 보정동/ }));
+    await user.click(screen.getByRole('link', { name: /^3\. 보정동/ }));
 
     expect(await heading1('보정동 / 과일 가게')).toBeInTheDocument();
   });
 });
 
 describe('업종 선택과 쿼리', () => {
-  it('업종을 바꾸면 목록과 지도 알약이 바뀌고 순위가 1부터 다시 매겨진다', async () => {
+  it('업종을 바꾸면 그 업종의 목록과 지도 알약으로 바뀐다(공공데이터 줄은 없다)', async () => {
     const user = userEvent.setup();
     await openFounder();
 
@@ -147,6 +235,7 @@ describe('업종 선택과 쿼리', () => {
     expect(rankRows()[0]).toHaveTextContent('요청 12명 · 같은 업종 0곳');
     // 대형마트 값이 없으면 그 부분이 빠진다.
     expect(rankRows()[0]).not.toHaveTextContent('대형마트');
+    expect(rankRows()[0]).not.toHaveTextContent('기대');
     expect(pills().map((p) => p.textContent)).toEqual(['1. 구성동']);
     expect(live()).toHaveTextContent('반찬가게 기준 동네 1곳 표시 중');
     expect(screen.getByRole('link', { name: /^1\. 구성동/ })).toHaveAttribute(
@@ -166,7 +255,7 @@ describe('업종 선택과 쿼리', () => {
     await openFounder('/founder?category=nope');
 
     expect(select()).toHaveDisplayValue('과일 / 채소 가게');
-    expect(rankRows()).toHaveLength(3);
+    expect(rankRows()).toHaveLength(7);
   });
 
   it('업종을 바꾸면 URL 쿼리가 갱신되고, 리포트에서 브라우저 뒤로 가기로 돌아오면 선택이 유지된다', async () => {

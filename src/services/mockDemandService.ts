@@ -32,7 +32,7 @@ function buildMarker(
   placement: (typeof mockMarkerPlacements)[number],
   index: number,
 ): MapMarker | null {
-  const { neighborhoodId, kind, categoryId, position } = placement;
+  const { neighborhoodId, kind, categoryId, position, storeName } = placement;
   const id = `${neighborhoodId}-${kind}-${categoryId ?? index}`;
 
   if (kind === 'existing') {
@@ -41,6 +41,7 @@ function buildMarker(
       kind,
       categoryId,
       label: '있는 가게 위치',
+      ...(storeName !== undefined && { storeName }),
       position,
       ...geoOf(neighborhoodId, position),
     };
@@ -82,17 +83,6 @@ export const mockDemandService: DemandService = {
 
   async getDefaultCategoryId() {
     return DEFAULT_CATEGORY_ID;
-  },
-
-  async listReports(categoryId) {
-    return mockNeighborhoods
-      .map((n) => buildReport(n.id, categoryId))
-      .filter((report): report is NeighborhoodReport => report !== null)
-      .sort((a, b) => b.demand.requestCount - a.demand.requestCount);
-  },
-
-  async getReport(neighborhoodId, categoryId) {
-    return buildReport(neighborhoodId, categoryId);
   },
 
   async listReportsByNeighborhood(neighborhoodId) {

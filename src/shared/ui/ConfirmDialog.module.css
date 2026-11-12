@@ -1,0 +1,21 @@
+/* 확인창 본문과 버튼 (틀은 Modal.module.css) */
+.body {
+  margin: var(--dialog-gap-body) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-dialog-body);
+  color: var(--color-text-secondary);
+  word-break: keep-all;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--dialog-actions-gap);
+  margin-top: var(--dialog-gap-actions);
+}
+
+.actions > * {
+  width: var(--dialog-button-width);
+}

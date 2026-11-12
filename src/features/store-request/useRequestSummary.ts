@@ -95,5 +95,5 @@ export function useRequestSummary(text: string, neighborhoodId?: string) {
 
 /** 정리 실패 안내. API 오류는 코드별 문구(AI_UNAVAILABLE 은 "업종을 직접 골라 주세요")이고 그 밖의 오류는 기본 문구다. */
 function describeSummaryError(error: unknown): string {
-  return describeLoadError(error);
+  return describeLoadError(error, 'parse');
 }

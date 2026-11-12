@@ -14,7 +14,11 @@ import type {
   MerchantResponse,
   Neighborhood,
   NeighborhoodReport,
+  NewOffer,
   NewStoreRequest,
+  OfferSent,
+  OwnerOffer,
+  PublicData,
   StoreCategory,
   StoreRequest,
   UserRole,
@@ -23,11 +27,14 @@ import type {
 } from '@/types/domain';
 import { declutterOffsets } from '../mapCoordinates';
 import type { MerchantMapData } from '../merchantService';
+import type { QuickRequestInput, QuickRequestResult } from '../requestSubmitter';
 import type { RequestSummary } from '../requestSummarizer';
 import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
 import type {
   CategoryDto,
+  CreateOfferBody,
+  CreateOfferResponseDto,
   CreateRequestBody,
   CreateResponseDto,
   DongDto,
@@ -40,13 +47,15 @@ import type {
   MyRequestDto,
   OfferDto,
   OwnerDemandDto,
+  OwnerOfferDto,
   OwnerDetailDto,
   ParseResponseDto,
   ShopViewDto,
 } from './dto';
 import { isNoStoreGap } from './gapStatus';
 import { toDomainId, toServerId } from './ids';
-import { isShownOfferStatus } from './offerStatus';
+import { toKstIso } from '@/shared/lib/kstDate';
+import { isShownOfferStatus, toOfferStatus } from './offerStatus';
 import {
   CONDITION_LABELS_BY_CODE,
   FREQUENCY_CODES,
@@ -302,6 +311,7 @@ export function mapMapMarkers(
         ? { categoryId: String(categoryId) }
         : {}),
       label: name,
+      storeName: name,
       position: { x: ratio(lng, minLng, maxLng), y: 1 - ratio(lat, minLat, maxLat) },
       lat,
       lng,
@@ -432,6 +442,31 @@ export function mapCreateResponse(
   return { ...input, id };
 }
 
+/** 간편 요청 본문: {dongId, categoryId, timeSlots, frequency} 뿐이다(text·conditions 는 보내지 않는다). */
+export function buildQuickRequestBody(input: QuickRequestInput): CreateRequestBody {
+  return {
+    dongId: toServerId(input.neighborhoodId),
+    categoryId: toServerId(input.categoryId),
+    timeSlots: input.visitTimes.map((time) => TIME_SLOT_CODES[time]),
+    frequency: FREQUENCY_CODES[input.visitFrequency],
+  };
+}
+
+/**
+ * POST /requests 201 응답 → 간편 요청 결과. reachedGoal 이 true 일 때만 도달이다(없거나 다른 값이면 false).
+ * notifiedOwnerCount 는 0 이상의 정수일 때만 쓰고 아니면 없음이다. 요청 id 는 쓰지 않는다.
+ */
+export function mapQuickResponse(dto: CreateResponseDto | undefined): QuickRequestResult {
+  const body: CreateResponseDto = isObject(dto) ? dto : {};
+  const notified = asNumber(body.notifiedOwnerCount);
+  return {
+    reachedGoal: body.reachedGoal === true,
+    ...(notified !== undefined && Number.isInteger(notified) && notified >= 0
+      ? { notifiedOwnerCount: notified }
+      : {}),
+  };
+}
+
 /** ISO 8601 문자열 → Date. 올바르지 않으면 undefined */
 export function parseIsoDate(value: unknown): Date | undefined {
   if (typeof value !== 'string' || value === '') return undefined;
@@ -441,22 +476,25 @@ export function parseIsoDate(value: unknown): Date | undefined {
 
 /**
  * 요청의 제안(offers[]) → "사장님 응답". 서버가 준 순서에서 보여줄 수 있는 첫 제안 하나를 쓴다.
- * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이나 제목(title)이 없는 것
- *   (없는 값을 지어내지 않으므로 "업체(지역): 제목" 한 줄을 만들 수 없다).
- * - 매핑: shopName → merchantName, 요청의 동네 이름 → areaName, title → message.
- * 가격·수령 시각과 장소·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
+ * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이 없는 것.
+ * - 매핑: shopName → merchantName, pickupAt → pickupAt(ISO 8601 을 해석하지 못하면 없음), pickupPlace → pickupPlace(비면 없음).
+ * 제목·가격·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
  * 제안이 없거나 배열이 아니면 undefined 다.
  */
 export function selectOfferResponse(
   offers: OfferDto[] | null | undefined,
-  areaName: string,
 ): MerchantResponse | undefined {
   for (const offer of Array.isArray(offers) ? offers : []) {
     if (!isObject(offer) || !isShownOfferStatus(offer.status)) continue;
     const merchantName = asString(offer.shopName);
-    const message = asString(offer.title);
-    if (merchantName === '' || message === '') continue;
-    return { merchantName, areaName, message };
+    if (merchantName === '') continue;
+    const pickupAt = parseIsoDate(offer.pickupAt);
+    const pickupPlace = asString(offer.pickupPlace).trim();
+    return {
+      merchantName,
+      ...(pickupAt !== undefined && { pickupAt }),
+      ...(pickupPlace !== '' && { pickupPlace }),
+    };
   }
   return undefined;
 }
@@ -487,7 +525,7 @@ export function mapMyRequests(
     ) satisfies VisitTime[];
     const visitFrequency: VisitFrequency | undefined = toVisitFrequency(item.frequency);
     const createdAt = parseIsoDate(item.createdAt);
-    const response = selectOfferResponse(item.offers, asString(dong.name));
+    const response = selectOfferResponse(item.offers);
 
     return {
       request: {
@@ -513,14 +551,6 @@ export function mapMyRequests(
   });
 }
 
-/**
- * 순위에 올릴지 정하는 규칙(한 곳). 서버 순위는 요청이 0명인 동네까지 전부 준다(동 39곳).
- * true(현재)이면 요청이 1명 이상인 동네만 남기고 순위 번호를 보이는 행 기준으로 1부터 다시 매긴다
- * (서버 rank 는 score 순서라 0명 동네가 빠지면 번호가 건너뛴다. 예: 반찬은 요청 있는 동네가 서버 3위 하나뿐이라 1위가 된다).
- * false 이면 서버가 준 목록과 순위를 그대로 보여준다.
- */
-export const HIDE_ZERO_REQUEST_RANKS = true;
-
 const requiredCount = (value: unknown, what: string): number => {
   const count = asNumber(value);
   if (count === undefined || count < 0) throw parseError(`${what} 가 숫자가 아니에요.`);
@@ -528,39 +558,62 @@ const requiredCount = (value: unknown, what: string): number => {
 };
 
 /**
- * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서를 그대로 쓰고, 순위(rank)는 서버 값을 쓴다(없으면 서버 순서의 번호).
- * 요청 0명 동네를 숨기면(HIDE_ZERO_REQUEST_RANKS) 순위는 보이는 행 기준으로 다시 매긴다.
+ * 공공데이터(publicData) → 도메인. 숫자 필드는 0 이상의 유한한 숫자일 때만 담고 아니면 비운다(expectedCount 는 소수 그대로, 반올림은
+ * 표시 단계에서 한다). verdict·verdictLabel 은 비어 있지 않은 문자열일 때만 담고 서버 값을 그대로 쓴다(알 수 없는 값도 그대로).
+ * 객체가 아니거나 쓸 수 있는 필드가 하나도 없으면 없음(undefined)이다.
+ */
+export function mapPublicData(raw: unknown): PublicData | undefined {
+  if (!isObject(raw)) return undefined;
+  const count = (value: unknown) => {
+    const n = asNumber(value);
+    return n !== undefined && n >= 0 ? n : undefined;
+  };
+  const text = (value: unknown) =>
+    typeof value === 'string' && value.trim() !== '' ? value : undefined;
+  const population = count(raw.population);
+  const expectedCount = count(raw.expectedCount);
+  const dongStoreCount = count(raw.dongStoreCount);
+  const verdict = text(raw.verdict);
+  const verdictLabel = text(raw.verdictLabel);
+  const data: PublicData = {
+    ...(population !== undefined && { population }),
+    ...(expectedCount !== undefined && { expectedCount }),
+    ...(dongStoreCount !== undefined && { dongStoreCount }),
+    ...(verdict !== undefined && { verdict }),
+    ...(verdictLabel !== undefined && { verdictLabel }),
+  };
+  return Object.keys(data).length > 0 ? data : undefined;
+}
+
+/**
+ * GET /founder/rankings 응답 → 도메인 LocationRank[]. 서버 순서를 그대로 쓰고(재정렬·필터 없음, 요청 0명 항목도 남긴다),
+ * 순위(rank)는 서버 값을 쓴다(없으면 서버 순서의 번호).
  * - 동네 id 는 문자열로 바꾼다(양의 정수가 아니면 INVALID_ID). 이름이 없으면 parse 오류.
  *   서버 순위에는 구(gu)가 없어 district 는 빈 문자열이다.
  * - requestCount·sameCategoryStoreCount 가 숫자가 아니면 parse 오류다(지어내지 않는다). nearestMartKm 이 없으면 비운다.
- * - 서버 순위에는 좌표가 없어 lat·lng·position 을 만들어 넣지 않는다. score 는 쓰지 않는다.
+ * - 서버 순위에는 좌표가 없어 lat·lng·position 을 만들어 넣지 않는다. score 는 쓰지 않는다(서버 순서는 score 순이 아니다).
+ * - publicData 는 있으면 mapPublicData 로 옮기고, 없거나 비어 있으면 필드 자체가 없다.
  * 응답이 객체가 아니거나 items 가 배열이 아니면 parse 오류.
  */
-export function mapRankings(
-  dto: FounderRankingDto | undefined,
-  /** 테스트용으로 규칙을 바꿔 끼울 수 있다. 기본은 HIDE_ZERO_REQUEST_RANKS */
-  hideZeroRequests: boolean = HIDE_ZERO_REQUEST_RANKS,
-): LocationRank[] {
+export function mapRankings(dto: FounderRankingDto | undefined): LocationRank[] {
   if (!isObject(dto) || !Array.isArray(dto.items)) {
     throw parseError('GET /founder/rankings 응답에 items 가 없어요.');
   }
-  const ranks = dto.items.map((raw, index): LocationRank => {
+  return dto.items.map((raw, index): LocationRank => {
     const item = isObject(raw) ? raw : {};
     const name = asString(item.name);
     if (name === '') throw parseError('GET /founder/rankings 항목에 이름이 없어요.');
     const km = asNumber(item.nearestMartKm);
+    const publicData = mapPublicData(item.publicData);
     return {
       rank: asNumber(item.rank) ?? index + 1,
       neighborhood: { id: toDomainId(item.dongId), district: '', name },
       requestCount: requiredCount(item.requestCount, 'requestCount'),
       nearbySameCategoryCount: requiredCount(item.sameCategoryStoreCount, 'sameCategoryStoreCount'),
       ...(km !== undefined && km >= 0 && { nearestHypermarketKm: km }),
+      ...(publicData !== undefined && { publicData }),
     };
   });
-  if (!hideZeroRequests) return ranks;
-  return ranks
-    .filter((item) => item.requestCount > 0)
-    .map((item, index) => ({ ...item, rank: index + 1 }));
 }
 
 /**
@@ -633,6 +686,7 @@ export function mapMerchantProfile(
     categoryId: toDomainId(shop.categoryId),
     categoryName: shop.categoryName,
     district: dong?.district ?? '',
+    ...(shop.dongId !== undefined && { dongId: String(shop.dongId) }),
   };
 }
 
@@ -825,4 +879,69 @@ export function mapOwnerDetail(
     visitTimes,
     ...(summary !== '' && { summary: { text: summary, ...(by !== '' && { by }) } }),
   };
+}
+
+/**
+ * GET /owner/offers 응답 → 도메인 OwnerOffer[]. 서버 순서를 그대로 쓴다.
+ * - 응답은 배열이거나 {items|offers} 배열을 가진 객체다(실서버 모양은 명세에 없어 둘 다 받는다). 그 밖이면 parse 오류.
+ * - 항목의 id 가 양의 정수가 아니면 그 항목은 건너뛴다(화면이 키로 쓴다). 제목이 비면 빈 제목으로 둔다.
+ * - orderCount·minOrders 가 숫자가 아니면 0 이다(진행 막대가 비어 보인다). 상태가 모르는 값이면 상태가 없다.
+ * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 서버가 아직 주지 않을 수 있어 올바르지 않으면 비운다.
+ */
+export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
+  const list = Array.isArray(dto)
+    ? dto
+    : isObject(dto) && Array.isArray(dto.items)
+      ? dto.items
+      : isObject(dto) && Array.isArray(dto.offers)
+        ? dto.offers
+        : null;
+  if (list === null) throw parseError('GET /owner/offers 응답이 목록이 아니에요.');
+  return list.flatMap((raw): OwnerOffer[] => {
+    const item: OwnerOfferDto = isObject(raw) ? raw : {};
+    const id = safeDomainId(item.id);
+    if (id === undefined) return [];
+    const price = asNumber(item.price);
+    const pickupAt = parseIsoDate(item.pickupAt);
+    const deadlineAt = parseIsoDate(item.deadlineAt);
+    const status = toOfferStatus(item.status);
+    const count = (value: unknown) => {
+      const n = asNumber(value);
+      return n !== undefined && n >= 0 ? n : 0;
+    };
+    return [
+      {
+        id,
+        title: asString(item.title).trim(),
+        ...(status !== null && { status }),
+        ...(price !== undefined && price >= 0 && { price }),
+        ...(pickupAt !== undefined && { pickupAt }),
+        ...(deadlineAt !== undefined && { deadlineAt }),
+        orderCount: count(item.orderCount),
+        minOrders: count(item.minOrders),
+      },
+    ];
+  });
+}
+
+/** 제안 보내기 본문. 설명이 비면 보내지 않고, 날짜는 +09:00 오프셋 ISO 8601 이다. 동네·업종 id 가 숫자가 아니면 던진다. */
+export function buildCreateOfferBody(input: NewOffer): CreateOfferBody {
+  const description = input.description?.trim() ?? '';
+  return {
+    dongId: toServerId(input.neighborhoodId),
+    categoryId: toServerId(input.categoryId),
+    title: input.title.trim(),
+    ...(description !== '' && { description }),
+    price: input.price,
+    minOrders: input.minOrders,
+    pickupAt: toKstIso(input.pickupAt),
+    pickupPlace: input.pickupPlace.trim(),
+    deadlineAt: toKstIso(input.deadlineAt),
+  };
+}
+
+/** POST /offers 응답 → 결과. notifiedResidentCount 가 0 이상의 정수일 때만 쓴다(아니면 없음). */
+export function mapCreateOfferResponse(dto: CreateOfferResponseDto | undefined): OfferSent {
+  const n = isObject(dto) ? dto.notifiedResidentCount : undefined;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? { notifiedResidentCount: n } : {};
 }

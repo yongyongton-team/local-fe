@@ -1,7 +1,7 @@
 /*
  * 사장님 동네 상세 레이아웃 (Figma 402×874 기준을 비율·여백으로 옮김).
  * 402×874 는 참고 크기라 높이를 고정하지 않는다. 하단 내비게이션이 없고,
- * "결정 필요" 영역은 본문 흐름의 맨 아래에 붙어 내용을 가리지 않는다(고정 배치 아님).
+ * 하단 "방문 판매 제안하기" 버튼은 본문 흐름의 맨 아래에 붙어 내용을 가리지 않는다(고정 배치 아님).
  */
 .screen {
   flex: 1;
@@ -9,14 +9,6 @@
   flex-direction: column;
   min-width: 0;
   padding-top: var(--space-2);
-  /*
-   * 공통 본문 하단 여백(32px + 안전 영역)을 줄여, 결정 필요 영역 아래 간격이
-   * 안전 영역(홈 인디케이터)만큼이 되게 한다. 안전 영역이 없으면 최소 간격을 둔다.
-   */
-  margin-bottom: calc(
-    -1 * var(--space-6) - env(safe-area-inset-bottom) +
-      max(env(safe-area-inset-bottom), var(--detail-bottom-gap-min))
-  );
 }
 
 .header {

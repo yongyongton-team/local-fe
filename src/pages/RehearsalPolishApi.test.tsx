@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jsonResponse, stubFetch, type StubCall } from '@/test/apiStub';
 
 /**
- * 시연 리허설 후속 수정: 요청 정리 대기·실패 표시, 주민 지도의 요청·부족 가게 알약, 창업자 순위 숨김과 지도 카드.
+ * 시연 리허설 후속 수정: 요청 정리 대기·실패 표시, 주민 지도의 요청·부족 가게 알약, 창업자 순위의 요청 0명 동네와 지도 카드.
  * 서비스 구현은 import 시점에 정해지므로 환경 값을 바꾼 뒤 React·RTL·앱 모듈을 모두 새로 불러온다.
  */
 type Rtl = typeof import('@testing-library/react');
@@ -86,7 +86,7 @@ afterEach(() => {
   rtl = null;
 });
 
-const mapRegion = (app: App) => app.screen.getByRole('region', { name: '동네 지도(예시)' });
+const mapRegion = (app: App) => app.screen.getByRole('region', { name: '동네 지도' });
 const mapTexts = (app: App) =>
   app
     .within(mapRegion(app))
@@ -244,7 +244,7 @@ describe('요청 정리 대기·실패 표시', () => {
   });
 });
 
-describe('창업자 순위: 요청 0명 동네 숨김과 지도 카드', () => {
+describe('창업자 순위: 요청 0명 동네와 지도 카드', () => {
   const item = (over: Record<string, unknown>) => ({
     rank: 1,
     dongId: 22,
@@ -258,18 +258,18 @@ describe('창업자 순위: 요청 0명 동네 숨김과 지도 카드', () => {
   const section = (app: App) =>
     app.within(
       app.screen
-        .getByRole('heading', { level: 2, name: '요청은 많고 가게는 없는 동네' })
+        .getByRole('heading', { level: 2, name: '인구에 비해 가게가 부족한 동네' })
         .closest('section')!,
     );
 
-  it('요청 0명 동네는 숨기고 순위 번호를 보이는 행 기준으로 1부터 다시 매긴다(서버 rank 와 달라진다)', async () => {
+  it('요청 0명 동네도 숨기지 않고 서버 rank 와 서버 순서 그대로 보여준다', async () => {
     stubServer('FOUNDER', {
       rankings: () =>
         jsonResponse(200, {
           items: [
             item({ rank: 1, dongId: 16, name: '영덕2동', requestCount: 0 }),
             item({ rank: 2, dongId: 36, name: '상현1동', requestCount: 0 }),
-            item({ rank: 3, dongId: 22, name: '구성동', requestCount: 12 }),
+            item({ rank: 4, dongId: 22, name: '구성동', requestCount: 12, score: 999 }),
           ],
         }),
     });
@@ -278,11 +278,14 @@ describe('창업자 순위: 요청 0명 동네 숨김과 지도 카드', () => {
 
     await app.screen.findByRole('link', { name: /구성동/ });
     const rows = section(app).getAllByRole('link');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveAccessibleName(/^1\. 구성동, 요청 12명/);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveAccessibleName(/^1\. 영덕2동, 요청 0명/);
+    expect(rows[1]).toHaveAccessibleName(/^2\. 상현1동, 요청 0명/);
+    // 서버 rank 가 4 이면 그대로 4 다(보이는 행 기준으로 다시 매기지 않는다).
+    expect(rows[2]).toHaveAccessibleName(/^4\. 구성동, 요청 12명/);
   });
 
-  it('업종에 요청이 하나도 없으면 기존 빈 상태 문구가 나오고 지도 카드는 없다', async () => {
+  it('업종의 요청이 모두 0명이어도 행을 보여주고 빈 상태 문구는 나오지 않는다(서버가 순위를 준 경우)', async () => {
     stubServer('FOUNDER', {
       rankings: () =>
         jsonResponse(200, {
@@ -295,10 +298,10 @@ describe('창업자 순위: 요청 0명 동네 숨김과 지도 카드', () => {
     const app = await loadApp('api');
     app.renderApp(['/founder']);
 
-    expect(await app.screen.findByText('아직 요청이 없는 업종이에요')).toBeInTheDocument();
     expect(
-      app.screen.queryByRole('region', { name: '입지 후보 지도(예시)' }),
-    ).not.toBeInTheDocument();
+      await app.screen.findByRole('link', { name: /^1\. 구성동, 요청 0명/ }),
+    ).toBeInTheDocument();
+    expect(app.screen.queryByText('아직 요청이 없는 업종이에요')).not.toBeInTheDocument();
   });
 
   it('목 모드는 기존대로 지도 카드를 보여주고 fetch 를 부르지 않는다', async () => {

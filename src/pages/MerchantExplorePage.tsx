@@ -13,12 +13,14 @@ import {
 } from '@/features/merchant-explore/useMerchantExplore';
 import { NoShopNotice } from '@/features/merchant-explore/NoShopNotice';
 import { describeLoadError } from '@/features/resident-map/loadErrorText';
-import { isNoShopError } from '@/services';
+import { Link } from 'react-router';
+import { isNoShopError, merchantService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
-import { PeopleIcon, SearchIcon } from '@/shared/ui/icons';
+import { SearchIcon } from '@/shared/ui/icons';
+import { MAP_COPY } from '@/shared/ui/copy';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Text } from '@/shared/ui/Text';
@@ -44,16 +46,17 @@ export function MerchantExplorePage() {
       <header className={styles.header}>
         <LogoLink />
         <div className={styles.headerRow}>
-          {/* 사장님 가게 정보(보조 텍스트). 로그인과 가게 등록이 없어 목 프로필이다. */}
+          {/* 사장님 가게 정보. 누르면 내 가게(보낸 제안 목록)로 간다. */}
           <p className={styles.shop}>
-            {profile.status === 'success'
-              ? `${profile.data.shopName} · ${profile.data.categoryName}`
-              : ''}
+            {profile.status === 'success' && (
+              <Link to={paths.merchantOffers()} className={styles.shopLink}>
+                {`${profile.data.shopName} · ${profile.data.categoryName}`}
+              </Link>
+            )}
           </p>
-          {/* 검색·사람들: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
+          {/* 검색: 동작이 정해지지 않아 렌더링만 한다. 이름은 임시다. */}
           <div className={styles.actions}>
             <IconButton label="검색" icon={<SearchIcon />} />
-            <IconButton label="이웃 보기" icon={<PeopleIcon />} />
           </div>
         </div>
       </header>
@@ -69,7 +72,8 @@ export function MerchantExplorePage() {
 
       <div className={styles.mapBleed}>
         <NaverMap
-          label="수요 지도(예시)"
+          label={MAP_COPY.regionLabel('수요 지도', merchantService.remote)}
+          remote={merchantService.remote}
           markers={map.status === 'success' ? map.data.markers : []}
           origin={
             map.status === 'success' ? { ...map.data.origin, radiusKm: option.km } : undefined

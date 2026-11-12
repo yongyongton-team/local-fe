@@ -4,7 +4,7 @@ import { jsonResponse, stubFetch, type StubCall } from '@/test/apiStub';
 import { createApiClient } from './apiClient';
 import { createApiFounderService, RANKING_LIMIT } from './apiFounderService';
 import { tryToServerId } from './ids';
-import { HIDE_ZERO_REQUEST_RANKS, mapFounderReport, mapRankings } from './mappers';
+import { mapFounderReport, mapPublicData, mapRankings } from './mappers';
 import { createTokenStore } from './tokenStore';
 
 const GUEST = '/api/v1/auth/guest';
@@ -77,8 +77,7 @@ describe('mapRankings', () => {
   it('숫자 id 를 문자열로 바꾸고 서버 순서·순위를 그대로 둔다(요청 수로 다시 정렬하지 않는다)', () => {
     const shuffled = [ITEMS[2]!, ITEMS[0]!, ITEMS[1]!].map((item, i) => ({ ...item, rank: i + 1 }));
 
-    // 요청 0명 동네를 숨기지 않는 모드(false)로 서버 순서·순위 보존을 확인한다.
-    const ranks = mapRankings({ items: shuffled }, false);
+    const ranks = mapRankings({ items: shuffled });
 
     expect(ranks.map((r) => [r.rank, r.neighborhood.id, r.neighborhood.name])).toEqual([
       [1, '16', '영덕2동'],
@@ -94,7 +93,7 @@ describe('mapRankings', () => {
   });
 
   it('nearestMartKm 가 없으면 거리를 비우고, 서버에 없는 좌표·위치를 만들어 넣지 않는다', () => {
-    const [first, , third] = mapRankings({ items: ITEMS }, false);
+    const [first, , third] = mapRankings({ items: ITEMS });
 
     expect(third).not.toHaveProperty('nearestHypermarketKm');
     for (const rank of [first, third]) {
@@ -109,34 +108,85 @@ describe('mapRankings', () => {
   });
 
   it('서버가 준 순위 값(동점 등으로 연속이 아닐 수 있다)을 그대로 쓴다', () => {
-    const ranks = mapRankings(
-      {
-        items: [
-          { ...ITEMS[0]!, rank: 1 },
-          { ...ITEMS[1]!, rank: 1 },
-          { ...ITEMS[2]!, rank: 3 },
-        ],
-      },
-      false,
-    );
+    const ranks = mapRankings({
+      items: [
+        { ...ITEMS[0]!, rank: 1 },
+        { ...ITEMS[1]!, rank: 1 },
+        { ...ITEMS[2]!, rank: 3 },
+      ],
+    });
 
     expect(ranks.map((r) => r.rank)).toEqual([1, 1, 3]);
   });
 
   it('rank 가 없으면 서버 순서의 번호를 쓴다', () => {
-    const ranks = mapRankings(
-      { items: ITEMS.map(({ rank, ...rest }) => (void rank, rest)) },
-      false,
-    );
+    const ranks = mapRankings({ items: ITEMS.map(({ rank, ...rest }) => (void rank, rest)) });
 
     expect(ranks.map((r) => r.rank)).toEqual([1, 2, 3]);
   });
 
-  it('요청 0명 동네는 기본 규칙(HIDE_ZERO_REQUEST_RANKS = true)대로 숨기고, 규칙을 끄면 서버 목록 그대로다', () => {
-    expect(HIDE_ZERO_REQUEST_RANKS).toBe(true);
-    expect(mapRankings({ items: ITEMS }).map((r) => r.neighborhood.id)).toEqual(['22', '28']);
+  it('요청 0명인 동네도 숨기지 않고 서버 순서·순위를 그대로 남긴다(공공데이터로 상위에 올 수 있다)', () => {
+    const ranks = mapRankings({ items: ITEMS });
 
-    expect(mapRankings({ items: ITEMS }, false)).toHaveLength(3);
+    expect(ranks.map((r) => [r.rank, r.neighborhood.id, r.requestCount])).toEqual([
+      [1, '22', 29],
+      [2, '28', 14],
+      [3, '16', 0],
+    ]);
+    // 요청 0명 항목이 2위에 오는 서버 순서도 그대로다.
+    const zeroSecond = mapRankings({
+      items: [
+        { ...ITEMS[0]!, rank: 1 },
+        { ...ITEMS[2]!, rank: 2 },
+        { ...ITEMS[1]!, rank: 3 },
+      ],
+    });
+    expect(zeroSecond.map((r) => [r.rank, r.requestCount])).toEqual([
+      [1, 29],
+      [2, 0],
+      [3, 14],
+    ]);
+  });
+
+  it('score 로 다시 정렬하지 않는다(2위의 score 가 3위보다 낮아도 서버 순서 그대로)', () => {
+    const items = [
+      { ...ITEMS[0]!, rank: 1, score: 50 },
+      { ...ITEMS[2]!, rank: 2, score: 1 },
+      { ...ITEMS[1]!, rank: 3, score: 20 },
+    ];
+
+    expect(mapRankings({ items }).map((r) => r.neighborhood.id)).toEqual(['22', '16', '28']);
+  });
+
+  it('publicData 가 없으면 필드 자체가 없다', () => {
+    const [first] = mapRankings({ items: [ITEMS[0]!] });
+
+    expect(first).not.toHaveProperty('publicData');
+  });
+
+  it('publicData 를 도메인으로 옮긴다(expectedCount 는 소수 그대로, 판정 문구는 서버 문구 그대로)', () => {
+    const [row] = mapRankings({
+      items: [
+        {
+          ...ITEMS[0]!,
+          publicData: {
+            population: 12345,
+            expectedCount: 6.7,
+            dongStoreCount: 9,
+            verdict: 'SHORT',
+            verdictLabel: '가짜 판정 문구',
+          },
+        },
+      ],
+    });
+
+    expect(row!.publicData).toEqual({
+      population: 12345,
+      expectedCount: 6.7,
+      dongStoreCount: 9,
+      verdict: 'SHORT',
+      verdictLabel: '가짜 판정 문구',
+    });
   });
 
   it('id 가 올바르지 않으면 INVALID_ID, 이름·개수가 없거나 items 가 없으면 parse 오류다', () => {
@@ -152,6 +202,57 @@ describe('mapRankings', () => {
     expect(() => mapRankings({})).toThrow(expect.objectContaining({ kind: 'parse' }));
     expect(() => mapRankings(undefined)).toThrow(expect.objectContaining({ kind: 'parse' }));
   });
+});
+
+describe('mapPublicData', () => {
+  it('알려진 판정 5가지와 새로 생긴 값을 모두 그대로 둔다(문자열 폴백)', () => {
+    for (const verdict of [
+      'SHORT',
+      'SOME_NEARBY',
+      'NEXT_DONG',
+      'NOT_SHORT',
+      'NOT_JUDGED',
+      'NEW_VALUE',
+    ]) {
+      expect(mapPublicData({ verdict })?.verdict).toBe(verdict);
+    }
+  });
+
+  it('숫자 필드는 유효한 숫자일 때만 담는다(문자열·NaN·음수·null 은 비운다)', () => {
+    expect(
+      mapPublicData({
+        population: '100',
+        expectedCount: Number.NaN,
+        dongStoreCount: -1,
+        verdict: 'SHORT',
+      }),
+    ).toEqual({ verdict: 'SHORT' });
+    expect(mapPublicData({ population: null, expectedCount: null, verdict: 'SHORT' })).toEqual({
+      verdict: 'SHORT',
+    });
+    expect(mapPublicData({ expectedCount: 0, dongStoreCount: 0 })).toEqual({
+      expectedCount: 0,
+      dongStoreCount: 0,
+    });
+  });
+
+  it('expectedCount 를 반올림하지 않는다', () => {
+    expect(mapPublicData({ expectedCount: 10.5 })?.expectedCount).toBe(10.5);
+    expect(mapPublicData({ expectedCount: 6.7 })?.expectedCount).toBe(6.7);
+  });
+
+  it('필드가 일부만 있거나 판정 문구가 비어 있어도 깨지지 않는다', () => {
+    expect(mapPublicData({ verdictLabel: '문구만' })).toEqual({ verdictLabel: '문구만' });
+    expect(mapPublicData({ verdict: 'SHORT', verdictLabel: '  ' })).toEqual({ verdict: 'SHORT' });
+    expect(mapPublicData({ verdict: '', dongStoreCount: 3 })).toEqual({ dongStoreCount: 3 });
+  });
+
+  it.each([[undefined], [null], [{}], [[]], ['text'], [42], [{ unknown: 1 }]])(
+    '객체가 아니거나 쓸 수 있는 필드가 없으면(%j) 없음이다',
+    (raw) => {
+      expect(mapPublicData(raw)).toBeUndefined();
+    },
+  );
 });
 
 describe('mapFounderReport', () => {
@@ -248,8 +349,8 @@ describe('createApiFounderService', () => {
 
     const ranks = await newServices().founderService.listLocationRanks('7');
 
-    // 요청 0명 동네(영덕2동)는 숨긴다.
-    expect(ranks).toHaveLength(2);
+    // 요청 0명 동네(영덕2동)도 숨기지 않는다.
+    expect(ranks).toHaveLength(3);
     const call = calls.find((c) => c.path.startsWith('/api/v1/founder/rankings'));
     expect(call?.path).toBe(`/api/v1/founder/rankings?categoryId=7&limit=${RANKING_LIMIT}`);
     expect(call?.method).toBe('GET');

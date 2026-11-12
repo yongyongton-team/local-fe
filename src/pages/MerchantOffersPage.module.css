@@ -1,0 +1,49 @@
+/*
+ * 내 가게(제안 목록) 레이아웃 (Figma 45:584, 402×874 기준을 비율·여백으로 옮김).
+ * 높이를 고정하지 않는다. 내용이 길면 스크롤하고 하단 버튼은 화면 아래에 붙는다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--offer-section-gap);
+  margin-top: var(--space-2);
+}
+
+.list {
+  min-width: 0;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--offer-card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 하단 버튼 두 개: 짧은 화면에서는 맨 아래, 긴 화면에서는 스크롤하며 아래에 붙는다. */
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  padding-bottom: calc(var(--sticky-footer-gap) - var(--space-6) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-surface) var(--space-5));
+}

@@ -1,0 +1,14 @@
+/* 방문 판매 제안 작성 레이아웃 (Figma 45:542). 높이를 고정하지 않는다. */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}

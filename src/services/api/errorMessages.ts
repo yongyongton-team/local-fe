@@ -33,6 +33,26 @@ export const ERROR_MESSAGES_BY_CODE: Partial<Record<KnownErrorCode, string>> = {
   AI_UNAVAILABLE: '요청 내용을 정리하지 못했어요. 업종을 직접 골라 주세요.',
 };
 
+/**
+ * VALIDATION_ERROR(400)가 사용자에게 보이는 화면의 맥락. 같은 코드라도 무엇을 보낸 요청인지에 따라 확인할 항목이 달라서
+ * 호출하는 화면이 describeApiError(error, context) 로 맥락을 알려 준다. 맥락을 주지 않으면(내 정보 저장·동네 선택 등)
+ * ERROR_MESSAGES_BY_CODE 의 기존 문구를 쓴다.
+ * - offer: 방문 판매 제안 보내기(POST /offers)
+ * - request: 요청 작성·간편 요청(POST /requests)
+ * - shop: 내 가게 저장(PUT /me/shop)
+ * - parse: 요청 문장 정리(POST /requests/parse)
+ */
+export type ErrorContext = 'offer' | 'request' | 'shop' | 'parse';
+
+/** 맥락별 VALIDATION_ERROR 문구. */
+// TODO(문구 확정 후 교체): 아래 네 문구는 임시다.
+export const VALIDATION_MESSAGES_BY_CONTEXT: Readonly<Record<ErrorContext, string>> = {
+  offer: '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.',
+  request: '요청 내용을 다시 확인해 주세요. 시간대와 이용 빈도를 선택했는지 살펴봐 주세요.',
+  shop: '가게 정보를 다시 확인해 주세요. 가게 이름, 업종, 위치를 살펴봐 주세요.',
+  parse: '요청 문장을 다시 확인해 주세요.',
+};
+
 /** 5xx 이어도 코드별 문구를 보여주는 코드. AI_UNAVAILABLE 은 502 로 오지만 화면이 업종 직접 선택으로 이어가야 한다. */
 const CODES_SHOWN_ON_5XX: readonly string[] = ['AI_UNAVAILABLE'];
 
@@ -48,9 +68,10 @@ const CODE_BY_STATUS: Readonly<Record<number, KnownErrorCode>> = {
  * - network, timeout 은 종류로 구분한다.
  * - 5xx 는 마지막 문구다(AI_UNAVAILABLE 만 예외로 코드별 문구).
  * - http 는 code(없으면 상태 코드)로 표에서 찾고, 표에 없으면 마지막 문구다.
+ * - context 가 있으면 VALIDATION_ERROR 만 그 맥락의 문구로 바꾼다(다른 코드의 문구는 그대로다).
  * - ApiError 가 아닌 오류와 parse 오류도 마지막 문구다.
  */
-export function describeApiError(error: unknown): string {
+export function describeApiError(error: unknown, context?: ErrorContext): string {
   if (!isApiError(error)) return FALLBACK_ERROR_MESSAGE;
   if (error.code === 'DEMO_SESSION') return DEMO_WRITE_BLOCKED_MESSAGE;
   if (error.kind === 'network') return NETWORK_MESSAGE;
@@ -69,5 +90,8 @@ export function describeApiError(error: unknown): string {
     : error.code === undefined && error.status !== undefined
       ? CODE_BY_STATUS[error.status]
       : undefined;
+  if (code === 'VALIDATION_ERROR' && context !== undefined) {
+    return VALIDATION_MESSAGES_BY_CONTEXT[context];
+  }
   return (code && ERROR_MESSAGES_BY_CODE[code]) || FALLBACK_ERROR_MESSAGE;
 }

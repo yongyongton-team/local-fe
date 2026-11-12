@@ -99,6 +99,8 @@ export interface MockMarkerPlacement {
   kind: MapMarkerKind;
   /** request / missing 마커는 업종이 필요하다. */
   categoryId?: string;
+  /** existing(있는 가게) 마커의 가게 이름. 가게 정보 카드가 쓴다. */
+  storeName?: string;
   position: MapPosition;
 }
 
@@ -152,9 +154,10 @@ export const mockMarkerPlacements: MockMarkerPlacement[] = [
   },
   { neighborhoodId: 'guseong', kind: 'missing', categoryId: 'side-dish', position: at(291, 93) },
   { neighborhoodId: 'guseong', kind: 'missing', categoryId: 'bakery', position: at(83, 187) },
-  { neighborhoodId: 'guseong', kind: 'existing', position: at(262, 60) },
-  { neighborhoodId: 'guseong', kind: 'existing', position: at(29, 148) },
-  { neighborhoodId: 'guseong', kind: 'existing', position: at(234, 231) },
+  // [임의] 있는 가게 핀의 가게 이름. 실제 가게가 아닌 개발용 이름이다. 업종은 같은 동네의 "없는 가게" 업종과 겹치지 않게 비워 둔다.
+  { neighborhoodId: 'guseong', kind: 'existing', storeName: '예시 가게 1', position: at(262, 60) },
+  { neighborhoodId: 'guseong', kind: 'existing', storeName: '예시 가게 2', position: at(29, 148) },
+  { neighborhoodId: 'guseong', kind: 'existing', storeName: '예시 가게 3', position: at(234, 231) },
 
   // [임의] 보정동·마북동 위치는 디자인에 없어 개발용으로 정한 값이다. 기존 요약값에 맞는 최소한의 마커만 둔다.
   // 보정동: 과일/채소 14명, 주변 같은 업종 1곳 → 요청 마커 1개 + 같은 업종의 있는 가게 핀 1개
@@ -168,6 +171,7 @@ export const mockMarkerPlacements: MockMarkerPlacement[] = [
     neighborhoodId: 'bojeong',
     kind: 'existing',
     categoryId: 'fruit-vegetable',
+    storeName: '예시 청과',
     position: at(230, 140),
   },
   // 마북동: 과일/채소 9명, 주변 같은 업종 0곳 → 요청 마커 + 없는 가게 마커
@@ -194,7 +198,7 @@ export interface MockStoredRequest {
 /**
  * [임의] 처음부터 있는 "내가 보낸 요청". 개발용 값이다.
  * 구성동 반찬 요청 12명·"내가 요청함"(위 수요 데이터)과 일치하게 두었다.
- * 사장님 응답의 업체·지역·문구도 개발용이다(Figma 예시는 과일/채소 카드의 "싱싱과일(신갈동)" 응답).
+ * 사장님 응답의 업체·수령 시각·장소도 개발용이다(Figma 예시는 과일/채소 카드의 "싱싱과일: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요" 응답).
  */
 export const mockSeedRequests: MockStoredRequest[] = [
   {
@@ -209,8 +213,14 @@ export const mockSeedRequests: MockStoredRequest[] = [
     },
     response: {
       merchantName: '맛나반찬',
-      areaName: '신갈동',
-      message: '토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+      // 2026-11-14 는 토요일이다.
+      pickupAt: new Date('2026-11-14T10:00:00+09:00'),
+      pickupPlace: '구성동 주민센터 앞',
     },
   },
 ];
+
+/** [임의] 목 모드에서 "기준 인원에 도달했다"고 보는 요청 인원(시연: 구성동 과일 29명 → 30명). */
+export const MOCK_GOAL_COUNT = 30;
+/** [임의] 목 모드에서 기준 인원에 도달했을 때 "알린 사장님 수"로 돌려주는 값. */
+export const MOCK_NOTIFIED_OWNER_COUNT = 1;

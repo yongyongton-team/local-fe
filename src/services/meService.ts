@@ -6,6 +6,14 @@ export interface SavedSelection {
   neighborhood: Neighborhood;
 }
 
+/** 내 가게 저장 입력. 위치는 좌표만 보낸다(동네는 서버가 좌표로 찾는다). categoryId 는 도메인의 문자열 id 다. */
+export interface ShopInput {
+  shopName: string;
+  categoryId: string;
+  lat: number;
+  lng: number;
+}
+
 /**
  * 내 정보와 서버 상태 경계.
  * - mock: 고정된 예시 값(네트워크 없음).
@@ -33,5 +41,10 @@ export interface MeService {
    * neighborhoodId 는 도메인의 문자열 id 이고 API 구현이 숫자로 바꿔 보낸다(숫자가 아니면 ApiError). 저장된 내 정보를 돌려준다.
    */
   saveSelection(role: UserRole, neighborhoodId: string, signal?: AbortSignal): Promise<Me>;
+  /**
+   * 사장님의 내 가게를 등록하거나 고친다(PUT /me/shop). 응답은 쓰지 않고, 화면은 GET /me 로 다시 읽는다.
+   * api 는 데모 세션이면 서버에 보내지 않고 던진다(공유 계정 보호). mock 은 메모리 상태만 바꾼다.
+   */
+  saveShop(input: ShopInput, signal?: AbortSignal): Promise<void>;
   checkHealth(signal?: AbortSignal): Promise<Health>;
 }

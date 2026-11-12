@@ -5,7 +5,6 @@ import {
   buildVisitTimeRows,
 } from '@/features/merchant-area/areaDetailView';
 import { BarSection } from '@/features/merchant-area/BarSection';
-import { DecisionCallout } from '@/features/merchant-area/DecisionCallout';
 import { OneLineSummary } from '@/features/merchant-area/OneLineSummary';
 import { useAreaDetail } from '@/features/merchant-area/useAreaDetail';
 import { NoShopNotice } from '@/features/merchant-explore/NoShopNotice';
@@ -14,6 +13,7 @@ import { isNoShopError, merchantService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { AppBar } from '@/shared/ui/AppBar';
+import { LinkButton } from '@/shared/ui/Button';
 import { Notice } from '@/shared/ui/Notice';
 import { StatCards } from '@/shared/ui/StatCards';
 import styles from './MerchantAreaDetailPage.module.css';
@@ -24,7 +24,7 @@ const FALLBACK_TITLE = '동네 수요';
 /**
  * 사장님용 동네 수요 상세 (Figma node 2:1947 구성동 / 2:2159 보정동 / 2:2227 마북동: 값만 다른 같은 화면).
  * :areaId 는 동네 id 다. 역할·동네 선택이 없어도 렌더링한다(접근 권한이 아니다).
- * 하단 내비게이션은 없다. "방문 판매 제안하기" 이후 화면은 정해지지 않아 버튼은 동작이 없다.
+ * 하단 내비게이션은 없다. "방문 판매 제안하기"는 이 동네에 대한 방문 판매 제안 작성 화면으로 이동한다.
  */
 export function MerchantAreaDetailPage() {
   const { areaId } = useParams();
@@ -74,7 +74,14 @@ export function MerchantAreaDetailPage() {
             <OneLineSummary summary={state.data.summary} remote={merchantService.remote} />
           </div>
           <footer className={styles.footer}>
-            <DecisionCallout />
+            <LinkButton
+              to={paths.merchantOfferNew(state.data.detail.neighborhood.id)}
+              variant="highlight"
+              size="large"
+              fullWidth
+            >
+              방문 판매 제안하기
+            </LinkButton>
           </footer>
         </>
       )}

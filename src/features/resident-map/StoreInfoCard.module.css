@@ -1,0 +1,28 @@
+/* 지도 영역 아래쪽에 겹치는 정보 카드. 지도 틀 안에 있어 하단 내비·플로팅 버튼을 가리지 않는다. */
+.card {
+  position: absolute;
+  right: var(--space-page);
+  bottom: var(--space-3);
+  left: var(--space-page);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-contents);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-contents);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}

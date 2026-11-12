@@ -194,10 +194,14 @@ describe('api 모드의 사장님 수요 화면', () => {
     app.renderApp(['/merchant']);
     await areaList(app).findAllByRole('link');
 
-    const map = app.screen.getByRole('region', { name: '수요 지도(예시)' });
+    const map = app.screen.getByRole('region', { name: '수요 지도' });
     await app.waitFor(() => expect(app.within(map).getByText('과일 요청 29')).toBeInTheDocument());
     expect(app.within(map).queryByText('과일 요청 14')).not.toBeInTheDocument();
     expect(app.within(map).getByText('내 가게 위치')).toBeInTheDocument();
+    // API 모드에서는 mock 이라는 말이 없다.
+    expect(app.screen.queryByRole('region', { name: '수요 지도(예시)' })).not.toBeInTheDocument();
+    expect(app.within(map).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(app.screen.queryByText(/지도 연동 예정|예시 데이터/)).not.toBeInTheDocument();
   });
 
   it('가게가 없으면(shop null) 안내만 보여주고 /owner/demand 는 요청하지 않는다', async () => {
@@ -279,16 +283,19 @@ describe('api 모드의 사장님 동네 상세', () => {
     );
   });
 
-  it('제안 CTA("방문 판매 제안하기")는 그대로 있고 누르면 서버 요청이 나가지 않는다', async () => {
+  it('제안 CTA("방문 판매 제안하기")는 이 동네의 제안 작성 화면으로 가는 링크이고 누르는 것만으로 서버에 쓰지 않는다', async () => {
     const { calls } = stubServer();
     const app = await loadApp('api');
     app.renderApp(['/merchant/areas/22']);
-    const button = await app.screen.findByRole('button', { name: /방문 판매 제안하기/ });
-    const before = calls.length;
+    const link = await app.screen.findByRole('link', { name: /방문 판매 제안하기/ });
+    expect(link).toHaveAttribute('href', '/merchant/offers/new?area=22');
 
-    await app.user.click(button);
+    await app.user.click(link);
 
-    expect(calls).toHaveLength(before);
+    expect(
+      await app.screen.findByRole('heading', { level: 1, name: '방문 판매 제안' }),
+    ).toBeInTheDocument();
+    expect(calls.filter((c) => c.method === 'POST' && c.path.endsWith('/offers'))).toHaveLength(0);
   });
 
   it('요약이 없으면 요약 카드만 실패 안내이고 수치는 그대로 보인다', async () => {

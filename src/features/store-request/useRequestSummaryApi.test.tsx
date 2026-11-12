@@ -2,12 +2,12 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestSummarizer } from '@/services';
 import { ApiError } from '@/services/api/apiError';
-import { SUMMARY_DEBOUNCE_MS } from './constants';
+import { PARSE_DEBOUNCE_MS } from './constants';
 import { useRequestSummary } from './useRequestSummary';
 
 const advanceDebounce = () =>
   act(async () => {
-    await vi.advanceTimersByTimeAsync(SUMMARY_DEBOUNCE_MS + 1);
+    await vi.advanceTimersByTimeAsync(PARSE_DEBOUNCE_MS + 1);
   });
 
 describe('useRequestSummary 의 동네 id·취소·실패 처리', () => {

@@ -117,22 +117,19 @@ describe('구조와 접근성', () => {
     expect(within(section('한 줄 요약')).getByText('예시 정리 · AI 연동 예정')).toBeInTheDocument();
   });
 
-  it('"방문 판매 제안하기" 버튼은 "결정 필요" 알약을 설명으로 가리키고 동작이 없다', async () => {
+  it('"방문 판매 제안하기"는 이 동네의 제안 작성 화면으로 가는 링크이고 시안의 주석("결정 필요" 알약·점선)은 없다', async () => {
     const user = userEvent.setup();
     renderApp(['/merchant/areas/guseong']);
     await heading1('구성동 / 과일 가게');
 
-    const button = screen.getByRole('button', { name: '방문 판매 제안하기' });
-    expect(button).toHaveAccessibleDescription('결정 필요');
-    expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(
-      '결정 필요',
-    );
+    const button = screen.getByRole('link', { name: '방문 판매 제안하기' });
+    expect(button).toHaveAttribute('href', '/merchant/offers/new?area=guseong');
+    expect(screen.queryByText('결정 필요')).not.toBeInTheDocument();
+    expect(button).not.toHaveAttribute('aria-describedby');
 
-    // 눌러도 화면이 바뀌지 않는다(다음 화면 미정).
+    // 누르면 방문 판매 제안 작성 화면이 열린다.
     await user.click(button);
-    expect(
-      screen.getByRole('heading', { level: 1, name: '구성동 / 과일 가게' }),
-    ).toBeInTheDocument();
+    expect(await heading1('방문 판매 제안')).toBeInTheDocument();
   });
 
   it('하단 내비게이션이 없다', async () => {
@@ -165,7 +162,7 @@ describe('로딩과 없는 동네', () => {
       'href',
       '/merchant',
     );
-    expect(screen.queryByRole('button', { name: '방문 판매 제안하기' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '방문 판매 제안하기' })).not.toBeInTheDocument();
   });
 
   it('조회가 실패하면 오류 안내를 보여준다', async () => {

@@ -131,7 +131,15 @@ describe('mapMerchantProfile', () => {
       categoryId: '7',
       categoryName: '과일·채소 가게',
       district: '기흥구',
+      dongId: '23',
     });
+  });
+
+  it('가게의 동 id 가 없으면 dongId 속성이 없다', () => {
+    const profile = mapMerchantProfile({ ...shop, dongId: undefined }, NEIGHBORHOODS);
+
+    expect(profile).not.toBeNull();
+    expect(profile).not.toHaveProperty('dongId');
   });
 
   it('가게가 없거나 업종 id 가 없으면 null 이고, 동네를 못 찾으면 구는 빈 문자열이다', () => {
@@ -333,6 +341,7 @@ describe('createApiMerchantService', () => {
       categoryId: '7',
       categoryName: '과일·채소 가게',
       district: '기흥구',
+      dongId: '23',
     });
     expect(callsTo(calls, '/api/v1/me')).toHaveLength(1);
   });
