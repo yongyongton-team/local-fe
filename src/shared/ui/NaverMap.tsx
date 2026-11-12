@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNaverMapScript } from '@/shared/lib/useNaverMapScript';
+import { useNaverMapScript, type NaverMapStatus } from '@/shared/lib/useNaverMapScript';
 import type { MapMarker } from '@/types/domain';
+import { MAP_COPY } from './copy';
 import { MapPlaceholder, type MapPlaceholderProps } from './MapPlaceholder';
 import {
   fitToMarkers,
@@ -21,10 +22,12 @@ import {
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './naverMapDefaults';
 import styles from './NaverMap.module.css';
 
-/** 폴백 문구: 키가 있는데 불러오지 못했거나 인증에 실패했을 때만 보인다. */
-const FALLBACK_NOTICE = '지도를 불러오지 못했어요';
-
 export interface NaverMapProps extends MapPlaceholderProps {
+  /**
+   * 서버 데이터를 쓰는 모드(API)이면 true(서비스의 remote 값). 폴백 자리표시자에 "지도 연동 예정 · 예시 데이터" 대신
+   * mock 이라는 말이 없는 문구("지도를 불러오는 중이에요" / "지도를 불러오지 못했어요")를 보여준다. 기본 false(mock).
+   */
+  remote?: boolean;
   /**
    * true 이면 마커 집합(id)이 바뀔 때마다 마커 전체가 보이게 다시 맞춘다(예: 업종에 따라 마커가 달라지는 창업자 화면).
    * 기본(false)은 처음 마커가 생길 때 한 번만 맞추고 이후(예: 칩 필터)에는 지도를 움직이지 않는다.
@@ -44,13 +47,15 @@ export interface NaverMapProps extends MapPlaceholderProps {
  * origin(내 가게 중심 핀·반경)이 위도·경도와 함께 오면 핀과 실제 반경(km → m) 원을 지도에 그린다.
  * 아래 경우에는 MapPlaceholder 를 폴백으로 보여준다.
  *  - 스크립트가 아직 준비되지 않았다(불러오는 중 포함)
- *  - 키가 없다: 문구 없이 기존 자리표시자 그대로(개발 환경), 테스트 환경도 키가 없어 여기에 해당한다
+ *  - 키가 없다: mock 모드는 문구 없이 기존 자리표시자 그대로(개발 환경), 테스트 환경도 키가 없어 여기에 해당한다
  *  - 스크립트 로드 실패 또는 인증 실패: "지도를 불러오지 못했어요" 문구와 함께
+ *  - remote(API 모드)이면 위 경우 모두 mock 이라는 말이 없는 문구를 쓴다(불러오는 중은 "지도를 불러오는 중이에요", 그 밖은 "지도를 불러오지 못했어요")
  *  - origin(기준 핀·반경)이 있는데 위도·경도가 없다
  *  - 마커는 있지만 위도·경도가 하나도 없다
  *  - SDK 호출이 예외를 던졌다(예: 인증 실패 직후 SDK 내부 상태가 깨진 경우). 앱 전체가 멈추지 않게 폴백으로 바꾼다.
  */
 export function NaverMap({
+  remote = false,
   refitOnChange = false,
   onStoreClick,
   onMapClick,
@@ -100,7 +105,7 @@ export function NaverMap({
 
   if (status !== 'ready' || unsupported || crashed) {
     const failed = crashed || (status === 'error' && reason !== 'no-key');
-    return <MapPlaceholder {...props} notice={failed ? FALLBACK_NOTICE : undefined} />;
+    return <MapPlaceholder {...props} notice={placeholderNotice(remote, status, failed)} />;
   }
   return (
     <MapCanvas
@@ -292,4 +297,19 @@ function MapCanvas({
       )}
     </div>
   );
+}
+
+/**
+ * 폴백 자리표시자의 구석 문구. undefined 이면 MapPlaceholder 의 기본 문구("지도 연동 예정 · 예시 데이터", mock 모드 전용)다.
+ * remote 이면 mock 이라는 말이 없는 문구만 쓴다: 불러오는 중(idle·loading)이면 "불러오는 중", 그 밖(키 없음·실패·그릴 수 없음)은 "불러오지 못했어요".
+ */
+function placeholderNotice(
+  remote: boolean,
+  status: NaverMapStatus,
+  failed: boolean,
+): string | undefined {
+  if (remote) {
+    return status === 'idle' || status === 'loading' ? MAP_COPY.loading : MAP_COPY.failed;
+  }
+  return failed ? MAP_COPY.failed : undefined;
 }

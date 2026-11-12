@@ -330,7 +330,9 @@ describe('방문 판매 제안 작성: 제출', () => {
     await user.click(submit());
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('선택한 정보를 확인하지 못했어요.');
+    expect(alert).toHaveTextContent(
+      '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.',
+    );
     expect(screen.queryByText(/서버 원문 메시지/)).not.toBeInTheDocument();
     expect(submit()).toBeEnabled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

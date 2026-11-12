@@ -233,6 +233,39 @@ describe('api 모드의 요청 작성', () => {
     expect(submitButton(app)).toBeEnabled();
   });
 
+  it('400 VALIDATION_ERROR 이면 요청 작성 맥락의 문구를 보여준다(서버 message 는 쓰지 않는다)', async () => {
+    stubServer({
+      parse: () => jsonResponse(200, PARSED),
+      create: () => jsonResponse(400, { code: 'VALIDATION_ERROR', message: '서버 원문' }),
+    });
+    const app = await loadApp('api');
+    await writeText(app, await openForm(app), '[프론트 테스트] 태권도장');
+    await app.screen.findByRole('region', { name: '요청 정리 결과' });
+    await chooseVisit(app);
+    await app.user.click(submitButton(app));
+
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '요청 내용을 다시 확인해 주세요. 시간대와 이용 빈도를 선택했는지 살펴봐 주세요.',
+    );
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/역할과 동네/)).not.toBeInTheDocument();
+  });
+
+  it('요청 정리(parse)가 400 VALIDATION_ERROR 이면 요청 정리 맥락의 문구를 보여준다', async () => {
+    stubServer({
+      parse: () => jsonResponse(400, { code: 'VALIDATION_ERROR', message: '서버 원문' }),
+    });
+    const app = await loadApp('api');
+    await writeText(app, await openForm(app), '[프론트 테스트] 문장');
+
+    const card = await app.screen.findByRole('region', { name: '요청 정리 결과' });
+    expect(app.within(card).getByRole('status')).toHaveTextContent(
+      '요청 문장을 다시 확인해 주세요.',
+    );
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/역할과 동네/)).not.toBeInTheDocument();
+  });
+
   it('제출하는 동안 다시 눌러도 요청은 한 번만 나가고, 끝나면 이동한다', async () => {
     let finish: (response: Response) => void = () => undefined;
     const { calls } = stubServer({

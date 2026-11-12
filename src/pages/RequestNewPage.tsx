@@ -148,7 +148,7 @@ function RequestForm({ neighborhood }: { neighborhood: Neighborhood }) {
     } catch (error) {
       // 입력은 그대로 유지하고 오류 문구만 보여준다. 입력 문장은 기록하지 않는다.
       setSubmitting(false);
-      setSubmitError(isApiError(error) ? describeApiError(error) : SUBMIT_FAILED_TEXT);
+      setSubmitError(isApiError(error) ? describeApiError(error, 'request') : SUBMIT_FAILED_TEXT);
       return;
     }
     void navigate(paths.residentRequests);

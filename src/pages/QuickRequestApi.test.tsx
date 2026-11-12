@@ -136,6 +136,22 @@ describe('api 모드의 나도 요청', () => {
     expect(app.screen.getByRole('link', { name: '내 요청 보기' })).toBeInTheDocument();
   });
 
+  it('400 VALIDATION_ERROR 는 요청 작성 맥락의 문구이고 서버 message 는 보이지 않는다', async () => {
+    stubServer(() =>
+      jsonResponse(400, { code: 'VALIDATION_ERROR', message: '서버 원문 노출 금지' }),
+    );
+    const app = await loadApp();
+    const dialog = await openAndFill(app);
+
+    await app.user.click(app.within(dialog).getByRole('button', { name: /^보내기/ }));
+
+    expect(await app.within(dialog).findByRole('alert')).toHaveTextContent(
+      '요청 내용을 다시 확인해 주세요. 시간대와 이용 빈도를 선택했는지 살펴봐 주세요.',
+    );
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+    expect(app.screen.queryByText(/역할과 동네/)).not.toBeInTheDocument();
+  });
+
   it('그 밖의 서버 오류는 오류 문구만 보여주고 카드는 그대로다', async () => {
     stubServer(() => jsonResponse(500, { code: 'X', message: '서버 원문 노출 금지' }));
     const app = await loadApp();

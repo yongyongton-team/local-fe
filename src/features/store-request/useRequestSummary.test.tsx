@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestSummarizer, type RequestSummary } from '@/services';
-import { SUMMARY_DEBOUNCE_MS } from './constants';
+import { PARSE_DEBOUNCE_MS } from './constants';
 import { useRequestSummary } from './useRequestSummary';
 
 const summary = (categoryId: string | null): RequestSummary => ({ categoryId, conditions: [] });
@@ -17,7 +17,7 @@ function deferred<T>() {
 
 const advanceDebounce = () =>
   act(async () => {
-    await vi.advanceTimersByTimeAsync(SUMMARY_DEBOUNCE_MS + 1);
+    await vi.advanceTimersByTimeAsync(PARSE_DEBOUNCE_MS + 1);
   });
 
 describe('useRequestSummary', () => {
@@ -34,7 +34,7 @@ describe('useRequestSummary', () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SUMMARY_DEBOUNCE_MS - 100);
+      await vi.advanceTimersByTimeAsync(PARSE_DEBOUNCE_MS - 100);
     });
     expect(spy).not.toHaveBeenCalled();
     expect(result.current.summary).toBeNull();

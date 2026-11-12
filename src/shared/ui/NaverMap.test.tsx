@@ -97,6 +97,76 @@ describe('폴백(MapPlaceholder)', () => {
   });
 });
 
+describe('폴백 문구: remote(API 모드)에서는 mock 이라는 말이 없다', () => {
+  const MOCK_NOTICE = '지도 연동 예정 · 예시 데이터';
+
+  it('키가 없으면 "지도 연동 예정 · 예시 데이터" 대신 "지도를 불러오지 못했어요"를 보여준다', () => {
+    render(<NaverMap remote markers={[A]} label="동네 지도" />);
+
+    const region = screen.getByRole('region', { name: '동네 지도' });
+    expect(within(region).getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+    expect(region).toHaveTextContent('과일 요청 1');
+  });
+
+  it('스크립트를 불러오는 동안은 "지도를 불러오는 중이에요"를 보여준다', () => {
+    useKey();
+    render(<NaverMap remote markers={[A]} label="지도" />);
+
+    expect(scripts()).toHaveLength(1);
+    expect(screen.getByText('지도를 불러오는 중이에요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오지 못했어요')).not.toBeInTheDocument();
+  });
+
+  it('스크립트 로드에 실패하면 "지도를 불러오지 못했어요"이고 불러오는 중 문구는 사라진다', () => {
+    useKey();
+    render(<NaverMap remote markers={[A]} label="지도" />);
+
+    act(() => {
+      scripts()[0]!.dispatchEvent(new Event('error'));
+    });
+
+    expect(screen.getByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+  });
+
+  it('지도를 그릴 수 없는 마커(위도·경도 없음)이면 "지도를 불러오지 못했어요"이다', async () => {
+    useKey();
+    installFakeNaver();
+    const noGeo: MapMarker = { ...A, lat: undefined, lng: undefined };
+    render(<NaverMap remote markers={[noGeo]} label="지도" />);
+
+    expect(await screen.findByText('지도를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_NOTICE)).not.toBeInTheDocument();
+  });
+
+  it('remote 가 아니면(mock 모드) 키가 없을 때 기존 "지도 연동 예정 · 예시 데이터"이고 불러오는 중 문구는 없다', () => {
+    render(<NaverMap markers={[A]} label="지도" />);
+
+    expect(screen.getByText(MOCK_NOTICE)).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+  });
+
+  it('remote 가 아니면 키가 있어 불러오는 동안에도 기존 문구다(불러오는 중 문구로 바꾸지 않는다)', () => {
+    useKey();
+    render(<NaverMap markers={[A]} label="지도" />);
+
+    expect(screen.getByText(MOCK_NOTICE)).toBeInTheDocument();
+    expect(screen.queryByText('지도를 불러오는 중이에요')).not.toBeInTheDocument();
+  });
+});
+
+describe('MAP_COPY.regionLabel', () => {
+  it('mock 에서만 "(예시)"를 붙인다', async () => {
+    const { MAP_COPY } = await import('./copy');
+
+    expect(MAP_COPY.regionLabel('동네 지도', false)).toBe('동네 지도(예시)');
+    expect(MAP_COPY.regionLabel('동네 지도', true)).toBe('동네 지도');
+  });
+});
+
 // CSS 모듈 변환 없이 소스 그대로 읽는다(Vitest 는 프로젝트 루트에서 실행된다).
 const mapCss = readFileSync('src/shared/ui/NaverMap.module.css', 'utf8');
 

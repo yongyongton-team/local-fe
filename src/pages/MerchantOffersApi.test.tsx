@@ -257,7 +257,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
     expect(await app.screen.findByRole('alert')).toHaveTextContent(
-      '선택한 정보를 확인하지 못했어요.',
+      '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.',
     );
     expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
   });

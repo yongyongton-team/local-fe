@@ -85,17 +85,6 @@ export const mockDemandService: DemandService = {
     return DEFAULT_CATEGORY_ID;
   },
 
-  async listReports(categoryId) {
-    return mockNeighborhoods
-      .map((n) => buildReport(n.id, categoryId))
-      .filter((report): report is NeighborhoodReport => report !== null)
-      .sort((a, b) => b.demand.requestCount - a.demand.requestCount);
-  },
-
-  async getReport(neighborhoodId, categoryId) {
-    return buildReport(neighborhoodId, categoryId);
-  },
-
   async listReportsByNeighborhood(neighborhoodId) {
     return mockCategories
       .map((c) => buildReport(neighborhoodId, c.id))

@@ -45,13 +45,13 @@ export type { RequestSubmitter } from './requestSubmitter';
 export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
 
 /*
- * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock)가 아래 서비스의 구현을 고른다.
- * 부분 연결 상태다: api 모드에서 실제 서버를 쓰는 것은 인증(authService), 내 정보·역할 저장(meService),
- * 동네·업종 목록과 주민 조회(demandService 의 listNeighborhoods·listCategories·getDefaultCategoryId·
- * listReportsByNeighborhood·listMapMarkers), 요청 작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService),
- * 예비 창업자(founderService·reportDescriptionGenerator),
- * 사장님(merchantService·areaDescriptionGenerator·offerService)뿐이다. 나머지 서비스와 메서드는
- * 모드와 무관하게 항상 목 구현을 쓰고, 단계적으로 늘어난다. mock 이면 네트워크 요청과 로그인이 전혀 일어나지 않는다.
+ * 목/API 전환. VITE_DATA_SOURCE(mock | api, 기본 mock; 비어 있거나 잘못된 값도 mock)가 아래 모든 서비스의 구현을 한꺼번에 고른다.
+ * - api: 아래에서 내보내는 서비스는 모두 서버를 쓴다. 인증(authService), 내 정보·역할·가게 저장(meService),
+ *   동네·업종 목록·주민 조회·지도 마커(demandService), 요청 정리·작성(requestSummarizer·requestSubmitter)과 내 요청(myRequestService),
+ *   예비 창업자 순위·리포트(founderService·reportDescriptionGenerator),
+ *   사장님 가게 정보·동네 수요(merchantService·areaDescriptionGenerator)와 제안(offerService).
+ * - mock: 같은 서비스를 메모리 목으로 쓴다. 네트워크 요청과 로그인이 전혀 일어나지 않는다.
+ * 서버 API 중 아직 서비스가 없는 것(제안 주문·완료·취소, 주문 취소)은 여기에 없고 화면도 없다.
  */
 const dataSource = resolveDataSource(
   import.meta.env.VITE_DATA_SOURCE,
@@ -64,7 +64,7 @@ const dataSource = resolveDataSource(
     : undefined,
 );
 
-/** 앱이 사용하는 수요 서비스. api 모드에서는 동네·업종 목록과 주민 조회만 실제 서버이고 나머지 메서드는 목이다. */
+/** 앱이 사용하는 수요 서비스. api 모드에서는 모든 메서드가 서버(동네·업종 목록, 주민 조회, 지도 마커, 기본 업종)다. */
 export const demandService: DemandService =
   dataSource === 'api' ? createApiDemandService(mockDemandService) : mockDemandService;
 
@@ -139,5 +139,7 @@ export { isApiError } from './api/apiError';
 export {
   DEMO_WRITE_BLOCKED_MESSAGE,
   ERROR_MESSAGES_BY_CODE,
+  VALIDATION_MESSAGES_BY_CONTEXT,
   describeApiError,
 } from './api/errorMessages';
+export type { ErrorContext } from './api/errorMessages';

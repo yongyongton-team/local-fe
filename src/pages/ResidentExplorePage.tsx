@@ -19,7 +19,7 @@ import { StoreRequestCard } from '@/features/resident-map/StoreRequestCard';
 import { useResidentExplore } from '@/features/resident-map/useResidentExplore';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
-import { demandService } from '@/services';
+import { demandService, requestSubmitter } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
 import { LogoLink } from '@/shared/ui/LogoLink';
@@ -28,6 +28,7 @@ import { LinkButton } from '@/shared/ui/Button';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
 import { ChevronDownIcon, SearchIcon } from '@/shared/ui/icons';
+import { MAP_COPY } from '@/shared/ui/copy';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
@@ -145,7 +146,8 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
       <div className={styles.mapBleed}>
         <NaverMap
           markers={visibleMarkers}
-          label="동네 지도(예시)"
+          label={MAP_COPY.regionLabel('동네 지도', requestSubmitter.remote)}
+          remote={requestSubmitter.remote}
           summary={summary}
           onStoreClick={handleStoreClick}
           onMapClick={handleMapClick}

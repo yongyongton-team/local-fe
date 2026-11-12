@@ -92,7 +92,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
       setSent(result);
     } catch (e) {
       // 서버 message 는 쓰지 않는다. 오류 종류·코드로 정한 문구만 보여준다.
-      setError(describeApiError(e));
+      setError(describeApiError(e, 'offer'));
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

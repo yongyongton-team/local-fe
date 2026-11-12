@@ -15,6 +15,7 @@ import { founderService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ListRowLink } from '@/shared/ui/ListRowLink';
+import { MAP_COPY } from '@/shared/ui/copy';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { SelectBox } from '@/shared/ui/SelectBox';
@@ -139,7 +140,8 @@ function Explorer({
           {/* 업종에 따라 마커 집합이 달라지므로 바뀔 때마다 마커 전체가 보이게 다시 맞춘다. */}
           <NaverMap
             refitOnChange
-            label="입지 후보 지도(예시)"
+            label={MAP_COPY.regionLabel('입지 후보 지도', founderService.remote)}
+            remote={founderService.remote}
             markers={markers}
             summary={
               ranks.status === 'success' && category

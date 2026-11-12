@@ -14,12 +14,13 @@ import {
 import { NoShopNotice } from '@/features/merchant-explore/NoShopNotice';
 import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { Link } from 'react-router';
-import { isNoShopError } from '@/services';
+import { isNoShopError, merchantService } from '@/services';
 import { paths } from '@/shared/lib/paths';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ChipGroup } from '@/shared/ui/ChipGroup';
 import { IconButton } from '@/shared/ui/IconButton';
 import { SearchIcon } from '@/shared/ui/icons';
+import { MAP_COPY } from '@/shared/ui/copy';
 import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Text } from '@/shared/ui/Text';
@@ -71,7 +72,8 @@ export function MerchantExplorePage() {
 
       <div className={styles.mapBleed}>
         <NaverMap
-          label="수요 지도(예시)"
+          label={MAP_COPY.regionLabel('수요 지도', merchantService.remote)}
+          remote={merchantService.remote}
           markers={map.status === 'success' ? map.data.markers : []}
           origin={
             map.status === 'success' ? { ...map.data.origin, radiusKm: option.km } : undefined
