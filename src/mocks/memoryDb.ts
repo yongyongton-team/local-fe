@@ -1,5 +1,6 @@
-import type { DemandSummary, MeShop } from '@/types/domain';
+import type { DemandSummary, MeShop, OwnerOffer } from '@/types/domain';
 import { mockDemandSummaries, mockSeedRequests, type MockStoredRequest } from './demand';
+import { mockSeedOffers } from './offers';
 
 /*
  * 목 서비스가 함께 쓰는 메모리 DB. 새로고침하면 시드 상태로 돌아간다. 서버에는 아무것도 보내지 않는다.
@@ -14,6 +15,9 @@ interface MemoryDb {
   nextRequestNumber: number;
   /** 내 가게(GET /me 의 shop 에 해당). 등록하기 전에는 null. 내 가게 화면이 저장하면 채워진다. */
   shop: MeShop | null;
+  /** 사장님이 보낸 제안. 배열 앞이 가장 최근이다. */
+  offers: OwnerOffer[];
+  nextOfferNumber: number;
 }
 
 function createInitialDb(): MemoryDb {
@@ -25,6 +29,8 @@ function createInitialDb(): MemoryDb {
     })),
     nextRequestNumber: 1,
     shop: null,
+    offers: mockSeedOffers.map((offer) => ({ ...offer })),
+    nextOfferNumber: 1,
   };
 }
 

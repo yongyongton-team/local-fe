@@ -5,8 +5,6 @@ import { REQUEST_GOAL_COUNT } from './constants';
 export interface Progress {
   /** 막대 채움 비율(0~1). 기준 인원을 넘어도 1 이다. */
   ratio: number;
-  /** 기준 인원에 도달했는지. true 이면 "결정 필요"를 표시한다. (임시 규칙) */
-  reached: boolean;
   /** progressbar 의 aria-valuenow. min~max 범위 안으로 맞춘 값 */
   valueNow: number;
   /** 사람이 읽는 값. 예: 12명이 모였어요 (기준 30명) */
@@ -20,7 +18,6 @@ export function getProgress(count: number, goal: number = REQUEST_GOAL_COUNT): P
   const safeCount = Math.max(0, count);
   return {
     ratio: goal > 0 ? Math.min(1, safeCount / goal) : 1,
-    reached: safeCount >= goal,
     valueNow: Math.min(goal, safeCount),
     valueText: `${safeCount}명이 모였어요 (기준 ${goal}명)`,
     label: `${safeCount}명이 모였어요!`,

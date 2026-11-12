@@ -166,6 +166,8 @@ export interface MerchantProfile {
   categoryName: string;
   /** 예: 기흥구 */
   district: string;
+  /** 가게가 있는 동네 id. 서버가 주지 않으면 없다(제안 화면은 이때 동네를 알 수 없다). */
+  dongId?: string;
 }
 
 /** 사장님 탐색 화면의 동네 한 줄: 내 업종을 원하는 동네의 요청 현황. 개인 정보와 원문 문장은 담지 않는다. */
@@ -319,4 +321,46 @@ export interface MeShop {
 /** 서버 상태 확인 결과(GET /health). 값은 서버가 준 문자열만 담는다. */
 export interface Health {
   details: Record<string, string>;
+}
+
+/** 제안 상태. 서버 명세 기준이며 모르는 값은 상태 없음으로 다룬다. */
+export type OfferStatus = 'OPEN' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED' | 'DONE';
+
+/**
+ * 사장님이 보낸 방문 판매 제안(GET /owner/offers 의 한 항목).
+ * price·pickupAt 은 서버가 아직 주지 않을 수 있어 선택이다. 없으면 화면은 그 행만 그리지 않는다.
+ */
+export interface OwnerOffer {
+  id: string;
+  title: string;
+  /** 모르는 상태이면 없다 */
+  status?: OfferStatus;
+  price?: number;
+  /** 받는 날(수령 시각). 없거나 해석하지 못하면 없다 */
+  pickupAt?: Date;
+  /** 주문 마감. 없거나 해석하지 못하면 없다 */
+  deadlineAt?: Date;
+  /** 예약한 주민 수 */
+  orderCount: number;
+  /** 확정에 필요한 최소 주문 수 */
+  minOrders: number;
+}
+
+/** 보낼 제안(POST /offers). 동네·업종은 호출하는 쪽이 정한다. 날짜는 시각이 있는 Date 다. */
+export interface NewOffer {
+  neighborhoodId: string;
+  categoryId: string;
+  title: string;
+  /** 비면 없다 */
+  description?: string;
+  price: number;
+  minOrders: number;
+  pickupAt: Date;
+  pickupPlace: string;
+  deadlineAt: Date;
+}
+
+/** 제안을 보낸 결과. 알림을 받은 주민 수는 서버가 준 값이 올바를 때만 있다. */
+export interface OfferSent {
+  notifiedResidentCount?: number;
 }

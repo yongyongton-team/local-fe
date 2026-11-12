@@ -9,21 +9,19 @@ import {
 } from './requestProgress';
 
 describe('getProgress', () => {
-  it('기준 인원(30)보다 적으면 막대 비율을 계산하고 결정 필요가 아니다', () => {
+  it('기준 인원(30)보다 적으면 막대 비율을 계산한다', () => {
     const progress = getProgress(12);
 
     expect(progress.ratio).toBeCloseTo(0.4);
-    expect(progress.reached).toBe(false);
     expect(progress.valueNow).toBe(12);
     expect(progress.label).toBe('12명이 모였어요!');
     expect(progress.valueText).toBe('12명이 모였어요 (기준 30명)');
   });
 
-  it('기준 인원에 도달하면 결정 필요이고 막대가 가득 찬다', () => {
+  it('기준 인원에 도달하면 막대가 가득 찬다', () => {
     const progress = getProgress(30);
 
     expect(progress.ratio).toBe(1);
-    expect(progress.reached).toBe(true);
     expect(progress.label).toBe('30명이 모였어요!');
   });
 
@@ -31,14 +29,13 @@ describe('getProgress', () => {
     const progress = getProgress(45);
 
     expect(progress.ratio).toBe(1);
-    expect(progress.reached).toBe(true);
     expect(progress.valueNow).toBe(30);
     // 실제 인원은 문구에 그대로 보여준다.
     expect(progress.label).toBe('45명이 모였어요!');
   });
 
   it('음수 인원은 0 으로 본다', () => {
-    expect(getProgress(-3)).toMatchObject({ ratio: 0, valueNow: 0, reached: false });
+    expect(getProgress(-3)).toMatchObject({ ratio: 0, valueNow: 0 });
   });
 
   it('기준 인원을 바꿔 계산할 수 있다', () => {

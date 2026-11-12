@@ -1,0 +1,31 @@
+/*
+ * 요약 카드 (Figma 45:601, 362×84). 내 요청 요약 카드와 같은 옅은 라임 바탕이다.
+ * 바탕 색은 --color-ai-card / --color-ai-card-glow 를 그대로 쓴다.
+ */
+.card {
+  padding: var(--space-3) var(--space-5) var(--space-3);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+  color: var(--color-text-primary);
+}
+
+/* [시안] "구성동 · 과일·채소 가게": SemiBold 18px */
+.title {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-title);
+}
+
+/* [시안] 요청 수와 조건: Regular 14px */
+.line {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-primary);
+}

@@ -14,7 +14,10 @@ import type {
   MerchantResponse,
   Neighborhood,
   NeighborhoodReport,
+  NewOffer,
   NewStoreRequest,
+  OfferSent,
+  OwnerOffer,
   PublicData,
   StoreCategory,
   StoreRequest,
@@ -30,6 +33,8 @@ import { ApiError } from './apiError';
 import { labelsFor } from './categoryLabels';
 import type {
   CategoryDto,
+  CreateOfferBody,
+  CreateOfferResponseDto,
   CreateRequestBody,
   CreateResponseDto,
   DongDto,
@@ -42,13 +47,15 @@ import type {
   MyRequestDto,
   OfferDto,
   OwnerDemandDto,
+  OwnerOfferDto,
   OwnerDetailDto,
   ParseResponseDto,
   ShopViewDto,
 } from './dto';
 import { isNoStoreGap } from './gapStatus';
 import { toDomainId, toServerId } from './ids';
-import { isShownOfferStatus } from './offerStatus';
+import { toKstIso } from '@/shared/lib/kstDate';
+import { isShownOfferStatus, toOfferStatus } from './offerStatus';
 import {
   CONDITION_LABELS_BY_CODE,
   FREQUENCY_CODES,
@@ -679,6 +686,7 @@ export function mapMerchantProfile(
     categoryId: toDomainId(shop.categoryId),
     categoryName: shop.categoryName,
     district: dong?.district ?? '',
+    ...(shop.dongId !== undefined && { dongId: String(shop.dongId) }),
   };
 }
 
@@ -871,4 +879,69 @@ export function mapOwnerDetail(
     visitTimes,
     ...(summary !== '' && { summary: { text: summary, ...(by !== '' && { by }) } }),
   };
+}
+
+/**
+ * GET /owner/offers 응답 → 도메인 OwnerOffer[]. 서버 순서를 그대로 쓴다.
+ * - 응답은 배열이거나 {items|offers} 배열을 가진 객체다(실서버 모양은 명세에 없어 둘 다 받는다). 그 밖이면 parse 오류.
+ * - 항목의 id 가 양의 정수가 아니면 그 항목은 건너뛴다(화면이 키로 쓴다). 제목이 비면 빈 제목으로 둔다.
+ * - orderCount·minOrders 가 숫자가 아니면 0 이다(진행 막대가 비어 보인다). 상태가 모르는 값이면 상태가 없다.
+ * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 서버가 아직 주지 않을 수 있어 올바르지 않으면 비운다.
+ */
+export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
+  const list = Array.isArray(dto)
+    ? dto
+    : isObject(dto) && Array.isArray(dto.items)
+      ? dto.items
+      : isObject(dto) && Array.isArray(dto.offers)
+        ? dto.offers
+        : null;
+  if (list === null) throw parseError('GET /owner/offers 응답이 목록이 아니에요.');
+  return list.flatMap((raw): OwnerOffer[] => {
+    const item: OwnerOfferDto = isObject(raw) ? raw : {};
+    const id = safeDomainId(item.id);
+    if (id === undefined) return [];
+    const price = asNumber(item.price);
+    const pickupAt = parseIsoDate(item.pickupAt);
+    const deadlineAt = parseIsoDate(item.deadlineAt);
+    const status = toOfferStatus(item.status);
+    const count = (value: unknown) => {
+      const n = asNumber(value);
+      return n !== undefined && n >= 0 ? n : 0;
+    };
+    return [
+      {
+        id,
+        title: asString(item.title).trim(),
+        ...(status !== null && { status }),
+        ...(price !== undefined && price >= 0 && { price }),
+        ...(pickupAt !== undefined && { pickupAt }),
+        ...(deadlineAt !== undefined && { deadlineAt }),
+        orderCount: count(item.orderCount),
+        minOrders: count(item.minOrders),
+      },
+    ];
+  });
+}
+
+/** 제안 보내기 본문. 설명이 비면 보내지 않고, 날짜는 +09:00 오프셋 ISO 8601 이다. 동네·업종 id 가 숫자가 아니면 던진다. */
+export function buildCreateOfferBody(input: NewOffer): CreateOfferBody {
+  const description = input.description?.trim() ?? '';
+  return {
+    dongId: toServerId(input.neighborhoodId),
+    categoryId: toServerId(input.categoryId),
+    title: input.title.trim(),
+    ...(description !== '' && { description }),
+    price: input.price,
+    minOrders: input.minOrders,
+    pickupAt: toKstIso(input.pickupAt),
+    pickupPlace: input.pickupPlace.trim(),
+    deadlineAt: toKstIso(input.deadlineAt),
+  };
+}
+
+/** POST /offers 응답 → 결과. notifiedResidentCount 가 0 이상의 정수일 때만 쓴다(아니면 없음). */
+export function mapCreateOfferResponse(dto: CreateOfferResponseDto | undefined): OfferSent {
+  const n = isObject(dto) ? dto.notifiedResidentCount : undefined;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? { notifiedResidentCount: n } : {};
 }

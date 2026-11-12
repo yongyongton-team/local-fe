@@ -53,13 +53,12 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
     expect(screen.queryByRole('button', { name: '뒤로 가기' })).not.toBeInTheDocument();
   });
 
-  it('요약 카드: 반찬 12명, 막대 12/30, 결정 필요는 없다', async () => {
+  it('요약 카드: 반찬 12명, 막대 12/30', async () => {
     await openMyRequests();
 
     const card = within(summaryCard());
     expect(card.getByText(SIDE_DISH_SUMMARY)).toBeInTheDocument();
     expect(card.getByText('12명이 모였어요!')).toBeInTheDocument();
-    expect(card.queryByText('결정 필요')).not.toBeInTheDocument();
     expect(card.getByText('30명이 모이면 근처 가게에 알려요')).toBeInTheDocument();
 
     const bar = card.getByRole('progressbar', { name: '12명이 모였어요!' });
@@ -113,14 +112,15 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
 });
 
 describe('과일/채소 요청을 보낸 뒤', () => {
-  it('요약 카드가 30명·막대 가득·결정 필요가 되고, 그 카드는 사장님 응답이 없다', async () => {
+  it('요약 카드가 30명·막대 가득이 되고, 그 카드는 사장님 응답이 없다', async () => {
     await requestSubmitter.submit(fruitRequest());
     await openMyRequests();
 
     const card = within(summaryCard());
     expect(card.getByText(FRUIT_SUMMARY)).toBeInTheDocument();
     expect(card.getByText('30명이 모였어요!')).toBeInTheDocument();
-    expect(card.getByText('결정 필요')).toBeInTheDocument();
+    // 시안의 "결정 필요" 알약은 디자이너 주석이라 그리지 않는다.
+    expect(card.queryByText('결정 필요')).not.toBeInTheDocument();
     expect(card.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30');
 
     const [fruit, sideDish] = cards();

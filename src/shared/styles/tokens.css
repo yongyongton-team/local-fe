@@ -42,7 +42,7 @@
   --font-family-base:
     'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
     'Malgun Gothic', system-ui, sans-serif; /* [DS] Pretendard + [임시] 한글 시스템 폰트 폴백 */
-  --font-weight-regular: 400; /* [화면] 작은 알약 글자(결정 필요) */
+  --font-weight-regular: 400; /* [화면] 본문·작은 글자 */
   --font-weight-medium: 500; /* [DS] Contents·Caption */
   --font-weight-semibold: 600; /* [화면] DS 밖 개별 화면(첫 화면 제목·역할 카드) */
   --font-weight-bold: 700; /* [DS] Title */
@@ -169,9 +169,8 @@
   --color-progress-track: var(--color-surface);
   /* [화면] 요청 카드 윤곽선 */
   --color-border-card: #999999;
-  /* [화면] "결정 필요" 알약. 글자는 Figma 변수 Accents/Red, 배경은 rgba(255,0,0,0.12) */
-  --color-decision-text: #ff383c;
-  --color-decision-bg: rgb(255 0 0 / 12%);
+  /* [화면] 오류 표시용 빨강. Figma 변수 Accents/Red (제안 작성 오류 문구·테두리) */
+  --color-accent-red: #ff383c;
 
   /* [화면] 요청 카드 왼쪽 체크 표시의 중심: 카드 왼쪽 가장자리에서 14px */
   --request-check-x: 14px;
@@ -316,15 +315,6 @@
   --detail-summary-pad-x: 14px;
   --detail-summary-pad-top: 3px;
   --line-height-summary-text: 17px;
-  /* [화면] 결정 필요 영역: 윤곽은 순수 빨강 점선 1px */
-  --color-callout-border: #ff0000;
-  --callout-pad-top: 10px;
-  --callout-pad: 11px;
-  --callout-gap: 7px;
-  --callout-pill-pad-y: 6px;
-  --callout-pill-pad-x: 17px;
-  /* [임시] 안전 영역이 없는 화면에서 결정 필요 영역 아래 최소 간격(Figma 는 홈 인디케이터 영역 34px) */
-  --detail-bottom-gap-min: 16px;
 
   /* 입지 찾기 화면(/founder) 전용 */
   /* [화면] 업종 선택 상자: 높이 54px, 글자는 상자 안쪽 24px(테두리 1px 포함), chevron 은 오른쪽에서 23px */
@@ -356,4 +346,31 @@
   --report-gap-sources: 12px;
   /* [임시] 공유 버튼 아래 간격(안전 영역에 더한다). Figma 는 홈 인디케이터 영역 34px + 11px */
   --report-bottom-gap: 11px;
+  /* 사장님 제안 화면(/merchant/offers, /merchant/offers/new) 전용 (Figma 45:584, 45:542) */
+  /* [화면] 제안 카드 글자는 화면 여백(20px)보다 15px 안쪽(x=35)에서 시작하고 막대도 같은 폭이다 */
+  --offer-card-inset-x: 15px;
+  --font-size-offer-title: 15px;
+  --line-height-offer-title: 18px;
+  /* [화면] 상태 배지: 12px Bold, 안쪽 여백 3px 10px */
+  --offer-badge-pad-y: 3px;
+  --offer-badge-pad-x: 10px;
+  --line-height-offer-badge: 14px;
+  /* [화면] 행: 라벨 13px(칸 폭 68px) + 값 14px Bold, 행 간격 25px 안팎 */
+  --font-size-offer-label: 13px;
+  --offer-label-width: 68px;
+  --offer-row-gap: 7px;
+  /* [화면] 진행 막대 높이 8px */
+  --offer-progress-height: 8px;
+  --offer-progress-radius: 4px;
+  /* [임시] 제안 카드 사이 간격(시안에는 카드가 하나다) */
+  --offer-card-gap: var(--space-5);
+  /* [화면] 요약 카드 아래 첫 요소까지(제안 카드 32px) */
+  --offer-section-gap: var(--space-6);
+  /* [화면] 작성 입력: 높이 50px, 글자는 안쪽 29px, 라벨→상자 4px, 상자→다음 라벨 6px */
+  --offer-field-height: 50px;
+  --offer-field-pad-left: 29px;
+  --offer-label-gap: 4px;
+  --offer-field-gap: 6px;
+  /* [화면] 가격·최소 주문은 한 줄에 둘이 놓이고 사이는 16px */
+  --offer-pair-gap: var(--space-4);
 }

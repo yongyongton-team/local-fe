@@ -36,28 +36,6 @@
   margin-top: var(--space-4);
 }
 
-.status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* 결정 필요: 분홍 배경 + 빨간 글자 (Figma Accents/Red) */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  min-height: var(--chip-height);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-pill);
-  background: var(--color-decision-bg);
-  color: var(--color-decision-text);
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-chip);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-chip);
-}
-
 .count {
   font: var(--font-caption);
   color: var(--color-text-primary);

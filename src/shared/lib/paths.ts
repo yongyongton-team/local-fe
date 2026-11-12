@@ -12,6 +12,15 @@ export const paths = {
   residentRequests: '/resident/requests',
   merchant: '/merchant',
   merchantArea: (areaId: string) => `/merchant/areas/${encodeURIComponent(areaId)}`,
+  /**
+   * 내 가게(제안 목록). areaId 가 있으면 ?area= 로 요약 카드의 동네를 정한다(없으면 가게가 있는 동네).
+   * 내 정보의 "내 가게"(/me/shop, 가게 등록·수정)와 다른 화면이다.
+   */
+  merchantOffers: (areaId?: string) =>
+    `/merchant/offers${areaId ? `?area=${encodeURIComponent(areaId)}` : ''}`,
+  /** 방문 판매 제안 작성. areaId 가 있으면 ?area= 의 동네에 제안한다(없으면 가게가 있는 동네). */
+  merchantOfferNew: (areaId?: string) =>
+    `/merchant/offers/new${areaId ? `?area=${encodeURIComponent(areaId)}` : ''}`,
   founder: '/founder',
   /** 입지 찾기. categoryId 가 있으면 ?category= 로 선택한 업종을 유지한다. */
   founderExplore: (categoryId?: string) =>

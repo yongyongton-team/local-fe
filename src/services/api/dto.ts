@@ -269,3 +269,36 @@ export interface OwnerDetailDto {
   >;
   summary?: Nullable<{ text?: Nullable<string>; by?: Nullable<string> }>;
 }
+
+/**
+ * GET /owner/offers 의 제안 한 항목. 명세의 OwnerOfferItem 에는 price·pickupAt 이 없어 선택으로 두었다(백엔드에 추가 요청 예정).
+ * 응답이 배열인지 {items|offers} 객체인지는 실서버에서 확인해야 한다(mapOwnerOffers 는 둘 다 받는다).
+ */
+export interface OwnerOfferDto {
+  id?: Nullable<number>;
+  title?: Nullable<string>;
+  status?: Nullable<string>;
+  price?: Nullable<number>;
+  pickupAt?: Nullable<string>;
+  deadlineAt?: Nullable<string>;
+  minOrders?: Nullable<number>;
+  orderCount?: Nullable<number>;
+}
+
+/** POST /offers 본문(CreateOfferRequest). 날짜는 +09:00 오프셋이 붙은 ISO 8601 문자열이다. */
+export interface CreateOfferBody {
+  dongId: number;
+  categoryId: number;
+  title: string;
+  description?: string;
+  price: number;
+  minOrders: number;
+  pickupAt: string;
+  pickupPlace: string;
+  deadlineAt: string;
+}
+
+/** POST /offers 응답. notifiedResidentCount 만 쓴다. */
+export interface CreateOfferResponseDto {
+  notifiedResidentCount?: Nullable<number>;
+}
