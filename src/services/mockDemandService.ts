@@ -1,11 +1,18 @@
 import {
   mockCategories,
+  mockMapGapCategoryIds,
   mockMarkerPlacements,
   mockNeighborhoodCenters,
   mockNeighborhoods,
 } from '@/mocks/demand';
 import { getDb } from '@/mocks/memoryDb';
-import type { MapMarker, MapPosition, NeighborhoodReport } from '@/types/domain';
+import type {
+  MapMarker,
+  MapOverview,
+  MapPosition,
+  NeighborhoodReport,
+  RequestedStore,
+} from '@/types/domain';
 import { DEFAULT_CATEGORY_ID, type DemandService } from './demandService';
 import { spreadAroundCenter } from './mapCoordinates';
 
@@ -71,6 +78,32 @@ function buildMarker(
   };
 }
 
+function buildMarkers(neighborhoodId: string): MapMarker[] {
+  return mockMarkerPlacements
+    .map((placement, index) => ({ placement, index }))
+    .filter(({ placement }) => placement.neighborhoodId === neighborhoodId)
+    .map(({ placement, index }) => buildMarker(placement, index))
+    .filter((marker): marker is MapMarker => marker !== null);
+}
+
+/**
+ * "주민이 요청한 가게": 메모리 DB 의 수요 데이터에서 요청이 있는 업종 중 목 지도 응답의 gaps(mockMapGapCategoryIds)와
+ * 겹치지 않는 것, 요청 많은 순. 인원은 수요 데이터 값 그대로다.
+ */
+function buildRequestedStores(neighborhoodId: string): RequestedStore[] {
+  const gaps = mockMapGapCategoryIds[neighborhoodId] ?? [];
+  return mockCategories
+    .flatMap((category): RequestedStore[] => {
+      const demand = getDb().summaries.find(
+        (d) => d.neighborhoodId === neighborhoodId && d.categoryId === category.id,
+      );
+      return demand && demand.requestCount > 0 && !gaps.includes(category.id)
+        ? [{ category, requestCount: demand.requestCount }]
+        : [];
+    })
+    .sort((a, b) => b.requestCount - a.requestCount);
+}
+
 /** 네트워크 없이 목 데이터를 비동기로 돌려주는 구현. */
 export const mockDemandService: DemandService = {
   async listNeighborhoods() {
@@ -92,10 +125,13 @@ export const mockDemandService: DemandService = {
   },
 
   async listMapMarkers(neighborhoodId) {
-    return mockMarkerPlacements
-      .map((placement, index) => ({ placement, index }))
-      .filter(({ placement }) => placement.neighborhoodId === neighborhoodId)
-      .map(({ placement, index }) => buildMarker(placement, index))
-      .filter((marker): marker is MapMarker => marker !== null);
+    return buildMarkers(neighborhoodId);
+  },
+
+  async getMapOverview(neighborhoodId): Promise<MapOverview> {
+    return {
+      markers: buildMarkers(neighborhoodId),
+      requestedStores: buildRequestedStores(neighborhoodId),
+    };
   },
 };

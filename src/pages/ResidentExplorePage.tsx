@@ -12,11 +12,17 @@ import { QuickRequestDialog } from '@/features/resident-map/QuickRequestDialog';
 import {
   applyOverridesToMarkers,
   applyOverridesToReports,
+  applyOverridesToRequestedStores,
   type RequestOverrides,
 } from '@/features/resident-map/quickRequestOverrides';
 import { StoreInfoCard } from '@/features/resident-map/StoreInfoCard';
 import { StoreRequestCard } from '@/features/resident-map/StoreRequestCard';
-import { useResidentExplore } from '@/features/resident-map/useResidentExplore';
+import { REQUESTED_STORES_COPY } from '@/features/resident-map/copy';
+import {
+  requestedKey,
+  useMyRequestedKeys,
+  useResidentExplore,
+} from '@/features/resident-map/useResidentExplore';
 import { NeighborhoodNotice } from '@/features/selection/NeighborhoodNotice';
 import { useSelection } from '@/features/selection/SelectionContext';
 import { demandService, requestSubmitter } from '@/services';
@@ -33,7 +39,13 @@ import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
 import { Text } from '@/shared/ui/Text';
-import type { MapMarker, Neighborhood, NeighborhoodReport } from '@/types/domain';
+import type {
+  MapMarker,
+  Neighborhood,
+  NeighborhoodReport,
+  RequestedStore,
+  StoreCategory,
+} from '@/types/domain';
 import styles from './ResidentExplorePage.module.css';
 
 /**
@@ -67,13 +79,15 @@ const loadCategories = () => demandService.listCategories();
 
 function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
   const [filter, setFilter] = useState<MapFilter>('all');
-  const { reports: loadedReports, markers } = useResidentExplore(neighborhood.id);
+  const { reports: loadedReports, markers, requestedStores } = useResidentExplore(neighborhood.id);
+  // 내가 이미 요청한 (동네, 업종). "주민이 요청한 가게"의 ✓ 에만 쓴다. 실패해도 목록은 그대로다.
+  const myRequestedKeys = useMyRequestedKeys();
   // 업종 이름(가게 정보 카드용). 이미 받아 둔 업종 목록을 쓰므로 추가 요청은 없다.
   const categories = useAsyncData(loadCategories);
 
   // 이 화면에서 보낸 간편 요청: 서버를 다시 읽지 않고 카드의 인원·아이콘과 지도의 "요청 N" 알약만 고친다.
   const [overrides, setOverrides] = useState<RequestOverrides>({});
-  const [quickTarget, setQuickTarget] = useState<NeighborhoodReport | null>(null);
+  const [quickTarget, setQuickTarget] = useState<StoreCategory | null>(null);
   // 지도에서 고른 가게 핀. 한 번에 하나만 보인다.
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
@@ -169,10 +183,21 @@ function ExploreScreen({ neighborhood }: { neighborhood: Neighborhood }) {
         <StoreCards state={reports} onRequest={setQuickTarget} />
       </section>
 
+      {/* 요청은 있지만 "없는 가게"에는 없는 업종. 하나도 없으면(불러오는 중·실패 포함) 섹션 전체를 숨긴다. */}
+      {requestedStores.status === 'success' && requestedStores.data.length > 0 && (
+        <RequestedStoresSection
+          neighborhoodId={neighborhood.id}
+          stores={[...applyOverridesToRequestedStores(requestedStores.data, overrides)]}
+          myRequestedKeys={myRequestedKeys}
+          sentCategoryIds={overrides}
+          onRequest={setQuickTarget}
+        />
+      )}
+
       {quickTarget && (
         <QuickRequestDialog
           neighborhood={neighborhood}
-          report={quickTarget}
+          category={quickTarget}
           onClose={() => setQuickTarget(null)}
           onSent={(categoryId, added) =>
             setOverrides((previous) => ({
@@ -199,7 +224,7 @@ function StoreCards({
   onRequest,
 }: {
   state: AsyncState<NeighborhoodReport[]>;
-  onRequest: (report: NeighborhoodReport) => void;
+  onRequest: (category: StoreCategory) => void;
 }) {
   if (state.status === 'loading') return <p role="status">불러오는 중이에요.</p>;
   if (state.status === 'error') {
@@ -214,9 +239,57 @@ function StoreCards({
     <ol className={styles.cardList}>
       {cards.map((report) => (
         <li key={report.category.id}>
-          <StoreRequestCard report={report} onRequest={onRequest} />
+          <StoreRequestCard
+            category={report.category}
+            requestCount={report.demand.requestCount}
+            nearestHypermarketKm={report.demand.nearestHypermarketKm}
+            requestedByMe={report.demand.requestedByMe === true}
+            onRequest={onRequest}
+          />
         </li>
       ))}
     </ol>
+  );
+}
+
+/**
+ * "주민이 요청한 가게": 요청 많은 순. 이 화면에서 보내면 "없는 가게" 카드와 같은 방식(overrides)으로 인원이 +1 이고(409 면 그대로), 지도를 다시 부르지 않는다.
+ * ✓ 는 GET /me/requests 에 같은 동네·업종이 있거나, 이 화면에서 방금 보냈거나 이미 요청해 둔 것(409)일 때다.
+ */
+function RequestedStoresSection({
+  neighborhoodId,
+  stores,
+  myRequestedKeys,
+  sentCategoryIds,
+  onRequest,
+}: {
+  neighborhoodId: string;
+  stores: readonly RequestedStore[];
+  myRequestedKeys: ReadonlySet<string>;
+  sentCategoryIds: RequestOverrides;
+  onRequest: (category: StoreCategory) => void;
+}) {
+  return (
+    <section aria-labelledby="requested-stores" className={styles.listSection}>
+      <Text as="h2" variant="contents" id="requested-stores">
+        {REQUESTED_STORES_COPY.title}
+      </Text>
+      <Text variant="caption">{REQUESTED_STORES_COPY.description}</Text>
+      <ol className={styles.cardList}>
+        {stores.map(({ category, requestCount }) => (
+          <li key={category.id}>
+            <StoreRequestCard
+              category={category}
+              requestCount={requestCount}
+              requestedByMe={
+                myRequestedKeys.has(requestedKey(neighborhoodId, category.id)) ||
+                sentCategoryIds[category.id] !== undefined
+              }
+              onRequest={onRequest}
+            />
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

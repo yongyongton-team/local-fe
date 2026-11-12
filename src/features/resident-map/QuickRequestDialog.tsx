@@ -16,14 +16,14 @@ import { Button } from '@/shared/ui/Button';
 import { CloseIcon } from '@/shared/ui/icons';
 import { IconButton } from '@/shared/ui/IconButton';
 import { Modal } from '@/shared/ui/Modal';
-import type { Neighborhood, NeighborhoodReport, VisitFrequency, VisitTime } from '@/types/domain';
+import type { Neighborhood, StoreCategory, VisitFrequency, VisitTime } from '@/types/domain';
 import { QUICK_REQUEST_COPY } from './copy';
 import styles from './QuickRequestDialog.module.css';
 
 interface QuickRequestDialogProps {
   neighborhood: Neighborhood;
-  /** 요청할 카드. 업종은 카드의 업종이다. */
-  report: NeighborhoodReport;
+  /** 요청할 업종(카드의 업종). "없는 가게" 카드와 "주민이 요청한 가게" 카드가 함께 쓴다. */
+  category: StoreCategory;
   onClose: () => void;
   /**
    * 요청이 서버(목)에 반영됐을 때. added 가 true 면 인원이 늘었고, false 면 이미 요청해 둔 것(ALREADY_REQUESTED)이다.
@@ -44,11 +44,10 @@ type Outcome = { kind: 'goal'; notifiedOwnerCount?: number } | { kind: 'already'
  */
 export function QuickRequestDialog({
   neighborhood,
-  report,
+  category,
   onClose,
   onSent,
 }: QuickRequestDialogProps) {
-  const { category } = report;
   const [visitTimes, setVisitTimes] = useState<VisitTime[]>([]);
   const [visitFrequency, setVisitFrequency] = useState<VisitFrequency | null>(null);
   const [submitting, setSubmitting] = useState(false);

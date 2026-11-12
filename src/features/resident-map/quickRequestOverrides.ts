@@ -1,4 +1,4 @@
-import type { MapMarker, NeighborhoodReport } from '@/types/domain';
+import type { MapMarker, NeighborhoodReport, RequestedStore } from '@/types/domain';
 
 /**
  * 이 화면에서 보낸 간편 요청의 반영. 서버·메모리를 다시 읽지 않고 화면의 카드와 요청 알약을 바로 고친다.
@@ -30,6 +30,27 @@ export function applyOverridesToReports(
       },
     };
   });
+}
+
+/**
+ * "주민이 요청한 가게" 목록에 반영한다: 인원에 extra 를 더하고(없는 가게 카드와 같은 규칙) 요청 많은 순을 유지한다(같으면 원래 순서).
+ * ✓ 는 이 데이터가 아니라 화면이 overrides 에 그 업종이 있는지로 정한다. 반영할 것이 없으면 같은 배열을 돌려준다.
+ */
+export function applyOverridesToRequestedStores(
+  stores: readonly RequestedStore[],
+  overrides: RequestOverrides,
+): readonly RequestedStore[] {
+  if (Object.keys(overrides).length === 0) return stores;
+  return stores
+    .map((store, index) => {
+      const override = overrides[store.category.id];
+      return {
+        store: override ? { ...store, requestCount: store.requestCount + override.extra } : store,
+        index,
+      };
+    })
+    .sort((a, b) => b.store.requestCount - a.store.requestCount || a.index - b.index)
+    .map(({ store }) => store);
 }
 
 /**

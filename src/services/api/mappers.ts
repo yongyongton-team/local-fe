@@ -17,6 +17,7 @@ import type {
   NewOffer,
   NewStoreRequest,
   OfferSent,
+  RequestedStore,
   OwnerOffer,
   PublicData,
   StoreCategory,
@@ -370,6 +371,35 @@ export function mapMapMarkers(
     ...(offsets[index] && { offset: offsets[index] }),
   }));
   return [...pins, ...demandPills];
+}
+
+/**
+ * GET /dongs/{dongId}/map 응답 → "주민이 요청한 가게". requests 중 gaps 와 categoryId 가 겹치지 않는 항목만, 요청 수 많은 순이다
+ * (같으면 서버 순서). 업종 id 가 올바르지 않거나 인원이 0 이상의 숫자가 아닌 항목은 뺀다. 인원은 서버 값 그대로다.
+ * 업종은 업종 목록에서 찾고, 없으면 항목의 이름으로 대체한다. 응답이 객체가 아니면 parse 오류이고, requests 가 없으면 빈 배열이다.
+ */
+export function mapRequestedStores(
+  dto: DongMapDto | undefined,
+  categories: readonly StoreCategory[] = [],
+): RequestedStore[] {
+  if (!isObject(dto)) throw parseError('GET /dongs/{id}/map 응답이 비어 있어요.');
+  const gapIds = new Set(
+    (Array.isArray(dto.gaps) ? dto.gaps : []).flatMap((raw) => {
+      const id = isObject(raw) ? safeDomainId(raw.categoryId) : undefined;
+      return id === undefined ? [] : [id];
+    }),
+  );
+  return (Array.isArray(dto.requests) ? dto.requests : [])
+    .flatMap((raw) => {
+      const item = isObject(raw) ? raw : {};
+      const id = safeDomainId(item.categoryId);
+      const count = asNumber(item.count);
+      if (id === undefined || count === undefined || count < 0 || gapIds.has(id)) return [];
+      return [{ category: categoryOf(id, asString(item.name), categories), requestCount: count }];
+    })
+    .map((store, index) => ({ store, index }))
+    .sort((a, b) => b.store.requestCount - a.store.requestCount || a.index - b.index)
+    .map(({ store }) => store);
 }
 
 /** 서버 id 가 양의 정수면 문자열 id, 아니면 undefined(예외를 던지지 않는다). */

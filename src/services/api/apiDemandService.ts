@@ -1,10 +1,17 @@
-import type { StoreCategory } from '@/types/domain';
+import type { MapOverview, StoreCategory } from '@/types/domain';
 import type { DemandService } from '../demandService';
 import type { ApiClient } from './apiClient';
 import { getApiClient } from './defaultClient';
 import type { CategoryDto, DongDto, DongMapDto, GapDto } from './dto';
 import { toServerId } from './ids';
-import { mapCategories, mapDongs, mapGaps, mapMapMarkers, pickDefaultCategoryId } from './mappers';
+import {
+  mapCategories,
+  mapDongs,
+  mapGaps,
+  mapMapMarkers,
+  mapRequestedStores,
+  pickDefaultCategoryId,
+} from './mappers';
 import { ApiError } from './apiError';
 
 /**
@@ -43,6 +50,26 @@ export function createApiDemandService(
     return { categories: mapCategories(dtos), defaultCategoryId: pickDefaultCategoryId(dtos) };
   });
 
+  async function getMapOverview(
+    neighborhoodId: string,
+    signal?: AbortSignal,
+  ): Promise<MapOverview> {
+    const dongId = toServerId(neighborhoodId);
+    const request = getClient().request<DongMapDto>(`/dongs/${dongId}/map`, { signal });
+    // 알약·목록의 업종 문구용이다. 업종 목록을 못 불러와도 가게 핀과 알약(항목의 이름 사용)은 그린다.
+    const categories = loadCategories().then(
+      (loaded) => loaded.categories,
+      (): StoreCategory[] => [],
+    );
+    // 둘을 함께 기다린다: 한쪽을 기다리는 동안 다른 쪽이 취소(abort)로 거부돼도 처리되지 않은 거부로 남지 않는다.
+    const [dto, loaded] = await Promise.all([request, categories]);
+    // 같은 응답 한 번으로 마커와 "주민이 요청한 가게"를 만든다(요청을 한 번 더 보내지 않는다).
+    return {
+      markers: mapMapMarkers(dto, loaded),
+      requestedStores: mapRequestedStores(dto, loaded),
+    };
+  }
+
   return {
     ...base,
     listNeighborhoods: loadNeighborhoods,
@@ -73,17 +100,9 @@ export function createApiDemandService(
       };
       return mapGaps(gaps, { neighborhood, categories });
     },
+    getMapOverview,
     async listMapMarkers(neighborhoodId, signal) {
-      const dongId = toServerId(neighborhoodId);
-      const request = getClient().request<DongMapDto>(`/dongs/${dongId}/map`, { signal });
-      // 알약의 업종 문구용이다. 업종 목록을 못 불러와도 가게 핀과 알약(항목의 이름 사용)은 그린다.
-      const categories = loadCategories().then(
-        (loaded) => loaded.categories,
-        (): StoreCategory[] => [],
-      );
-      // 둘을 함께 기다린다: 한쪽을 기다리는 동안 다른 쪽이 취소(abort)로 거부돼도 처리되지 않은 거부로 남지 않는다.
-      const [dto, loaded] = await Promise.all([request, categories]);
-      return mapMapMarkers(dto, loaded);
+      return (await getMapOverview(neighborhoodId, signal)).markers;
     },
   };
 }
