@@ -1,4 +1,7 @@
 import { useId } from 'react';
+import { Link } from 'react-router';
+import { linkedOfferFor } from '@/features/resident-offers/offerView';
+import { paths } from '@/shared/lib/paths';
 import { CheckIcon } from '@/shared/ui/icons';
 import type { MyRequest } from '@/types/domain';
 import { buildMetaLine, formatMerchantResponse } from './requestProgress';
@@ -26,7 +29,9 @@ export function MyRequestCard({
 }: MyRequestCardProps) {
   const titleId = useId();
   const responseLabelId = useId();
-  const { request, neighborhood, category, requestCount, response } = item;
+  const { request, neighborhood, category, requestCount, response, offers } = item;
+  // 카드 문구와 같은 제안이 offers 에 있을 때만 상세로 이어진다(없으면 지금처럼 정적 문구, 깨진 링크를 만들지 않는다).
+  const linkedOffer = linkedOfferFor(response, offers);
 
   return (
     <article className={styles.card} aria-labelledby={titleId}>
@@ -58,13 +63,24 @@ export function MyRequestCard({
       </p>
 
       {response ? (
-        // 라벨과 메시지가 하나의 묶음으로 읽히도록 group 으로 묶는다.
-        <div role="group" aria-labelledby={responseLabelId} className={styles.response}>
-          <p id={responseLabelId} className={styles.responseLabel}>
-            사장님 응답
-          </p>
-          <p className={styles.responseMessage}>{formatMerchantResponse(response)}</p>
-        </div>
+        linkedOffer ? (
+          // 제안 상세로 가는 링크. 라벨과 메시지가 링크 이름 하나로 읽힌다.
+          <Link
+            to={paths.residentOffer(linkedOffer.id)}
+            className={`${styles.response} ${styles.responseLink}`}
+          >
+            <p className={styles.responseLabel}>사장님 응답</p>
+            <p className={styles.responseMessage}>{formatMerchantResponse(response)}</p>
+          </Link>
+        ) : (
+          // 라벨과 메시지가 하나의 묶음으로 읽히도록 group 으로 묶는다.
+          <div role="group" aria-labelledby={responseLabelId} className={styles.response}>
+            <p id={responseLabelId} className={styles.responseLabel}>
+              사장님 응답
+            </p>
+            <p className={styles.responseMessage}>{formatMerchantResponse(response)}</p>
+          </div>
+        )
       ) : (
         <p className={styles.noResponse}>아직 사장님 응답이 없어요</p>
       )}

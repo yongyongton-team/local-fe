@@ -7,7 +7,7 @@ import { isApiError } from './apiError';
 import { getApiClient } from './defaultClient';
 import type { CreateResponseDto, MyRequestDto, ParseResponseDto } from './dto';
 import { assertNotDemoSession } from './demoGuard';
-import { toServerId } from './ids';
+import { toServerId, tryToServerId } from './ids';
 import {
   buildCreateRequestBody,
   buildQuickRequestBody,
@@ -88,6 +88,16 @@ export function createApiRequestServices({
         (listNeighborhoods?.() ?? Promise.resolve([])).catch((): Neighborhood[] => []),
       ]);
       return mapMyRequests(dtos, categories, neighborhoods);
+    },
+    async getResidentOffer(offerId) {
+      // 라우트에서 온 값이라 숫자가 아닐 수 있다. 요청 없이 "찾을 수 없음"(null)으로 처리한다.
+      if (tryToServerId(offerId) === null) return null;
+      const items = await myRequestService.listMyRequests();
+      for (const item of items) {
+        const found = item.offers.find((offer) => offer.id === offerId);
+        if (found) return found;
+      }
+      return null;
     },
     async deleteRequest(requestId) {
       // 공유 데모 계정의 요청을 지우지 않는다. DELETE 는 이 한 곳에서만 부른다.

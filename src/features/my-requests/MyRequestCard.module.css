@@ -106,3 +106,15 @@
   font-weight: var(--font-weight-regular);
   color: var(--color-text-secondary);
 }
+
+/* 제안 상세로 이어지는 사장님 응답 박스: 모양은 그대로이고 링크 기본 모양만 지운다. */
+.responseLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.responseLink:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
