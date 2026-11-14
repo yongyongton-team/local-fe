@@ -47,7 +47,8 @@ describe('사장님 제안 목 서비스', () => {
   it('보낸 제안은 목록 맨 앞에 모집 중으로 들어가고 알림 인원은 그 동네·업종의 요청 인원이다', async () => {
     const result = await offerService.createOffer(input());
 
-    expect(result).toEqual({ notifiedResidentCount: 29 });
+    // 만든 제안의 id 와 알린 주민 수를 돌려준다(상세로 이동할 때 쓴다).
+    expect(result).toEqual({ offerId: 'offer-1', notifiedResidentCount: 29 });
     const offers = await offerService.listOwnerOffers();
     expect(offers.map((o) => o.title)).toEqual(['새 제안', '제철 과일 꾸러미', '주말 채소 박스']);
     expect(offers[0]).toMatchObject({ status: 'OPEN', price: 12000, minOrders: 5, orderCount: 0 });
@@ -56,7 +57,25 @@ describe('사장님 제안 목 서비스', () => {
   it('요청이 없는 동네·업종이면 알림 인원은 0 명이다', async () => {
     await expect(
       offerService.createOffer(input({ neighborhoodId: 'mabuk', categoryId: 'bakery' })),
-    ).resolves.toEqual({ notifiedResidentCount: 0 });
+    ).resolves.toEqual({ offerId: 'offer-1', notifiedResidentCount: 0 });
+  });
+
+  it('만든 제안은 그 id 로 다시 찾을 수 있고 설명이 있으면 같이 저장된다', async () => {
+    const { offerId } = await offerService.createOffer(input({ description: ' 새 설명 ' }));
+
+    const found = await offerService.getOwnerOffer(offerId!);
+
+    expect(found).toMatchObject({ id: offerId, title: '새 제안', description: '새 설명' });
+    // 설명이 없으면 description 필드가 없다.
+    const second = await offerService.createOffer(input());
+    expect(await offerService.getOwnerOffer(second.offerId!)).not.toHaveProperty('description');
+  });
+
+  it('제안을 연달아 보내면 id 가 서로 다르다', async () => {
+    const a = await offerService.createOffer(input());
+    const b = await offerService.createOffer(input());
+
+    expect(a.offerId).not.toBe(b.offerId);
   });
 
   it('돌려준 목록을 바꿔도 목 원본은 바뀌지 않는다', async () => {

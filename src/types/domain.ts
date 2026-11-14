@@ -388,6 +388,8 @@ export interface OwnerOffer {
   pickupAt?: Date;
   /** 받는 곳. 비어 있으면 없다 */
   pickupPlace?: string;
+  /** 제안 설명(서버 description). 비어 있으면 없다 */
+  description?: string;
   /** 제안한 동네 이름(서버 dong.name). 없으면 없다 */
   dongName?: string;
   /** 주문 마감. 없거나 해석하지 못하면 없다 */
@@ -414,6 +416,8 @@ export interface NewOffer {
 
 /** 제안을 보낸 결과. 알림을 받은 주민 수는 서버가 준 값이 올바를 때만 있다. */
 export interface OfferSent {
+  /** 만든 제안의 id(서버 offer.id). 서버가 주지 않았거나 올바르지 않으면 없다. */
+  offerId?: string;
   notifiedResidentCount?: number;
 }
 

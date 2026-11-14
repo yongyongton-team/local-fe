@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDb } from '@/mocks/memoryDb';
 import { ApiError } from '@/services/api/apiError';
 import { authService, merchantService, NoShopError, offerService } from '@/services';
 import { renderApp } from '@/test/renderApp';
@@ -366,50 +367,78 @@ describe('방문 판매 제안 작성: 제출', () => {
     expect(input).not.toHaveProperty('description');
   });
 
-  it('성공하면 알림 보낸 주민 수를 Modal 로 알리고, 확인하면 내 가게(목록)로 가서 새 제안이 보인다', async () => {
+  it('성공하면 만든 제안의 상세로 이동하고(replace) 배너와 알린 주민 수가 보이며, 목록에도 새 제안이 있다', async () => {
     const user = userEvent.setup();
     const { router } = await openForm();
-    await fillValid(user, { title: '새로 보낸 제안' });
+    await fillValid(user, { title: '새로 보낸 제안', description: '새 설명이에요' });
 
     await user.click(submit());
 
-    const dialog = await screen.findByRole('dialog', { name: '제안을 보냈어요' });
-    expect(within(dialog).getByText('알림 보낸 주민 29명')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: '확인' }));
+    expect(await heading1('보낸 제안 상세')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/merchant/offers/offer-1');
+    // 작성 화면으로 뒤로 가도 다시 보내지 않도록 기록을 바꿔 치웠다.
+    expect(router.state.historyAction).toBe('REPLACE');
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
+    expect(screen.getByText('29명의 주민에게 알렸어요')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: '싱싱과일 / 새로 보낸 제안' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('새 설명이에요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '제안 취소' })).toBeInTheDocument();
+    expect(getDb().offers[0]).toMatchObject({ id: 'offer-1', title: '새로 보낸 제안' });
 
-    expect(await heading1('내 가게')).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/merchant/offers');
-    expect(router.state.location.search).toBe('?area=guseong');
+    await act(() => router.navigate('/merchant/offers?area=guseong'));
     expect(await screen.findByRole('article', { name: '새로 보낸 제안' })).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(3);
   });
 
-  it('알림 인원을 모르면 인원 없는 안내 문구다', async () => {
+  it('상세에서 새로 읽기(state 없음)로 다시 들어오면 배너가 없다', async () => {
     const user = userEvent.setup();
-    vi.spyOn(offerService, 'createOffer').mockResolvedValue({});
-    await openForm();
+    const { router } = await openForm();
     await fillValid(user);
-
     await user.click(submit());
+    await screen.findByText('제안을 보냈어요!');
+    await waitFor(() => expect(router.state.location.state).toBeNull());
 
-    expect(await screen.findByText('요청한 주민에게 알림을 보냈어요.')).toBeInTheDocument();
+    // 목록을 거쳐 다시 들어온다(같은 주소로 이동하면 화면이 그대로 남아 있어 다시 들어온 것이 아니다).
+    await act(() => router.navigate('/merchant/offers?area=guseong'));
+    await heading1('내 가게');
+    await act(() => router.navigate('/merchant/offers/offer-1'));
+    await heading1('보낸 제안 상세');
+
+    await waitFor(() => expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument());
+    expect(screen.queryByText(/명의 주민에게 알렸어요/)).not.toBeInTheDocument();
   });
 
-  it('Escape 로 닫아도 제안은 이미 보냈으므로 목록으로 간다(양식이 남아 다시 보내지 않게)', async () => {
+  it('알린 주민 수를 모르면 배너만 보이고 모집 현황 영역은 없다', async () => {
     const user = userEvent.setup();
+    vi.spyOn(offerService, 'createOffer').mockResolvedValue({ offerId: 'offer-seed-1' });
     await openForm();
     await fillValid(user);
-    await user.click(submit());
-    await screen.findByRole('dialog', { name: '제안을 보냈어요' });
 
-    await user.keyboard('{Escape}');
+    await user.click(submit());
+
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
+    expect(screen.queryByText(/명의 주민에게 알렸어요/)).not.toBeInTheDocument();
+  });
+
+  it('서버가 제안 id 를 주지 않으면 상세로 갈 수 없어 제안 목록으로 간다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(offerService, 'createOffer').mockResolvedValue({ notifiedResidentCount: 3 });
+    const { router } = await openForm();
+    await fillValid(user);
+
+    await user.click(submit());
 
     expect(await heading1('내 가게')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/merchant/offers');
+    expect(router.state.location.search).toBe('?area=guseong');
   });
 
   it('보내는 동안 중복 제출을 막는다(연타해도 한 번만 호출)', async () => {
     const user = userEvent.setup();
-    let release: (value: { notifiedResidentCount: number }) => void = () => undefined;
+    let release: (value: { offerId: string; notifiedResidentCount: number }) => void = () =>
+      undefined;
     const create = vi.spyOn(offerService, 'createOffer').mockReturnValue(
       new Promise((resolve) => {
         release = resolve;
@@ -424,8 +453,8 @@ describe('방문 판매 제안 작성: 제출', () => {
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(submit()).toHaveAttribute('aria-busy', 'true');
-    release({ notifiedResidentCount: 1 });
-    await screen.findByRole('dialog');
+    release({ offerId: 'offer-seed-1', notifiedResidentCount: 1 });
+    await heading1('보낸 제안 상세');
     expect(create).toHaveBeenCalledTimes(1);
   });
 
@@ -434,14 +463,14 @@ describe('방문 판매 제안 작성: 제출', () => {
     vi.spyOn(authService, 'isDemoSession').mockReturnValue(true);
     const create = vi
       .spyOn(offerService, 'createOffer')
-      .mockResolvedValue({ notifiedResidentCount: 2 });
+      .mockResolvedValue({ offerId: 'offer-seed-1', notifiedResidentCount: 2 });
     await openForm();
     await fillValid(user);
 
     await user.click(submit());
 
     expect(create).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole('dialog', { name: '제안을 보냈어요' })).toBeInTheDocument();
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
     expect(screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
   });
 
@@ -474,7 +503,7 @@ describe('방문 판매 제안 작성: 제출', () => {
           message: '서버 원문 메시지',
         }),
       )
-      .mockResolvedValueOnce({ notifiedResidentCount: 2 });
+      .mockResolvedValueOnce({ offerId: 'offer-seed-1', notifiedResidentCount: 2 });
     await openForm();
     await fillValid(user);
 
@@ -486,10 +515,10 @@ describe('방문 판매 제안 작성: 제출', () => {
     );
     expect(screen.queryByText(/서버 원문 메시지/)).not.toBeInTheDocument();
     expect(submit()).toBeEnabled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument();
 
     await user.click(submit());
-    expect(await screen.findByRole('dialog', { name: '제안을 보냈어요' })).toBeInTheDocument();
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
     expect(create).toHaveBeenCalledTimes(2);
   });
 

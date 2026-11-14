@@ -40,9 +40,12 @@ export const mockOfferService: OfferService = {
   async createOffer(input) {
     const db = getDb();
     const dongName = mockNeighborhoods.find((n) => n.id === input.neighborhoodId)?.name;
+    const id = `offer-${db.nextOfferNumber++}`;
+    const description = input.description?.trim() ?? '';
     db.offers.unshift({
-      id: `offer-${db.nextOfferNumber++}`,
+      id,
       title: input.title.trim(),
+      ...(description !== '' && { description }),
       status: 'OPEN',
       price: input.price,
       pickupAt: new Date(input.pickupAt),
@@ -56,7 +59,7 @@ export const mockOfferService: OfferService = {
     const demand = db.summaries.find(
       (s) => s.neighborhoodId === input.neighborhoodId && s.categoryId === input.categoryId,
     );
-    return { notifiedResidentCount: demand?.requestCount ?? 0 };
+    return { offerId: id, notifiedResidentCount: demand?.requestCount ?? 0 };
   },
   async getOwnerOffer(offerId) {
     const offer = getDb().offers.find((o) => o.id === offerId);

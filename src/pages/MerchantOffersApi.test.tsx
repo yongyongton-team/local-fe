@@ -87,7 +87,13 @@ function stubServer(routes: { offers?: Handler; create?: Handler; action?: Handl
       );
     }
     if (call.method === 'POST' && call.path === '/api/v1/offers') {
-      return routes.create?.(call) ?? jsonResponse(201, { notifiedResidentCount: 4 });
+      return (
+        routes.create?.(call) ??
+        jsonResponse(201, {
+          offer: { id: 6, status: 'OPEN', orderCount: 0, minOrders: 20 },
+          notifiedResidentCount: 4,
+        })
+      );
     }
     return jsonResponse(404, { code: 'NOT_FOUND' });
   });
@@ -208,16 +214,18 @@ describe('api 모드의 방문 판매 제안 작성', () => {
     app.fireEvent.change(field('주문 마감'), { target: { value: '2026-11-14T18:00' } });
   }
 
-  it('POST /offers 본문이 CreateOfferRequest 모양(숫자 id, +09:00 날짜)이고 알림 인원을 알린다', async () => {
-    const { calls } = stubServer();
+  it('POST /offers 본문이 CreateOfferRequest 모양(숫자 id, +09:00 날짜)이고, 응답의 offer.id 상세로 가서 알린 주민 수를 보인다', async () => {
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [ITEM_FULL]) });
     const app = await loadApp();
-    app.renderApp(['/merchant/offers/new?area=22']);
+    const { router } = app.renderApp(['/merchant/offers/new?area=22']);
     await app.screen.findByRole('region', { name: '내 가게 요약' });
     await fill(app);
 
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
-    expect(await app.screen.findByText('알림 보낸 주민 4명')).toBeInTheDocument();
+    expect(await app.screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
+    expect(app.screen.getByText('4명의 주민에게 알렸어요')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/merchant/offers/6');
     const posts = callsTo(calls, '/api/v1/offers', 'POST');
     expect(posts).toHaveLength(1);
     expect(JSON.parse(posts[0]?.body ?? '{}')).toEqual({
@@ -233,7 +241,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
   });
 
   it('?area= 가 없으면 가게가 있는 동네(23)로 보낸다', async () => {
-    const { calls } = stubServer();
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [ITEM_FULL]) });
     const app = await loadApp();
     app.renderApp(['/merchant/offers/new']);
     await app.screen.findByRole('region', { name: '내 가게 요약' });
@@ -241,7 +249,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
 
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
-    await app.screen.findByRole('dialog');
+    await app.screen.findByText('제안을 보냈어요!');
     const post = callsTo(calls, '/api/v1/offers', 'POST')[0];
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({ dongId: 23, categoryId: 7 });
   });
@@ -251,7 +259,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
       'yyt.session',
       JSON.stringify({ token: 'tok-demo', expiresAt: Date.now() + 1e7, demo: true }),
     );
-    const { calls } = stubServer();
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [ITEM_FULL]) });
     const app = await loadApp();
     app.renderApp(['/merchant/offers/new']);
     await app.screen.findByRole('region', { name: '내 가게 요약' });
@@ -259,7 +267,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
 
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
-    expect(await app.screen.findByText('알림 보낸 주민 4명')).toBeInTheDocument();
+    expect(await app.screen.findByText('4명의 주민에게 알렸어요')).toBeInTheDocument();
     expect(callsTo(calls, '/api/v1/offers', 'POST')).toHaveLength(1);
     expect(app.screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
   });
@@ -286,7 +294,7 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
   const CONFIRMED = { ...ITEM_FULL, id: 6, status: 'CONFIRMED', orderCount: 22 };
   const open = async (app: App, id = 6) => {
     app.renderApp([`/merchant/offers/${id}`]);
-    await app.screen.findByRole('heading', { level: 2, name: '값이 다 있는 제안' });
+    await app.screen.findByRole('heading', { level: 2, name: '싱싱과일 / 값이 다 있는 제안' });
   };
 
   it('GET /owner/offers 에서 id 로 찾아 보여주고, 제안 취소는 POST /offers/6/cancel 을 본문 없이 보낸다', async () => {
@@ -297,27 +305,27 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
 
     await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
     await app.user.click(
-      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '취소하기' }),
     );
 
     expect(await app.screen.findByText('취소한 제안이에요')).toBeInTheDocument();
     const posts = calls.filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest'));
     expect(posts.map((c) => c.path)).toEqual(['/api/v1/offers/6/cancel']);
     expect(posts[0]?.body).toBeNull();
-    expect(app.screen.getByText('예약 0명 · 최소 20명')).toBeInTheDocument();
+    expect(app.screen.getByText('0 / 20명 예약')).toBeInTheDocument();
   });
 
-  it('판매 끝은 POST /offers/6/done 이고 성공하면 수령 끝이 된다', async () => {
+  it('수령 완료 처리는 POST /offers/6/done 이고 성공하면 완료가 된다', async () => {
     const { calls } = stubServer({ offers: () => jsonResponse(200, [CONFIRMED]) });
     const app = await loadApp();
     await open(app);
 
-    await app.user.click(app.screen.getByRole('button', { name: '판매 끝 (모두 받아 갔어요)' }));
+    await app.user.click(app.screen.getByRole('button', { name: '수령 완료 처리' }));
     await app.user.click(
       app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '끝내기' }),
     );
 
-    expect(await app.screen.findByText('수령이 끝난 제안이에요')).toBeInTheDocument();
+    expect(await app.screen.findByText('수량이 완료된 제안이에요')).toBeInTheDocument();
     expect(
       calls
         .filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest'))
@@ -334,12 +342,12 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
     const app = await loadApp();
     await open(app);
 
-    await app.user.click(app.screen.getByRole('button', { name: '판매 끝 (모두 받아 갔어요)' }));
+    await app.user.click(app.screen.getByRole('button', { name: '수령 완료 처리' }));
     await app.user.click(
       app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '끝내기' }),
     );
 
-    expect(await app.screen.findByText('수령이 끝난 제안이에요')).toBeInTheDocument();
+    expect(await app.screen.findByText('수량이 완료된 제안이에요')).toBeInTheDocument();
     expect(
       calls.filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest')),
     ).toHaveLength(1);
@@ -358,7 +366,7 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
 
     await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
     await app.user.click(
-      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '취소하기' }),
     );
 
     expect(await app.screen.findByRole('alert')).toHaveTextContent(
@@ -381,7 +389,7 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
     await open(app);
     await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
     await app.user.click(
-      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '취소하기' }),
     );
     expect(await app.screen.findByRole('alert')).toHaveTextContent(
       '내 제안이 아니라서 처리할 수 없어요.',
@@ -396,7 +404,7 @@ describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
     await open(app2);
     await app2.user.click(app2.screen.getByRole('button', { name: '제안 취소' }));
     await app2.user.click(
-      app2.within(app2.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+      app2.within(app2.screen.getByRole('dialog')).getByRole('button', { name: '취소하기' }),
     );
     expect(await app2.screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
   });

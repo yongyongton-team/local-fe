@@ -1,45 +1,11 @@
 /*
- * 예약 현황 카드 (Figma 66:495, 362×138). 흰 바탕 + 윤곽 #c7c7c7, 모서리 12px, 안쪽 14px, 요소 사이 8px.
- * 제목 17px Bold, 막대 8px(채움은 진한 회색), 안내 13px, 행은 라벨 13px / 값 14px Bold.
+ * 상세의 값 행과 예약 막대 (Figma 79:2488). 행은 라벨 13px / 값 14px Bold, 막대 8px(라임 채움), 문구 13px.
  */
-.card {
+.block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   min-width: 0;
-  padding: var(--offer-detail-card-pad);
-  border: 1px solid var(--color-border-list);
-  border-radius: var(--radius-list);
-  background: var(--color-surface);
-}
-
-.title {
-  margin: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-offer-reserved-title);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-}
-
-.track {
-  height: var(--offer-progress-height);
-  overflow: hidden;
-  border-radius: var(--offer-progress-radius);
-  background: var(--color-surface-muted);
-}
-
-.fill {
-  height: 100%;
-  border-radius: var(--offer-progress-radius);
-  background: var(--color-offer-detail-bar-fill);
-}
-
-.note {
-  margin: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-offer-label);
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text-secondary);
+  margin-top: var(--space-4);
 }
 
 .rows {
@@ -72,4 +38,26 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   overflow-wrap: anywhere;
+}
+
+.track {
+  height: var(--offer-progress-height);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-surface-muted);
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-accent);
+}
+
+.reserved {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-offer-label);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
 }

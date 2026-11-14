@@ -1058,7 +1058,7 @@ export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
 /**
  * OwnerOfferItem 한 건 → 도메인 OwnerOffer. id 가 양의 정수가 아니면 undefined.
  * 목록(GET /owner/offers)의 항목과 POST /offers/{id}/done·cancel 의 응답이 같은 모양이다.
- * 받는 곳(pickupPlace)과 동네 이름(dong.name)은 비어 있으면 없다. 설명(description)은 읽지 않는다.
+ * 받는 곳(pickupPlace)·설명(description)·동네 이름(dong.name)은 비어 있으면 없다.
  */
 export function mapOwnerOffer(raw: unknown): OwnerOffer | undefined {
   const item: OwnerOfferDto = isObject(raw) ? raw : {};
@@ -1069,6 +1069,7 @@ export function mapOwnerOffer(raw: unknown): OwnerOffer | undefined {
   const deadlineAt = parseIsoDate(item.deadlineAt);
   const status = toOfferStatus(item.status);
   const pickupPlace = asString(item.pickupPlace).trim();
+  const description = asString(item.description).trim();
   const dongName = isObject(item.dong) ? asString(item.dong.name).trim() : '';
   const count = (value: unknown) => {
     const n = asNumber(value);
@@ -1081,6 +1082,7 @@ export function mapOwnerOffer(raw: unknown): OwnerOffer | undefined {
     ...(price !== undefined && price >= 0 && { price }),
     ...(pickupAt !== undefined && { pickupAt }),
     ...(pickupPlace !== '' && { pickupPlace }),
+    ...(description !== '' && { description }),
     ...(dongName !== '' && { dongName }),
     ...(deadlineAt !== undefined && { deadlineAt }),
     orderCount: count(item.orderCount),
@@ -1111,8 +1113,15 @@ export function buildCreateOfferBody(input: NewOffer): CreateOfferBody {
   };
 }
 
-/** POST /offers 응답 → 결과. notifiedResidentCount 가 0 이상의 정수일 때만 쓴다(아니면 없음). */
+/**
+ * POST /offers 응답 → 결과. 만든 제안의 id(offer.id)는 양의 정수일 때, notifiedResidentCount 는 0 이상의 정수일 때만 쓴다(아니면 없음).
+ */
 export function mapCreateOfferResponse(dto: CreateOfferResponseDto | undefined): OfferSent {
-  const n = isObject(dto) ? dto.notifiedResidentCount : undefined;
-  return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? { notifiedResidentCount: n } : {};
+  const body = isObject(dto) ? dto : {};
+  const offerId = isObject(body.offer) ? safeDomainId(body.offer.id) : undefined;
+  const n = body.notifiedResidentCount;
+  return {
+    ...(offerId !== undefined && { offerId }),
+    ...(typeof n === 'number' && Number.isInteger(n) && n >= 0 && { notifiedResidentCount: n }),
+  };
 }
