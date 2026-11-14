@@ -4,11 +4,13 @@ import { FounderExplorePage } from '@/pages/FounderExplorePage';
 import { DongSelectPage } from '@/pages/DongSelectPage';
 import { HomePage } from '@/pages/HomePage';
 import { MerchantAreaDetailPage } from '@/pages/MerchantAreaDetailPage';
+import { MerchantOfferDetailPage } from '@/pages/MerchantOfferDetailPage';
 import { MerchantOfferNewPage } from '@/pages/MerchantOfferNewPage';
 import { MerchantOffersPage } from '@/pages/MerchantOffersPage';
 import { MerchantExplorePage } from '@/pages/MerchantExplorePage';
 import { MyInfoPage } from '@/pages/MyInfoPage';
 import { MyRequestsPage } from '@/pages/MyRequestsPage';
+import { ResidentOfferDetailPage } from '@/pages/ResidentOfferDetailPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RequestNewPage } from '@/pages/RequestNewPage';
 import { ResidentExplorePage } from '@/pages/ResidentExplorePage';
@@ -44,18 +46,20 @@ export function createRoutes(extraRoutes: RouteObject[] = []): RouteObject[] {
         { path: 'merchant/areas/:areaId', element: <MerchantAreaDetailPage /> },
         { path: 'merchant/offers', element: <MerchantOffersPage /> },
         { path: 'merchant/offers/new', element: <MerchantOfferNewPage /> },
+        { path: 'merchant/offers/:offerId', element: <MerchantOfferDetailPage /> },
         { path: 'founder', element: <FounderExplorePage /> },
         { path: 'founder/areas/:areaId/report', element: <FounderAreaReportPage /> },
       ],
     },
     {
-      // 내비도 우측 상단 아이콘도 없는 화면: 첫 화면, 내 정보, 동네 선택, 내 가게, 없는 주소
+      // 내비도 우측 상단 아이콘도 없는 화면: 첫 화면, 내 정보, 동네 선택, 내 가게, 주민 제안 상세(시안에 내비·아이콘이 없다), 없는 주소
       element: <RootLayout />,
       children: [
         { index: true, element: <HomePage /> },
         { path: 'me', element: <MyInfoPage /> },
         { path: 'me/dong', element: <DongSelectPage /> },
         { path: 'me/shop', element: <ShopEditPage /> },
+        { path: 'resident/offers/:offerId', element: <ResidentOfferDetailPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

@@ -373,4 +373,14 @@
   --offer-field-gap: 6px;
   /* [화면] 가격·최소 주문은 한 줄에 둘이 놓이고 사이는 16px */
   --offer-pair-gap: var(--space-4);
+
+  /* 제안 상세(/merchant/offers/:offerId) 전용 (Figma 66:472) */
+  /* [화면] 제목 20px SemiBold */
+  --font-size-offer-detail-title: 20px;
+  --line-height-offer-detail-title: 25px;
+  /* [화면] 예약 현황 카드: 윤곽 #c7c7c7(--color-border-list), 모서리 12px(--radius-list), 안쪽 14px, 요소 사이 8px, "예약 N명 · 최소 M명" Bold 17px */
+  --offer-detail-card-pad: 14px;
+  --font-size-offer-reserved-title: 17px;
+  /* [화면] 진행 막대 채움은 진한 회색(#424242). 목록 카드의 라임 막대와 다르다 */
+  --color-offer-detail-bar-fill: #424242;
 }

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CATEGORY_PARAM } from '@/features/founder-explore/constants';
 import { FOUNDER_COPY } from '@/features/founder-explore/copy';
@@ -8,11 +8,13 @@ import {
   describeLocationRow,
   resolveCategoryId,
   shouldShowRankMap,
+  splitRankRows,
 } from '@/features/founder-explore/locationRows';
 import { useCategories, useLocationRanks } from '@/features/founder-explore/useFounderExplore';
 import { describeLoadError } from '@/features/resident-map/loadErrorText';
 import { founderService } from '@/services';
 import { paths } from '@/shared/lib/paths';
+import { Button } from '@/shared/ui/Button';
 import { LogoLink } from '@/shared/ui/LogoLink';
 import { ListRowLink } from '@/shared/ui/ListRowLink';
 import { MAP_COPY } from '@/shared/ui/copy';
@@ -20,12 +22,13 @@ import { NaverMap } from '@/shared/ui/NaverMap';
 import { Notice } from '@/shared/ui/Notice';
 import { SelectBox } from '@/shared/ui/SelectBox';
 import { Text } from '@/shared/ui/Text';
-import type { StoreCategory } from '@/types/domain';
+import type { LocationRank, StoreCategory } from '@/types/domain';
 import styles from './FounderExplorePage.module.css';
 
 /**
  * 예비 창업자용 입지 찾기 (Figma node 2:1903).
  * 선택한 업종에 대해 인구에 비해 가게가 부족한 동네를 서버가 준 순서 그대로 순위로 보여준다(다시 정렬하지 않는다).
+ * 부족하지 않다는 판정(NOT_SHORT)의 행은 기본으로 접고 버튼으로 펼친다. 접어도 순서와 순위 번호는 서버 값 그대로다.
  * 업종은 URL 쿼리(?category=)에도 보관한다.
  * 역할 선택은 접근 권한이 아니므로 선택된 역할·동네 없이 직접 들어와도 렌더링한다. 하단 내비게이션은 없다.
  * 동네 리포트(/founder/areas/:areaId/report)는 이 화면의 범위가 아니다. 행은 링크로만 연결한다.
@@ -70,6 +73,13 @@ function Explorer({
   const categoryId = resolveCategoryId(params.get(CATEGORY_PARAM), categories, defaultCategoryId);
   const category = categories.find((c) => c.id === categoryId);
   const ranks = useLocationRanks(categoryId);
+  // 접힌 행(NOT_SHORT)을 펼쳤는지. 업종이 바뀌면(선택·뒤로 가기 모두) 다시 접는다.
+  const [expanded, setExpanded] = useState(false);
+  const [foldCategoryId, setFoldCategoryId] = useState(categoryId);
+  if (foldCategoryId !== categoryId) {
+    setFoldCategoryId(categoryId);
+    setExpanded(false);
+  }
 
   function handleChange(value: string) {
     // 업종을 바꿀 때마다 기록을 쌓지 않도록 현재 기록을 바꾼다. 리포트에서 뒤로 오면 마지막 선택이 유지된다.
@@ -77,8 +87,11 @@ function Explorer({
   }
 
   const items = ranks.status === 'success' ? ranks.data : [];
+  const { visible, folded } = splitRankRows(items);
+  // 목록에 보이는 행(접힌 상태면 NOT_SHORT 제외)만 지도 알약으로 만든다. 서버 순서는 그대로다.
+  const shown = expanded ? [...visible, ...folded] : visible;
   // 위치 정보가 없는 순위(서버 순위에는 좌표가 없다)는 지도에 마커를 만들지 않는다. 목록은 그대로 보여준다.
-  const markers = buildRankMarkers(items, categoryId);
+  const markers = buildRankMarkers(shown, categoryId);
   const showMap = shouldShowRankMap(founderService.remote, markers.length);
 
   return (
@@ -115,22 +128,26 @@ function Explorer({
           (items.length === 0 ? (
             <Notice title="아직 요청이 없는 업종이에요" />
           ) : (
-            <ol className={styles.rankList}>
-              {items.map((item) => {
-                const text = describeLocationRow(item);
-                return (
-                  <li key={item.neighborhood.id}>
-                    <ListRowLink
-                      to={paths.founderAreaReport(item.neighborhood.id, categoryId)}
-                      title={text.title}
-                      detail={text.detail}
-                      extra={text.extra}
-                      accessibleName={text.accessibleName}
-                    />
-                  </li>
-                );
-              })}
-            </ol>
+            <>
+              {visible.length === 0 && <Notice title={FOUNDER_COPY.noShortNotice} />}
+              {visible.length > 0 && <RankList items={visible} categoryId={categoryId} />}
+              {folded.length > 0 && (
+                <>
+                  <Button
+                    variant="neutral"
+                    size="small"
+                    fullWidth
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded((value) => !value)}
+                  >
+                    {expanded
+                      ? FOUNDER_COPY.hideNotShort
+                      : FOUNDER_COPY.showNotShort(folded.length)}
+                  </Button>
+                  {expanded && <RankList items={folded} categoryId={categoryId} />}
+                </>
+              )}
+            </>
           ))}
       </section>
 
@@ -152,5 +169,26 @@ function Explorer({
         </div>
       )}
     </>
+  );
+}
+
+function RankList({ items, categoryId }: { items: readonly LocationRank[]; categoryId: string }) {
+  return (
+    <ol className={styles.rankList}>
+      {items.map((item) => {
+        const text = describeLocationRow(item);
+        return (
+          <li key={item.neighborhood.id}>
+            <ListRowLink
+              to={paths.founderAreaReport(item.neighborhood.id, categoryId)}
+              title={text.title}
+              detail={text.detail}
+              extra={text.extra}
+              accessibleName={text.accessibleName}
+            />
+          </li>
+        );
+      })}
+    </ol>
   );
 }

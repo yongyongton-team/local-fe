@@ -78,7 +78,7 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     const app = await loadApp('api');
     const list = await openList(app);
 
-    const group = app.within(list).getByRole('group', { name: '사장님 응답' });
+    const group = app.within(list).getByRole('link', { name: /^사장님 응답/ });
     expect(group).toHaveTextContent('싱싱과일: 화요일 오후 6시, 가게 앞에서 방문 판매해요');
     expect(app.within(list).queryByText(NO_RESPONSE)).not.toBeInTheDocument();
   });
@@ -99,7 +99,7 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     const app = await loadApp('api');
     const list = await openList(app);
 
-    expect(app.within(list).getAllByRole('group', { name: '사장님 응답' })).toHaveLength(1);
+    expect(app.within(list).getAllByRole('link', { name: /^사장님 응답/ })).toHaveLength(1);
     expect(
       app.within(list).getByText('첫번째가게: 화요일 오후 6시, 가게 앞에서 방문 판매해요'),
     ).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     const app = await loadApp('api');
     const list = await openList(app);
 
-    expect(app.within(list).getAllByRole('group', { name: '사장님 응답' })).toHaveLength(1);
+    expect(app.within(list).getAllByRole('link', { name: /^사장님 응답/ })).toHaveLength(1);
     expect(app.within(list).getAllByText(NO_RESPONSE)).toHaveLength(2);
   });
 
@@ -146,7 +146,7 @@ describe('api 모드의 내 요청: 사장님 응답', () => {
     const app = await loadApp('api');
     const list = await openList(app);
 
-    await app.within(list).findByRole('group', { name: '사장님 응답' });
+    await app.within(list).findByRole('link', { name: /^사장님 응답/ });
     expect(
       app.screen.queryByText(/9,?900|내일 저녁 과일 상자|2026-11-10|마감/),
     ).not.toBeInTheDocument();
@@ -243,5 +243,39 @@ describe('mock 모드의 내 요청', () => {
     expect(await app.screen.findByRole('region', { name: '내 요청' })).toBeInTheDocument();
     expect(app.screen.getByText('예시 데이터')).toBeInTheDocument();
     expect(fn).not.toHaveBeenCalled();
+  });
+});
+
+describe('api 모드의 내 요청: 제안 상세로 가는 링크', () => {
+  it('offers 에 있는 제안이면 "사장님 응답"이 /resident/offers/:id 링크다', async () => {
+    stubServer(() => jsonResponse(200, [item({ offers: [offer({ id: 41 })] })]));
+    const app = await loadApp('api');
+    const list = await openList(app);
+
+    const link = await app.within(list).findByRole('link', { name: /^사장님 응답/ });
+
+    expect(link).toHaveAttribute('href', '/resident/offers/41');
+  });
+
+  it('카드 문구는 만들어지지만 같은 제안이 offers 에 없으면(형식이 틀려 빠짐) 링크 없이 정적 문구만 보인다', async () => {
+    // 가격이 null 이면 offers 에서는 빠지지만 한 줄 응답은 예전 규칙대로 만들어진다.
+    stubServer(() => jsonResponse(200, [item({ offers: [offer({ id: 41, price: null })] })]));
+    const app = await loadApp('api');
+    const list = await openList(app);
+
+    const box = await app.within(list).findByRole('group', { name: '사장님 응답' });
+
+    expect(box).toHaveTextContent('싱싱과일');
+    expect(app.within(list).queryByRole('link', { name: /^사장님 응답/ })).not.toBeInTheDocument();
+    expect(app.within(list).queryAllByRole('link')).toHaveLength(0);
+  });
+
+  it('OPEN·CONFIRMED 가 아닌 제안만 있으면 응답도 링크도 없다', async () => {
+    stubServer(() => jsonResponse(200, [item({ offers: [offer({ id: 41, status: 'DONE' })] })]));
+    const app = await loadApp('api');
+    const list = await openList(app);
+
+    expect(await app.within(list).findByText(NO_RESPONSE)).toBeInTheDocument();
+    expect(app.within(list).queryAllByRole('link')).toHaveLength(0);
   });
 });

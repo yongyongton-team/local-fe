@@ -1,4 +1,4 @@
-import type { DemandSummary, MeShop, OwnerOffer } from '@/types/domain';
+import type { DemandSummary, MeShop, OwnerOffer, ResidentOffer } from '@/types/domain';
 import { mockDemandSummaries, mockSeedRequests, type MockStoredRequest } from './demand';
 import { mockSeedOffers } from './offers';
 
@@ -18,19 +18,35 @@ interface MemoryDb {
   /** 사장님이 보낸 제안. 배열 앞이 가장 최근이다. */
   offers: OwnerOffer[];
   nextOfferNumber: number;
+  /** 주문 번호 발급용(mock-order-N). 시드 주문과 겹치지 않는 이름을 쓴다. */
+  nextOrderNumber: number;
+  /** 취소한 주문의 id(제안 id → 주문 id). 서버처럼 다시 주문하면 같은 주문이 되살아난다. */
+  cancelledOrderIds: Record<string, string>;
 }
 
 function createInitialDb(): MemoryDb {
   return {
     summaries: mockDemandSummaries.map((summary) => ({ ...summary })),
-    requests: mockSeedRequests.map(({ request, response }) => ({
+    requests: mockSeedRequests.map(({ request, offers }) => ({
       request: { ...request },
-      response: response && { ...response },
+      offers: offers?.map(copyResidentOffer),
     })),
     nextRequestNumber: 1,
     shop: null,
     offers: mockSeedOffers.map((offer) => ({ ...offer })),
     nextOfferNumber: 1,
+    nextOrderNumber: 1,
+    cancelledOrderIds: {},
+  };
+}
+
+/** 시드 제안을 복사한다(날짜·주문 포함). 테스트가 상태를 바꿔도 시드는 그대로여야 한다. */
+export function copyResidentOffer(offer: ResidentOffer): ResidentOffer {
+  return {
+    ...offer,
+    pickupAt: new Date(offer.pickupAt),
+    deadlineAt: new Date(offer.deadlineAt),
+    myOrder: offer.myOrder && { ...offer.myOrder },
   };
 }
 

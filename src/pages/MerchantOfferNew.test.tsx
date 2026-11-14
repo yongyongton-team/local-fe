@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDb } from '@/mocks/memoryDb';
 import { ApiError } from '@/services/api/apiError';
 import { authService, merchantService, NoShopError, offerService } from '@/services';
 import { renderApp } from '@/test/renderApp';
@@ -30,7 +31,15 @@ async function fillValid(user: User, { description = '', title = '제철 과일 
   change('주문 마감', '2026-11-14T18:00');
 }
 
-afterEach(() => vi.restoreAllMocks());
+/** 마감은 "지금"보다 늦어야 하므로 시각을 고정한다(Date 만 가짜로 두어 userEvent·waitFor 의 타이머는 그대로다). */
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-01T09:00:00+09:00'));
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe('방문 판매 제안 작성: 렌더링', () => {
   it('앱바 제목과 같은 요약 카드, 시안의 필드 라벨(오타를 고친 "받는")이 있다', async () => {
@@ -179,6 +188,146 @@ describe('방문 판매 제안 작성: 검증', () => {
   });
 });
 
+describe('방문 판매 제안 작성: 길이·범위 제한(서버 명세)', () => {
+  it('입력 칸에 maxLength 가 있다: 제목 50, 설명 500, 받는 곳 100', async () => {
+    await openForm();
+
+    expect(field('제목')).toHaveAttribute('maxlength', '50');
+    expect(field('설명 (선택)')).toHaveAttribute('maxlength', '500');
+    expect(field('받는 곳')).toHaveAttribute('maxlength', '100');
+  });
+
+  it('붙여넣어도 제한 길이에서 잘린다', async () => {
+    const user = userEvent.setup();
+    await openForm();
+
+    await user.click(field('제목'));
+    await user.paste('가'.repeat(80));
+    await user.click(field('설명 (선택)'));
+    await user.paste('나'.repeat(700));
+    await user.click(field('받는 곳'));
+    await user.paste('다'.repeat(150));
+
+    expect((field('제목') as HTMLInputElement).value).toHaveLength(50);
+    expect((field('설명 (선택)') as HTMLInputElement).value).toHaveLength(500);
+    expect((field('받는 곳') as HTMLInputElement).value).toHaveLength(100);
+  });
+
+  it('가격은 int32 최댓값을 넘는 입력을 받지 않고 안내를 보인다(고치면 안내가 사라진다)', async () => {
+    const user = userEvent.setup();
+    await openForm();
+
+    await user.type(field('가격'), '21474836478');
+
+    expect(field('가격')).toHaveValue('2,147,483,647');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '가격은 2,147,483,647원 이하로 입력해 주세요.',
+    );
+
+    await user.type(field('가격'), '{Backspace}');
+    expect(field('가격')).toHaveValue('214,748,364');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('최소 주문은 100 에서 멈춘다(스텝퍼 상한)', async () => {
+    const user = userEvent.setup();
+    await openForm();
+    const group = screen.getByRole('group', { name: '최소 주문' });
+    const plus = within(group).getByRole('button', { name: '최소 주문 늘리기' });
+
+    for (let i = 0; i < 85; i += 1) await user.click(plus);
+
+    expect(group).toHaveTextContent('100명');
+    await user.click(plus);
+    expect(group).toHaveTextContent('100명');
+  });
+
+  it('최소 주문 100 으로 보낼 수 있고 제출값도 100 이다', async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(offerService, 'createOffer').mockResolvedValue({});
+    await openForm();
+    await fillValid(user);
+    const plus = screen.getByRole('button', { name: '최소 주문 늘리기' });
+    for (let i = 0; i < 90; i += 1) await user.click(plus);
+
+    await user.click(submit());
+
+    expect(create.mock.calls[0]?.[0].minOrders).toBe(100);
+  });
+});
+
+describe('방문 판매 제안 작성: 주문 마감 시각(지금 < 마감)', () => {
+  // 시각은 2026-11-01 09:00 KST 로 고정되어 있다.
+  const NOW_INPUT = '2026-11-01T09:00';
+
+  it('마감이 지금보다 이전이면 빨간 오류와 문구가 나오고 보낼 수 없다', async () => {
+    const user = userEvent.setup();
+    await openForm();
+    await fillValid(user);
+
+    change('주문 마감', '2026-10-31T18:00');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('마감은 지금보다 늦어야 해요.');
+    expect(field('주문 마감')).toHaveAttribute('aria-invalid', 'true');
+    expect(field('주문 마감')).toHaveAccessibleDescription('마감은 지금보다 늦어야 해요.');
+    expect(submit()).toBeDisabled();
+  });
+
+  it('경계: 지금과 같은 시각은 막히고, 1분 뒤는 통과한다', async () => {
+    const user = userEvent.setup();
+    await openForm();
+    await fillValid(user);
+
+    change('주문 마감', NOW_INPUT);
+    expect(screen.getByRole('alert')).toHaveTextContent('마감은 지금보다 늦어야 해요.');
+    expect(submit()).toBeDisabled();
+
+    change('주문 마감', '2026-11-01T09:01');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(submit()).toBeEnabled();
+  });
+
+  it('지금보다 이후이고 받는 날짜보다 빠르면 오류가 없다', async () => {
+    const user = userEvent.setup();
+    await openForm();
+    await fillValid(user);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(submit()).toBeEnabled();
+  });
+
+  it('받는 날짜 순서 오류가 함께 있으면 기존 문구("받는 날짜보다 빨라야 해요")를 먼저 보인다', async () => {
+    const user = userEvent.setup();
+    await openForm();
+    await fillValid(user);
+
+    change('받는 날짜 / 시간', '2026-10-01T10:00');
+    change('주문 마감', '2026-10-02T10:00');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('마감은 받는 날짜보다 빨라야 해요.');
+    expect(screen.queryByText('마감은 지금보다 늦어야 해요.')).not.toBeInTheDocument();
+    expect(submit()).toBeDisabled();
+  });
+
+  it('입력한 뒤 시간이 흘러 마감이 지났으면 보내는 순간 다시 검사해서 보내지 않고 오류를 보인다', async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(offerService, 'createOffer').mockResolvedValue({});
+    await openForm();
+    await fillValid(user);
+    change('주문 마감', '2026-11-02T09:00');
+    expect(submit()).toBeEnabled();
+
+    // 마감 시각(11/2 09:00)이 지난 뒤에 누른다.
+    vi.setSystemTime(new Date('2026-11-03T00:00:00+09:00'));
+    await user.click(submit());
+
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('마감은 지금보다 늦어야 해요.');
+    expect(submit()).toBeDisabled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
 describe('방문 판매 제안 작성: 제출', () => {
   it('입력값이 CreateOfferRequest 로 가는 필드(동네·업종은 현재 선택)에 그대로 매핑된다', async () => {
     const user = userEvent.setup();
@@ -218,50 +367,78 @@ describe('방문 판매 제안 작성: 제출', () => {
     expect(input).not.toHaveProperty('description');
   });
 
-  it('성공하면 알림 보낸 주민 수를 Modal 로 알리고, 확인하면 내 가게(목록)로 가서 새 제안이 보인다', async () => {
+  it('성공하면 만든 제안의 상세로 이동하고(replace) 배너와 알린 주민 수가 보이며, 목록에도 새 제안이 있다', async () => {
     const user = userEvent.setup();
     const { router } = await openForm();
-    await fillValid(user, { title: '새로 보낸 제안' });
+    await fillValid(user, { title: '새로 보낸 제안', description: '새 설명이에요' });
 
     await user.click(submit());
 
-    const dialog = await screen.findByRole('dialog', { name: '제안을 보냈어요' });
-    expect(within(dialog).getByText('알림 보낸 주민 29명')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: '확인' }));
+    expect(await heading1('보낸 제안 상세')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/merchant/offers/offer-1');
+    // 작성 화면으로 뒤로 가도 다시 보내지 않도록 기록을 바꿔 치웠다.
+    expect(router.state.historyAction).toBe('REPLACE');
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
+    expect(screen.getByText('29명의 주민에게 알렸어요')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: '싱싱과일 / 새로 보낸 제안' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('새 설명이에요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '제안 취소' })).toBeInTheDocument();
+    expect(getDb().offers[0]).toMatchObject({ id: 'offer-1', title: '새로 보낸 제안' });
+
+    await act(() => router.navigate('/merchant/offers?area=guseong'));
+    expect(await screen.findByRole('article', { name: '새로 보낸 제안' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(3);
+  });
+
+  it('상세에서 새로 읽기(state 없음)로 다시 들어오면 배너가 없다', async () => {
+    const user = userEvent.setup();
+    const { router } = await openForm();
+    await fillValid(user);
+    await user.click(submit());
+    await screen.findByText('제안을 보냈어요!');
+    await waitFor(() => expect(router.state.location.state).toBeNull());
+
+    // 목록을 거쳐 다시 들어온다(같은 주소로 이동하면 화면이 그대로 남아 있어 다시 들어온 것이 아니다).
+    await act(() => router.navigate('/merchant/offers?area=guseong'));
+    await heading1('내 가게');
+    await act(() => router.navigate('/merchant/offers/offer-1'));
+    await heading1('보낸 제안 상세');
+
+    await waitFor(() => expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument());
+    expect(screen.queryByText(/명의 주민에게 알렸어요/)).not.toBeInTheDocument();
+  });
+
+  it('알린 주민 수를 모르면 배너만 보이고 모집 현황 영역은 없다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(offerService, 'createOffer').mockResolvedValue({ offerId: 'offer-seed-1' });
+    await openForm();
+    await fillValid(user);
+
+    await user.click(submit());
+
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
+    expect(screen.queryByText(/명의 주민에게 알렸어요/)).not.toBeInTheDocument();
+  });
+
+  it('서버가 제안 id 를 주지 않으면 상세로 갈 수 없어 제안 목록으로 간다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(offerService, 'createOffer').mockResolvedValue({ notifiedResidentCount: 3 });
+    const { router } = await openForm();
+    await fillValid(user);
+
+    await user.click(submit());
 
     expect(await heading1('내 가게')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/merchant/offers');
     expect(router.state.location.search).toBe('?area=guseong');
-    expect(await screen.findByRole('article', { name: '새로 보낸 제안' })).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(2);
-  });
-
-  it('알림 인원을 모르면 인원 없는 안내 문구다', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(offerService, 'createOffer').mockResolvedValue({});
-    await openForm();
-    await fillValid(user);
-
-    await user.click(submit());
-
-    expect(await screen.findByText('요청한 주민에게 알림을 보냈어요.')).toBeInTheDocument();
-  });
-
-  it('Escape 로 닫아도 제안은 이미 보냈으므로 목록으로 간다(양식이 남아 다시 보내지 않게)', async () => {
-    const user = userEvent.setup();
-    await openForm();
-    await fillValid(user);
-    await user.click(submit());
-    await screen.findByRole('dialog', { name: '제안을 보냈어요' });
-
-    await user.keyboard('{Escape}');
-
-    expect(await heading1('내 가게')).toBeInTheDocument();
   });
 
   it('보내는 동안 중복 제출을 막는다(연타해도 한 번만 호출)', async () => {
     const user = userEvent.setup();
-    let release: (value: { notifiedResidentCount: number }) => void = () => undefined;
+    let release: (value: { offerId: string; notifiedResidentCount: number }) => void = () =>
+      undefined;
     const create = vi.spyOn(offerService, 'createOffer').mockReturnValue(
       new Promise((resolve) => {
         release = resolve;
@@ -276,8 +453,8 @@ describe('방문 판매 제안 작성: 제출', () => {
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(submit()).toHaveAttribute('aria-busy', 'true');
-    release({ notifiedResidentCount: 1 });
-    await screen.findByRole('dialog');
+    release({ offerId: 'offer-seed-1', notifiedResidentCount: 1 });
+    await heading1('보낸 제안 상세');
     expect(create).toHaveBeenCalledTimes(1);
   });
 
@@ -286,14 +463,14 @@ describe('방문 판매 제안 작성: 제출', () => {
     vi.spyOn(authService, 'isDemoSession').mockReturnValue(true);
     const create = vi
       .spyOn(offerService, 'createOffer')
-      .mockResolvedValue({ notifiedResidentCount: 2 });
+      .mockResolvedValue({ offerId: 'offer-seed-1', notifiedResidentCount: 2 });
     await openForm();
     await fillValid(user);
 
     await user.click(submit());
 
     expect(create).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole('dialog', { name: '제안을 보냈어요' })).toBeInTheDocument();
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
     expect(screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
   });
 
@@ -326,7 +503,7 @@ describe('방문 판매 제안 작성: 제출', () => {
           message: '서버 원문 메시지',
         }),
       )
-      .mockResolvedValueOnce({ notifiedResidentCount: 2 });
+      .mockResolvedValueOnce({ offerId: 'offer-seed-1', notifiedResidentCount: 2 });
     await openForm();
     await fillValid(user);
 
@@ -334,14 +511,14 @@ describe('방문 판매 제안 작성: 제출', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
-      '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.',
+      '입력한 값을 확인해 주세요. 날짜 순서와 가게 정보도 확인해 주세요.',
     );
     expect(screen.queryByText(/서버 원문 메시지/)).not.toBeInTheDocument();
     expect(submit()).toBeEnabled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument();
 
     await user.click(submit());
-    expect(await screen.findByRole('dialog', { name: '제안을 보냈어요' })).toBeInTheDocument();
+    expect(await screen.findByText('제안을 보냈어요!')).toBeInTheDocument();
     expect(create).toHaveBeenCalledTimes(2);
   });
 

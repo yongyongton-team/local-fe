@@ -1,0 +1,13 @@
+/* 상태 배지: 옅은 회색 알약, 12px Bold. 색은 디자인에서 상태별로 정하기로 해 한 가지 모양만 쓴다. */
+.badge {
+  flex: none;
+  padding: var(--offer-badge-pad-y) var(--offer-badge-pad-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-offer-badge);
+  white-space: nowrap;
+}

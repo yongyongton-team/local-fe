@@ -76,18 +76,37 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
     expect(item.getByRole('heading', { level: 3, name: '반찬가게' })).toBeInTheDocument();
     expect(item.getByText('12명')).toBeInTheDocument();
     expect(item.getByText('구성동 · 평일 저녁 · 한 달 2~3번')).toBeInTheDocument();
-    const response = item.getByRole('group', { name: '사장님 응답' });
+    const response = item.getByRole('link', { name: /^사장님 응답/ });
     expect(response).toHaveTextContent(
       '맛나반찬: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
     );
     expect(item.queryByText('아직 사장님 응답이 없어요')).not.toBeInTheDocument();
   });
 
-  it('요청 카드 안에는 링크나 버튼이 없고 삭제할 요청을 고르는 체크만 있다', async () => {
+  it('제안 데이터가 늘어도 카드에는 사장님 응답 한 줄만 보이고 제안 제목·가격·예약 같은 새 문구는 없다', async () => {
     await openMyRequests();
 
+    const [card] = cards();
+    const item = within(card!);
+    expect(item.getAllByRole('link', { name: /^사장님 응답/ })).toHaveLength(1);
+    expect(item.getByRole('link', { name: /^사장님 응답/ }).textContent).toBe(
+      '사장님 응답맛나반찬: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+    );
+    // 두 번째 제안(푸른반찬)과 제안 제목·가격·주문은 카드에 나오지 않는다.
+    for (const text of [/푸른반찬/, /제철 반찬 꾸러미/, /15,?000/, /예약/, /주문/]) {
+      expect(card!.textContent).not.toMatch(text);
+    }
+  });
+
+  it('요청 카드 안의 링크는 "사장님 응답" 하나뿐이고 버튼은 없으며, 삭제할 요청을 고르는 체크가 있다', async () => {
+    await openMyRequests();
+
+    const [seedCard] = cards();
+    const links = within(seedCard!).getAllByRole('link');
+    expect(links).toHaveLength(1);
+    // 첫 OPEN·CONFIRMED 제안(맛나반찬)의 상세로 이어진다.
+    expect(links[0]).toHaveAttribute('href', '/resident/offers/mock-offer-seed-1');
     cards().forEach((card) => {
-      expect(within(card).queryAllByRole('link')).toHaveLength(0);
       expect(within(card).queryAllByRole('button')).toHaveLength(0);
       expect(within(card).getAllByRole('checkbox')).toHaveLength(1);
     });
@@ -128,10 +147,10 @@ describe('과일/채소 요청을 보낸 뒤', () => {
     expect(within(fruit!).getByText('30명')).toBeInTheDocument();
     expect(within(fruit!).getByText('구성동 · 평일 저녁 · 주 1번 이상')).toBeInTheDocument();
     expect(within(fruit!).getByText('아직 사장님 응답이 없어요')).toBeInTheDocument();
-    expect(within(fruit!).queryByRole('group', { name: '사장님 응답' })).not.toBeInTheDocument();
+    expect(within(fruit!).queryByRole('link', { name: /^사장님 응답/ })).not.toBeInTheDocument();
     // 기존 반찬 요청은 그대로 아래에 있다(최근 순).
     expect(within(sideDish!).getByRole('heading', { name: '반찬가게' })).toBeInTheDocument();
-    expect(within(sideDish!).getByRole('group', { name: '사장님 응답' })).toBeInTheDocument();
+    expect(within(sideDish!).getByRole('link', { name: /^사장님 응답/ })).toBeInTheDocument();
   });
 
   it('시간대와 빈도를 고르지 않은 요청의 메타 줄에서는 그 부분이 빠진다', async () => {

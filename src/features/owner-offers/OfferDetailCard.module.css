@@ -1,0 +1,63 @@
+/*
+ * 상세의 값 행과 예약 막대 (Figma 79:2488). 행은 라벨 13px / 값 14px Bold, 막대 8px(라임 채움), 문구 13px.
+ */
+.block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-top: var(--space-4);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.label {
+  flex: none;
+  width: var(--offer-label-width);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-offer-label);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+.value {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.track {
+  height: var(--offer-progress-height);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-surface-muted);
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-accent);
+}
+
+.reserved {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-offer-label);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}

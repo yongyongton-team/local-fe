@@ -12,12 +12,16 @@ import type {
   LocationRank,
   MapPosition,
   MerchantResponse,
+  MyOrder,
   Neighborhood,
   NeighborhoodReport,
   NewOffer,
   NewStoreRequest,
   OfferSent,
+  OrderResult,
   RequestedStore,
+  ResidentOffer,
+  ResidentOfferStatus,
   OwnerOffer,
   PublicData,
   StoreCategory,
@@ -36,6 +40,7 @@ import type {
   CategoryDto,
   CreateOfferBody,
   CreateOfferResponseDto,
+  CreateOrderResponseDto,
   CreateRequestBody,
   CreateResponseDto,
   DongDto,
@@ -56,7 +61,7 @@ import type {
 import { isNoStoreGap } from './gapStatus';
 import { toDomainId, toServerId } from './ids';
 import { toKstIso } from '@/shared/lib/kstDate';
-import { isShownOfferStatus, toOfferStatus } from './offerStatus';
+import { SHOWN_OFFER_STATUSES, toOfferStatus, type OfferStatus } from './offerStatus';
 import {
   CONDITION_LABELS_BY_CODE,
   FREQUENCY_CODES,
@@ -504,29 +509,144 @@ export function parseIsoDate(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-/**
- * 요청의 제안(offers[]) → "사장님 응답". 서버가 준 순서에서 보여줄 수 있는 첫 제안 하나를 쓴다.
- * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이 없는 것.
- * - 매핑: shopName → merchantName, pickupAt → pickupAt(ISO 8601 을 해석하지 못하면 없음), pickupPlace → pickupPlace(비면 없음).
- * 제목·가격·최소 주문·마감·주문(myOrder)은 이 화면에 담을 자리가 없어 쓰지 않는다.
- * 제안이 없거나 배열이 아니면 undefined 다.
- */
-export function selectOfferResponse(
-  offers: OfferDto[] | null | undefined,
-): MerchantResponse | undefined {
-  for (const offer of Array.isArray(offers) ? offers : []) {
-    if (!isObject(offer) || !isShownOfferStatus(offer.status)) continue;
-    const merchantName = asString(offer.shopName);
-    if (merchantName === '') continue;
-    const pickupAt = parseIsoDate(offer.pickupAt);
-    const pickupPlace = asString(offer.pickupPlace).trim();
+/** 제안 한 건을 한 번만 읽은 결과. response 한 줄 요약과 제안 전체(offer)가 같은 값에서 나온다. */
+interface ParsedOffer {
+  /** 알려진 제안 상태. 모르는 값·없음은 null */
+  status: OfferStatus | null;
+  shopName: string;
+  pickupAt: Date | undefined;
+  pickupPlace: string;
+  /** 모든 필드가 형식에 맞을 때만 있다. 하나라도 틀리면 undefined(그 제안만 건너뛴다). */
+  offer: ResidentOffer | undefined;
+}
+
+/** 서버가 주민에게 주는 제안 상태(취소는 오지 않는다). 그 밖의 값은 제안을 건너뛴다. */
+const RESIDENT_OFFER_STATUSES: readonly ResidentOfferStatus[] = [
+  'OPEN',
+  'CONFIRMED',
+  'CLOSED',
+  'DONE',
+];
+
+const isCountNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+/** myOrder → 도메인. 없음(null)이거나 형식이 맞지 않거나 취소·모르는 상태면 null 이다. */
+export function mapMyOrder(raw: unknown): MyOrder | null {
+  if (!isObject(raw)) return null;
+  const id = safeDomainId(raw.id);
+  const offerId = safeDomainId(raw.offerId);
+  const status = raw.status === 'RESERVED' || raw.status === 'PICKED_UP' ? raw.status : null;
+  const quantity = raw.quantity;
+  if (
+    id === undefined ||
+    offerId === undefined ||
+    status === null ||
+    typeof quantity !== 'number' ||
+    !Number.isInteger(quantity) ||
+    quantity < 1
+  ) {
+    return null;
+  }
+  return { id, offerId, quantity, status };
+}
+
+function parseOffer(raw: unknown): ParsedOffer | null {
+  if (!isObject(raw)) return null;
+  const status = toOfferStatus(raw.status);
+  const shopName = asString(raw.shopName);
+  const pickupAt = parseIsoDate(raw.pickupAt);
+  const pickupPlace = asString(raw.pickupPlace).trim();
+
+  const id = safeDomainId(raw.id);
+  const deadlineAt = parseIsoDate(raw.deadlineAt);
+  const residentStatus = RESIDENT_OFFER_STATUSES.find((value) => value === status);
+  const { title, price, minOrders, orderCount } = raw;
+  const valid =
+    id !== undefined &&
+    residentStatus !== undefined &&
+    shopName !== '' &&
+    typeof title === 'string' &&
+    typeof raw.pickupPlace === 'string' &&
+    pickupAt !== undefined &&
+    deadlineAt !== undefined &&
+    isCountNumber(price) &&
+    isCountNumber(minOrders) &&
+    isCountNumber(orderCount);
+  return {
+    status,
+    shopName,
+    pickupAt,
+    pickupPlace,
+    offer: valid
+      ? {
+          id,
+          shopName,
+          title: title.trim(),
+          price,
+          pickupAt,
+          pickupPlace,
+          minOrders,
+          orderCount,
+          deadlineAt,
+          status: residentStatus,
+          myOrder: mapMyOrder(raw.myOrder),
+        }
+      : undefined,
+  };
+}
+
+/** offers[] 를 제안마다 한 번씩 읽는다. 배열이 아니면 빈 목록, 객체가 아닌 항목은 건너뛴다. */
+function parseOffers(offers: OfferDto[] | null | undefined): ParsedOffer[] {
+  return (Array.isArray(offers) ? offers : []).flatMap((raw) => parseOffer(raw) ?? []);
+}
+
+/** 읽은 제안 중 서버 순서의 첫 "보여줄 제안" → 사장님 응답. 보여줄 수 없으면 undefined. */
+function responseFromParsed(parsed: readonly ParsedOffer[]): MerchantResponse | undefined {
+  for (const { status, shopName, pickupAt, pickupPlace } of parsed) {
+    if (status === null || !SHOWN_OFFER_STATUSES.includes(status) || shopName === '') continue;
     return {
-      merchantName,
+      merchantName: shopName,
       ...(pickupAt !== undefined && { pickupAt }),
       ...(pickupPlace !== '' && { pickupPlace }),
     };
   }
   return undefined;
+}
+
+/**
+ * 요청의 제안(offers[]) → "사장님 응답". 서버가 준 순서에서 보여줄 수 있는 첫 제안 하나를 쓴다.
+ * - 보여줄 수 없는 제안: 취소됐거나 알 수 없는 상태(offerStatus.ts), 업체 이름(shopName)이 없는 것.
+ * - 매핑: shopName → merchantName, pickupAt → pickupAt(ISO 8601 을 해석하지 못하면 없음), pickupPlace → pickupPlace(비면 없음).
+ * 제목·가격·최소 주문·마감·주문(myOrder)은 이 한 줄에 담을 자리가 없어 쓰지 않는다(제안 전체는 MyRequest.offers 에 있다).
+ * 제안이 없거나 배열이 아니면 undefined 다.
+ */
+export function selectOfferResponse(
+  offers: OfferDto[] | null | undefined,
+): MerchantResponse | undefined {
+  return responseFromParsed(parseOffers(offers));
+}
+
+/**
+ * POST /offers/{offerId}/orders 응답 → 선주문 결과. order·orderCount·minOrders 를 알아볼 수 없으면 parse 오류다
+ * (서버에서는 주문이 만들어졌을 수 있어 화면은 서버 상태를 다시 불러온다).
+ */
+export function mapOrderResult(dto: CreateOrderResponseDto | undefined): OrderResult {
+  const body = isObject(dto) ? dto : {};
+  const order = mapMyOrder(body.order);
+  if (order === null || !isCountNumber(body.orderCount) || !isCountNumber(body.minOrders)) {
+    throw parseError('POST /offers/{id}/orders 응답을 알아볼 수 없어요.');
+  }
+  return { order, orderCount: body.orderCount, minOrders: body.minOrders };
+}
+
+/**
+ * offers[] → 도메인 ResidentOffer[]. 서버 순서를 그대로 둔다.
+ * 한 제안의 필드가 형식에 맞지 않으면(id 가 양의 정수가 아님, 숫자가 아니거나 음수, 날짜를 해석하지 못함, 업체 이름·제목·받는 곳이
+ * 문자열이 아님, 취소·모르는 상태) 그 제안만 건너뛰고 나머지는 유지한다. myOrder 는 없거나 형식이 틀리면 null 이다.
+ */
+export function mapResidentOffers(offers: OfferDto[] | null | undefined): ResidentOffer[] {
+  return parseOffers(offers).flatMap(({ offer }) => offer ?? []);
 }
 
 /**
@@ -555,7 +675,8 @@ export function mapMyRequests(
     ) satisfies VisitTime[];
     const visitFrequency: VisitFrequency | undefined = toVisitFrequency(item.frequency);
     const createdAt = parseIsoDate(item.createdAt);
-    const response = selectOfferResponse(item.offers);
+    const parsedOffers = parseOffers(item.offers);
+    const response = responseFromParsed(parsedOffers);
 
     return {
       request: {
@@ -577,6 +698,7 @@ export function mapMyRequests(
       requestCount: Math.max(0, asNumber(item.count) ?? 0),
       ...(createdAt !== undefined && { createdAt }),
       ...(response !== undefined && { response }),
+      offers: parsedOffers.flatMap(({ offer }) => offer ?? []),
     };
   });
 }
@@ -913,10 +1035,10 @@ export function mapOwnerDetail(
 
 /**
  * GET /owner/offers 응답 → 도메인 OwnerOffer[]. 서버 순서를 그대로 쓴다.
- * - 응답은 배열이거나 {items|offers} 배열을 가진 객체다(실서버 모양은 명세에 없어 둘 다 받는다). 그 밖이면 parse 오류.
+ * - 응답은 배열이다(명세·실서버 모두). {items|offers} 배열을 가진 객체도 받지만 서버가 주는 모양은 아니다. 그 밖이면 parse 오류.
  * - 항목의 id 가 양의 정수가 아니면 그 항목은 건너뛴다(화면이 키로 쓴다). 제목이 비면 빈 제목으로 둔다.
  * - orderCount·minOrders 가 숫자가 아니면 0 이다(진행 막대가 비어 보인다). 상태가 모르는 값이면 상태가 없다.
- * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 서버가 아직 주지 않을 수 있어 올바르지 않으면 비운다.
+ * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 명세에 필수 표시가 없어 없거나 올바르지 않으면 그 필드만 비운다.
  */
 export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
   const list = Array.isArray(dto)
@@ -928,30 +1050,51 @@ export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
         : null;
   if (list === null) throw parseError('GET /owner/offers 응답이 목록이 아니에요.');
   return list.flatMap((raw): OwnerOffer[] => {
-    const item: OwnerOfferDto = isObject(raw) ? raw : {};
-    const id = safeDomainId(item.id);
-    if (id === undefined) return [];
-    const price = asNumber(item.price);
-    const pickupAt = parseIsoDate(item.pickupAt);
-    const deadlineAt = parseIsoDate(item.deadlineAt);
-    const status = toOfferStatus(item.status);
-    const count = (value: unknown) => {
-      const n = asNumber(value);
-      return n !== undefined && n >= 0 ? n : 0;
-    };
-    return [
-      {
-        id,
-        title: asString(item.title).trim(),
-        ...(status !== null && { status }),
-        ...(price !== undefined && price >= 0 && { price }),
-        ...(pickupAt !== undefined && { pickupAt }),
-        ...(deadlineAt !== undefined && { deadlineAt }),
-        orderCount: count(item.orderCount),
-        minOrders: count(item.minOrders),
-      },
-    ];
+    const offer = mapOwnerOffer(raw);
+    return offer === undefined ? [] : [offer];
   });
+}
+
+/**
+ * OwnerOfferItem 한 건 → 도메인 OwnerOffer. id 가 양의 정수가 아니면 undefined.
+ * 목록(GET /owner/offers)의 항목과 POST /offers/{id}/done·cancel 의 응답이 같은 모양이다.
+ * 받는 곳(pickupPlace)·설명(description)·동네 이름(dong.name)은 비어 있으면 없다.
+ */
+export function mapOwnerOffer(raw: unknown): OwnerOffer | undefined {
+  const item: OwnerOfferDto = isObject(raw) ? raw : {};
+  const id = safeDomainId(item.id);
+  if (id === undefined) return undefined;
+  const price = asNumber(item.price);
+  const pickupAt = parseIsoDate(item.pickupAt);
+  const deadlineAt = parseIsoDate(item.deadlineAt);
+  const status = toOfferStatus(item.status);
+  const pickupPlace = asString(item.pickupPlace).trim();
+  const description = asString(item.description).trim();
+  const dongName = isObject(item.dong) ? asString(item.dong.name).trim() : '';
+  const count = (value: unknown) => {
+    const n = asNumber(value);
+    return n !== undefined && n >= 0 ? n : 0;
+  };
+  return {
+    id,
+    title: asString(item.title).trim(),
+    ...(status !== null && { status }),
+    ...(price !== undefined && price >= 0 && { price }),
+    ...(pickupAt !== undefined && { pickupAt }),
+    ...(pickupPlace !== '' && { pickupPlace }),
+    ...(description !== '' && { description }),
+    ...(dongName !== '' && { dongName }),
+    ...(deadlineAt !== undefined && { deadlineAt }),
+    orderCount: count(item.orderCount),
+    minOrders: count(item.minOrders),
+  };
+}
+
+/** POST /offers/{id}/done·cancel 응답(갱신된 OwnerOfferItem) → 도메인. 알아볼 수 없으면 parse 오류(처리됐는지 알 수 없다). */
+export function mapOwnerOfferResponse(dto: unknown): OwnerOffer {
+  const offer = mapOwnerOffer(dto);
+  if (offer === undefined) throw parseError('제안 처리 응답에 제안 id 가 없어요.');
+  return offer;
 }
 
 /** 제안 보내기 본문. 설명이 비면 보내지 않고, 날짜는 +09:00 오프셋 ISO 8601 이다. 동네·업종 id 가 숫자가 아니면 던진다. */
@@ -970,8 +1113,15 @@ export function buildCreateOfferBody(input: NewOffer): CreateOfferBody {
   };
 }
 
-/** POST /offers 응답 → 결과. notifiedResidentCount 가 0 이상의 정수일 때만 쓴다(아니면 없음). */
+/**
+ * POST /offers 응답 → 결과. 만든 제안의 id(offer.id)는 양의 정수일 때, notifiedResidentCount 는 0 이상의 정수일 때만 쓴다(아니면 없음).
+ */
 export function mapCreateOfferResponse(dto: CreateOfferResponseDto | undefined): OfferSent {
-  const n = isObject(dto) ? dto.notifiedResidentCount : undefined;
-  return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? { notifiedResidentCount: n } : {};
+  const body = isObject(dto) ? dto : {};
+  const offerId = isObject(body.offer) ? safeDomainId(body.offer.id) : undefined;
+  const n = body.notifiedResidentCount;
+  return {
+    ...(offerId !== undefined && { offerId }),
+    ...(typeof n === 'number' && Number.isInteger(n) && n >= 0 && { notifiedResidentCount: n }),
+  };
 }

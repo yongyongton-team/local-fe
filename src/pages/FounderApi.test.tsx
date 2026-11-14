@@ -232,6 +232,57 @@ describe('api 모드의 입지 찾기', () => {
     expect(await app.screen.findByText('아직 요청이 없는 업종이에요')).toBeInTheDocument();
   });
 
+  it('서버가 준 NOT_SHORT 행은 접고 순서·순위 번호는 서버 값 그대로이며, 펼쳐도 서버를 다시 부르지 않는다', async () => {
+    const item = (rank: number, dongId: number, name: string, verdict: string) => ({
+      rank,
+      dongId,
+      name,
+      requestCount: 0,
+      sameCategoryStoreCount: 0,
+      score: 1,
+      // [임의] 테스트용 값. 실제 서버 값이 아니다.
+      publicData: {
+        population: 10000,
+        expectedCount: 5,
+        dongStoreCount: 5,
+        verdict,
+        verdictLabel: `[임의] ${verdict}`,
+      },
+    });
+    const { calls } = stubServer({
+      rankings: () =>
+        jsonResponse(200, {
+          items: [
+            item(1, 22, '구성동', 'SHORT'),
+            item(2, 16, '영덕2동', 'NOT_SHORT'),
+            item(3, 28, '보정동', 'NOT_SHORT'),
+            item(4, 30, '마북동', 'NOT_JUDGED'),
+          ],
+        }),
+    });
+    const app = await loadApp('api');
+    app.renderApp(['/founder']);
+
+    await app.screen.findByRole('link', { name: /^1\. 구성동/ });
+    const names = () =>
+      rankSection(app)
+        .getAllByRole('link')
+        .map((link) => link.textContent?.split('요청')[0]);
+    expect(names()).toEqual(['1. 구성동', '4. 마북동']);
+    const callsBefore = rankingCalls(calls).length;
+
+    await app.user.click(
+      app.screen.getByRole('button', { name: '부족하지 않은 동네 2곳 더 보기' }),
+    );
+
+    expect(names()).toEqual(['1. 구성동', '4. 마북동', '2. 영덕2동', '3. 보정동']);
+    expect(app.screen.getByRole('button', { name: '접기' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(rankingCalls(calls)).toHaveLength(callsBefore);
+  });
+
   it.each([
     [
       '403 FORBIDDEN',

@@ -149,7 +149,7 @@ export interface CreateResponseDto {
   notifiedOwnerCount?: Nullable<number>;
 }
 
-/** GET /me/requests 의 제안 myOrder. 이 화면은 쓰지 않는다. */
+/** 주문 한 건(OrderView). GET /me/requests 의 제안 myOrder 와 POST /offers/{id}/orders 응답의 order 가 같은 모양이다. */
 export interface OrderDto {
   id?: Nullable<number>;
   offerId?: Nullable<number>;
@@ -157,9 +157,16 @@ export interface OrderDto {
   status?: Nullable<string>;
 }
 
+/** POST /offers/{offerId}/orders 응답. order 와 주문 직후의 orderCount·minOrders. */
+export interface CreateOrderResponseDto {
+  order?: Nullable<OrderDto>;
+  orderCount?: Nullable<number>;
+  minOrders?: Nullable<number>;
+}
+
 /**
- * GET /me/requests 항목의 제안. 실서버에서 제안을 본 적이 없어 모양은 명세 기준이다(미확인).
- * 이 화면이 쓰는 것은 status·shopName·title 뿐이다.
+ * GET /me/requests 항목의 제안(명세 ResidentOfferView). 실서버에서 제안을 본 적이 없어 모양은 명세 기준이다(미확인).
+ * 취소된 제안은 서버가 주지 않는다. 사장님 응답 한 줄과 제안 상세(주민)가 읽는다.
  */
 export interface OfferDto {
   id?: Nullable<number>;
@@ -271,8 +278,9 @@ export interface OwnerDetailDto {
 }
 
 /**
- * GET /owner/offers 의 제안 한 항목. 명세의 OwnerOfferItem 에는 price·pickupAt 이 없어 선택으로 두었다(백엔드에 추가 요청 예정).
- * 응답이 배열인지 {items|offers} 객체인지는 실서버에서 확인해야 한다(mapOwnerOffers 는 둘 다 받는다).
+ * GET /owner/offers 의 제안 한 항목(명세 OwnerOfferItem). 명세에는 price·pickupAt·pickupPlace·description 이 있고(필수 표시는 없다)
+ * 응답은 배열이다. 화면은 price·pickupAt·pickupPlace·description·dong.name 까지 읽는다.
+ * 모든 필드를 선택으로 둔 것은 명세에 필수 표시가 없어서다. 값이 없으면 매퍼가 그 필드만 비운다.
  */
 export interface OwnerOfferDto {
   id?: Nullable<number>;
@@ -280,6 +288,9 @@ export interface OwnerOfferDto {
   status?: Nullable<string>;
   price?: Nullable<number>;
   pickupAt?: Nullable<string>;
+  pickupPlace?: Nullable<string>;
+  description?: Nullable<string>;
+  dong?: Nullable<IdNameDto>;
   deadlineAt?: Nullable<string>;
   minOrders?: Nullable<number>;
   orderCount?: Nullable<number>;
@@ -298,7 +309,8 @@ export interface CreateOfferBody {
   deadlineAt: string;
 }
 
-/** POST /offers 응답. notifiedResidentCount 만 쓴다. */
+/** POST /offers 응답. 만든 제안의 id(offer.id)와 notifiedResidentCount 를 쓴다. */
 export interface CreateOfferResponseDto {
+  offer?: Nullable<{ id?: Nullable<number> }>;
   notifiedResidentCount?: Nullable<number>;
 }

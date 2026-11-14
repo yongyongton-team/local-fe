@@ -37,9 +37,20 @@ export interface MockRankEntry {
   publicData?: PublicData;
 }
 
+/** [임의] 부족하지 않다는 판정의 공공데이터 예시 값(빵집 보정동·마북동) */
+const NOT_SHORT_SAMPLE: PublicData = {
+  population: 14000,
+  expectedCount: 3.5,
+  dongStoreCount: 7,
+  verdict: 'NOT_SHORT',
+  verdictLabel: '[임의] 부족하지 않아요',
+};
+
 /** 업종별 순위 목록(서버 순서). 여기 없는 업종은 순위가 없다. */
 export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry[]>> = {
-  // 과일/채소: 판정 5가지, 요청 0명이 2위, 공공데이터 없음, 긴 판정 문구를 한 목록에 둔다.
+  // 과일/채소: 판정 5가지, 요청 0명이 위쪽, 공공데이터 없음, 긴 판정 문구를 한 목록에 둔다.
+  // 서버가 판정 우선순위(SHORT → SOME_NEARBY → NEXT_DONG → NOT_SHORT → NOT_JUDGED)로 준 순서를 흉내 낸다.
+  // 화면은 NOT_SHORT(3곳)를 기본으로 접는다. 공공데이터가 없는 마북동은 접지 않는다.
   'fruit-vegetable': [
     {
       neighborhoodId: 'guseong',
@@ -49,6 +60,17 @@ export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry
         dongStoreCount: 3,
         verdict: 'SHORT',
         verdictLabel: '[임의] 가게가 많이 부족해요',
+      },
+    },
+    {
+      sample: { id: 'sample-d', name: '예시동 라', requestCount: 3, nearbySameCategoryCount: 1 },
+      publicData: {
+        population: 18800,
+        expectedCount: 7.2,
+        dongStoreCount: 2,
+        verdict: 'SHORT',
+        verdictLabel:
+          '[임의] 인구에 비해 가게가 많이 부족하고 가까운 동네에도 같은 업종이 없어서 새로 열기 좋은 곳이에요',
       },
     },
     {
@@ -72,8 +94,6 @@ export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry
         verdictLabel: '[임의] 옆 동네에 가게가 있어요',
       },
     },
-    // 공공데이터가 없는 항목(기존 행과 같은 모양)
-    { neighborhoodId: 'mabuk' },
     {
       sample: {
         id: 'sample-b',
@@ -91,7 +111,27 @@ export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry
       },
     },
     {
-      // 판단하지 못한 경우: 숫자는 없거나 0
+      sample: { id: 'sample-e', name: '예시동 마', requestCount: 1, nearbySameCategoryCount: 4 },
+      publicData: {
+        population: 12400,
+        expectedCount: 5.5,
+        dongStoreCount: 8,
+        verdict: 'NOT_SHORT',
+        verdictLabel: '[임의] 부족하지 않아요',
+      },
+    },
+    {
+      sample: { id: 'sample-f', name: '예시동 바', requestCount: 0, nearbySameCategoryCount: 2 },
+      publicData: {
+        population: 7300,
+        expectedCount: 3.4,
+        dongStoreCount: 6,
+        verdict: 'NOT_SHORT',
+        verdictLabel: '[임의] 부족하지 않아요',
+      },
+    },
+    {
+      // 판단하지 못한 경우: 숫자는 없거나 0. 접지 않는다.
       sample: { id: 'sample-c', name: '예시동 다', requestCount: 1, nearbySameCategoryCount: 0 },
       publicData: {
         population: 0,
@@ -101,17 +141,8 @@ export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry
         verdictLabel: '[임의] 공공데이터가 부족해 판단하지 못했어요',
       },
     },
-    {
-      sample: { id: 'sample-d', name: '예시동 라', requestCount: 3, nearbySameCategoryCount: 1 },
-      publicData: {
-        population: 18800,
-        expectedCount: 7.2,
-        dongStoreCount: 2,
-        verdict: 'SHORT',
-        verdictLabel:
-          '[임의] 인구에 비해 가게가 많이 부족하고 가까운 동네에도 같은 업종이 없어서 새로 열기 좋은 곳이에요',
-      },
-    },
+    // 공공데이터가 없는 항목(기존 행과 같은 모양). 접지 않는다.
+    { neighborhoodId: 'mabuk' },
   ],
   // 그 업종의 수요가 있는 동네만 순위에 오른다(주민이 요청을 보내면 수요가 생겨 들어온다). 순서는 아래 그대로다.
   'side-dish': [
@@ -119,9 +150,19 @@ export const mockFounderRankings: Readonly<Record<string, readonly MockRankEntry
     { neighborhoodId: 'bojeong' },
     { neighborhoodId: 'mabuk' },
   ],
+  // 빵집: 순위에 오른 동네가 모두 NOT_SHORT 라 접으면 보이는 행이 0개인 경우(화면 안내 확인용)다.
   bakery: [
-    { neighborhoodId: 'guseong' },
-    { neighborhoodId: 'bojeong' },
-    { neighborhoodId: 'mabuk' },
+    {
+      neighborhoodId: 'guseong',
+      publicData: {
+        population: 21000,
+        expectedCount: 4.2,
+        dongStoreCount: 9,
+        verdict: 'NOT_SHORT',
+        verdictLabel: '[임의] 부족하지 않아요',
+      },
+    },
+    { neighborhoodId: 'bojeong', publicData: NOT_SHORT_SAMPLE },
+    { neighborhoodId: 'mabuk', publicData: NOT_SHORT_SAMPLE },
   ],
 };

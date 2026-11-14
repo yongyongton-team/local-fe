@@ -1,0 +1,66 @@
+/* 제안 전송 배너 (Figma 79:2354, 362×132): 라임 바탕, 모서리 26px, 검정 원 안의 체크 + 24px SemiBold 문구 */
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--founder-map-radius);
+  background: var(--color-accent);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-black);
+  color: var(--color-accent);
+}
+
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.text {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: 24px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* 모집 현황: 제목 18px SemiBold, 라임 막대(가득), 문구 12px Medium */
+.recruit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.recruitTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.recruitBar {
+  height: var(--offer-progress-height);
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-accent);
+}
+
+.recruitText {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}

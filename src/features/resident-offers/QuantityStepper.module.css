@@ -1,0 +1,49 @@
+/* 수량 알약 (Figma 66:518): 흰 바탕 + 1px 윤곽, 모서리 25px, 높이 약 37px, "− 2 +" */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 173px;
+  max-width: 100%;
+  min-height: var(--tap-target-min);
+  border: 1px solid var(--color-surface-muted);
+  border-radius: var(--founder-map-radius);
+  background: var(--color-surface);
+}
+
+.button {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  cursor: pointer;
+}
+
+.button:disabled {
+  color: var(--color-text-secondary);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--founder-map-radius);
+}
+
+.value {
+  min-width: 2ch;
+  text-align: center;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}

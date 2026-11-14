@@ -1,18 +1,23 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { describeApiError, offerService } from '@/services';
+import {
+  OFFER_DESCRIPTION_MAX,
+  OFFER_PICKUP_PLACE_MAX,
+  OFFER_TITLE_MAX,
+} from '@/shared/lib/inputLimits';
 import { formatMonthDay24h, formatMonthDayMeridiem, parseKstInput } from '@/shared/lib/kstDate';
 import { paths } from '@/shared/lib/paths';
 import { Button } from '@/shared/ui/Button';
-import { Modal } from '@/shared/ui/Modal';
-import type { OfferSent } from '@/types/domain';
 import { OFFER_COPY } from './copy';
 import { DateTimeField } from './DateTimeField';
 import {
   EMPTY_OFFER_FORM,
   checkOfferForm,
   clampMinOrders,
+  deadlineError,
   firstHint,
+  isPriceWithinLimit,
   sanitizePrice,
   type OfferFormValues,
 } from './formValidation';
@@ -26,15 +31,19 @@ const displayWith = (format: (date: Date) => string) => (value: string) => {
 
 /**
  * 방문 판매 제안 작성 폼(Figma 45:542). 동네·업종은 context(내 가게의 업종, 제안 대상 동네)에서 가져온다.
- * 보내는 동안은 버튼을 막아 중복 제출을 막고, 성공하면 알림 보낸 주민 수를 Modal 로 알린 뒤 내 가게(제안 목록)로 간다.
+ * 보내는 동안은 버튼을 막아 중복 제출을 막고, 성공하면 만든 제안의 상세로 간다(replace 라 뒤로 가도 다시 보내지 않는다).
+ * 이때 라우터 state 로 알림 보낸 주민 수를 넘겨 상세가 "제안을 보냈어요!" 배너를 보인다. 서버가 제안 id 를 주지 않았으면 제안 목록으로 간다.
  */
 export function OfferForm({ context }: { context: OfferContext }) {
   const navigate = useNavigate();
   const [values, setValues] = useState<OfferFormValues>(EMPTY_OFFER_FORM);
   const [dirty, setDirty] = useState(false);
+  // 마감 검증의 "지금". 입력할 때와 보내기 직전에 새로 읽는다(시간이 지나 마감이 지났을 수 있다).
+  const [now, setNow] = useState(() => new Date());
+  // 가격이 int32 최댓값을 넘는 입력을 막았을 때 안내를 보이기 위한 표시
+  const [priceTooHigh, setPriceTooHigh] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<OfferSent | null>(null);
   // state 갱신보다 빠른 연타도 막으려고 ref 로 확인한다.
   const submittingRef = useRef(false);
   const deadlineErrorId = useId();
@@ -43,13 +52,14 @@ export function OfferForm({ context }: { context: OfferContext }) {
   const descriptionId = useId();
   const priceId = useId();
   const placeId = useId();
-  const sentBodyId = useId();
 
-  const check = checkOfferForm(values);
+  const check = checkOfferForm(values, now);
   const hint = dirty ? firstHint(check) : null;
+  const deadlineMessage = deadlineError(check);
 
   function update(patch: Partial<OfferFormValues>) {
     setValues((current) => ({ ...current, ...patch }));
+    setNow(new Date());
     setDirty(true);
     setError(null);
   }
@@ -58,7 +68,13 @@ export function OfferForm({ context }: { context: OfferContext }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (submittingRef.current || !check.canSubmit) return;
+    if (submittingRef.current) return;
+    // 보내기 직전의 시각으로 다시 검사한다. 마감이 그새 지났으면 오류를 보이고 보내지 않는다.
+    const submitTime = new Date();
+    if (!checkOfferForm(values, submitTime).canSubmit) {
+      setNow(submitTime);
+      return;
+    }
     const pickupAt = parseKstInput(values.pickupAt);
     const deadlineAt = parseKstInput(values.deadlineAt);
     if (!pickupAt || !deadlineAt) return;
@@ -78,7 +94,19 @@ export function OfferForm({ context }: { context: OfferContext }) {
         pickupPlace: values.pickupPlace,
         deadlineAt,
       });
-      setSent(result);
+      if (result.offerId === undefined) {
+        goToList();
+      } else {
+        void navigate(paths.merchantOffer(result.offerId), {
+          replace: true,
+          state: {
+            justSent: true,
+            ...(result.notifiedResidentCount !== undefined && {
+              notifiedResidentCount: result.notifiedResidentCount,
+            }),
+          },
+        });
+      }
     } catch (e) {
       // 서버 message 는 쓰지 않는다. 오류 종류·코드로 정한 문구만 보여준다.
       setError(describeApiError(e, 'offer'));
@@ -100,6 +128,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_TITLE_MAX}
             placeholder={OFFER_COPY.titlePlaceholder}
             value={values.title}
             onChange={(event) => update({ title: event.target.value })}
@@ -115,6 +144,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_DESCRIPTION_MAX}
             placeholder={OFFER_COPY.descriptionPlaceholder}
             value={values.description}
             onChange={(event) => update({ description: event.target.value })}
@@ -135,7 +165,16 @@ export function OfferForm({ context }: { context: OfferContext }) {
                 autoComplete="off"
                 placeholder={OFFER_COPY.pricePlaceholder}
                 value={values.price === '' ? '' : Number(values.price).toLocaleString('ko-KR')}
-                onChange={(event) => update({ price: sanitizePrice(event.target.value) })}
+                onChange={(event) => {
+                  const next = sanitizePrice(event.target.value);
+                  // int32 최댓값을 넘는 입력은 받지 않고(이전 값 유지) 안내만 보인다.
+                  if (!isPriceWithinLimit(next)) {
+                    setPriceTooHigh(true);
+                    return;
+                  }
+                  setPriceTooHigh(false);
+                  update({ price: next });
+                }}
               />
               <span className={styles.unit} aria-hidden="true">
                 {OFFER_COPY.priceUnit}
@@ -172,6 +211,12 @@ export function OfferForm({ context }: { context: OfferContext }) {
           </div>
         </div>
 
+        {priceTooHigh && (
+          <p role="alert" className={styles.error}>
+            {OFFER_COPY.outOfRange.price}
+          </p>
+        )}
+
         <DateTimeField
           label={OFFER_COPY.fieldPickupAt}
           value={values.pickupAt}
@@ -189,6 +234,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_PICKUP_PLACE_MAX}
             placeholder={OFFER_COPY.pickupPlacePlaceholder}
             value={values.pickupPlace}
             onChange={(event) => update({ pickupPlace: event.target.value })}
@@ -201,12 +247,12 @@ export function OfferForm({ context }: { context: OfferContext }) {
           display={displayWith(formatMonthDay24h)}
           placeholder={OFFER_COPY.pickPlaceholder}
           onChange={(deadlineAt) => update({ deadlineAt })}
-          invalid={check.deadlineNotBeforePickup}
+          invalid={deadlineMessage !== null}
           errorId={deadlineErrorId}
         />
-        {check.deadlineNotBeforePickup && (
+        {deadlineMessage !== null && (
           <p id={deadlineErrorId} role="alert" className={styles.error}>
-            {OFFER_COPY.deadlineAfterPickup}
+            {deadlineMessage}
           </p>
         )}
 
@@ -229,17 +275,6 @@ export function OfferForm({ context }: { context: OfferContext }) {
           </Button>
         </div>
       </form>
-
-      {sent && (
-        <Modal title={OFFER_COPY.sentTitle} describedBy={sentBodyId} onClose={goToList}>
-          <p id={sentBodyId} className={styles.sentBody}>
-            {OFFER_COPY.sentBody(sent.notifiedResidentCount)}
-          </p>
-          <Button variant="highlight" size="medium" onClick={goToList}>
-            {OFFER_COPY.sentConfirm}
-          </Button>
-        </Modal>
-      )}
     </>
   );
 }

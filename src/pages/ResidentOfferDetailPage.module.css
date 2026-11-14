@@ -1,0 +1,156 @@
+/*
+ * 주민 제안 상세 레이아웃 (Figma 66:518, 402×874 기준을 비율·여백으로 옮김).
+ * 높이를 고정하지 않는다. 내용이 길면 스크롤하고 하단 버튼은 화면 아래에 붙는다.
+ */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+}
+
+/* 상태 줄: 뱃지 + "마감 …"(12px, 보조 글자색), 사이 8px */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--chip-height);
+}
+
+.deadline {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+/* "사장님 이름 / 제안 제목": 20px SemiBold */
+.title {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-offer-detail-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-offer-detail-title);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* 가격·받는 날·마감·받는 곳: 라벨 13px / 값 14px Bold */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.label {
+  flex: none;
+  width: var(--offer-label-width);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-offer-label);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+.value {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+/* "모집 현황", "수량": 18px SemiBold */
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* 모집 현황 막대: 라임 채움 */
+.track {
+  height: var(--offer-progress-height);
+  overflow: hidden;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-surface-muted);
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--offer-progress-radius);
+  background: var(--color-accent);
+}
+
+/* 12px Medium, 보조 글자색 */
+.recruitText {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.orderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* 내 예약·상태 안내 */
+.note {
+  margin: 0;
+  font: var(--font-caption);
+  color: var(--color-text-primary);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-accent-red);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-chip);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+}
+
+/* 하단 버튼: 짧은 화면에서는 맨 아래, 긴 화면에서는 스크롤하며 아래에 붙는다. */
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  padding-bottom: calc(var(--sticky-footer-gap) - var(--space-6) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-surface) var(--space-5));
+}

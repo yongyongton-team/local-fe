@@ -1,15 +1,21 @@
 import { render } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
+import {
+  createMemoryRouter,
+  RouterProvider,
+  type InitialEntry,
+  type RouteObject,
+} from 'react-router';
 import { AppProviders } from '@/app/providers';
 import { routes as appRoutes } from '@/app/routes';
 
 /**
  * 실제 앱과 같은 라우트·Provider 를 메모리 라우터로 렌더링한다. 네트워크는 사용하지 않는다.
+ * @param initialEntries 주소 문자열이나 { pathname, state } (라우터 state 를 가진 진입을 검증할 때)
  * @param routes 기본은 앱 라우트. 프로덕션 라우트 구성을 검증할 때 createRoutes() 결과를 넘긴다.
  * @param initialIndex initialEntries 중 처음 열 위치. 이전 화면이 있는 상태를 만들 때 쓴다.
  */
 export function renderApp(
-  initialEntries: string[] = ['/'],
+  initialEntries: InitialEntry[] = ['/'],
   routes: RouteObject[] = appRoutes,
   initialIndex?: number,
 ) {

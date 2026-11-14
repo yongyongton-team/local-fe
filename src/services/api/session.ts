@@ -32,8 +32,8 @@ export function resolveExpiresAt(
 export interface GuestSession {
   /** 토큰이 없을 때만 게스트 로그인한다. 동시에 여러 번 불러도 로그인은 한 번이다. 토큰 값을 돌려준다. */
   ensureSession(): Promise<string>;
-  /** 그 토큰이 아직 저장된 토큰일 때만 지운다(다른 요청이 이미 새 토큰을 받았다면 건드리지 않는다). */
-  invalidate(token: string): void;
+  /** 그 토큰이 아직 저장된 토큰일 때만 지운다(다른 요청이 이미 새 토큰을 받았다면 건드리지 않는다). 지웠으면 true. */
+  invalidate(token: string): boolean;
   /** 저장된 토큰을 지운다. */
   clear(): void;
   /** 만료되지 않은 토큰이 저장돼 있는지. 로그인도 요청도 일으키지 않는다. */
@@ -126,7 +126,9 @@ export function createGuestSession({
       return inflight;
     },
     invalidate(token) {
-      if (store.read(now())?.token === token) store.clear();
+      if (store.read(now())?.token !== token) return false;
+      store.clear();
+      return true;
     },
     clear() {
       store.clear();
