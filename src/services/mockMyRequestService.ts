@@ -45,6 +45,14 @@ export const mockMyRequestService: MyRequestService = {
     }
     return items;
   },
+  async getResidentOffer(offerId) {
+    // API 와 같은 방식: 내 요청 목록의 모든 요청 offers 에서 id 로 찾는다.
+    for (const item of await mockMyRequestService.listMyRequests()) {
+      const found = item.offers.find((offer) => offer.id === offerId);
+      if (found) return found;
+    }
+    return null;
+  },
   async deleteRequest(requestId) {
     const db = getDb();
     const index = db.requests.findIndex(({ request }) => request.id === requestId);

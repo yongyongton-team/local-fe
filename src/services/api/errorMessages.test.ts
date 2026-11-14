@@ -233,3 +233,43 @@ describe('describeApiError: 맥락별 NOT_FOUND 문구', () => {
     expect(describeApiError(http(500, 'NOT_FOUND'), 'shop')).toBe(FALLBACK_ERROR_MESSAGE);
   });
 });
+
+describe('describeApiError: order 맥락(선주문·예약 취소)', () => {
+  it('ALREADY_ORDERED·OFFER_CLOSED·FORBIDDEN·VALIDATION_ERROR·NOT_FOUND 에 주문용 문구를 쓴다', () => {
+    expect(describeApiError(http(409, 'ALREADY_ORDERED'), 'order')).toBe(
+      '이미 선주문한 제안이에요.',
+    );
+    expect(describeApiError(http(409, 'OFFER_CLOSED'), 'order')).toBe(
+      '주문이 마감됐거나 취소된 제안이에요.',
+    );
+    expect(describeApiError(http(403, 'FORBIDDEN'), 'order')).toBe(
+      '내 예약이 아니라서 처리할 수 없어요.',
+    );
+    expect(describeApiError(http(400, 'VALIDATION_ERROR'), 'order')).toBe(
+      '내 동네 제안에만 주문할 수 있어요.',
+    );
+    expect(describeApiError(http(404, 'NOT_FOUND'), 'order')).toBe(
+      '취소되었거나 사라진 제안이에요.',
+    );
+  });
+
+  it('맥락이 없으면 ALREADY_ORDERED·OFFER_CLOSED 는 마지막 문구, FORBIDDEN 은 기존 문구다(다른 화면은 그대로)', () => {
+    expect(describeApiError(http(409, 'ALREADY_ORDERED'))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(409, 'OFFER_CLOSED'))).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(409, 'OFFER_CLOSED'), 'offer')).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(http(403, 'FORBIDDEN'))).toBe(ERROR_MESSAGES_BY_CODE.FORBIDDEN);
+  });
+
+  it('5xx·네트워크·시간 초과·데모 차단은 맥락과 상관없이 기존 문구다', () => {
+    expect(describeApiError(http(500, 'OFFER_CLOSED'), 'order')).toBe(FALLBACK_ERROR_MESSAGE);
+    expect(describeApiError(of('network'), 'order')).toBe(describeApiError(of('network')));
+    expect(describeApiError(of('timeout'), 'order')).toBe(describeApiError(of('timeout')));
+    expect(describeApiError(new Error('x'), 'order')).toBe(FALLBACK_ERROR_MESSAGE);
+  });
+
+  it('서버 message 는 쓰지 않는다', () => {
+    const text = describeApiError(http(409, 'OFFER_CLOSED', '서버 원문 마감된 제안'), 'order');
+
+    expect(text).not.toContain('서버 원문');
+  });
+});

@@ -4,6 +4,7 @@ import { createApiFounderService } from './api/apiFounderService';
 import { createApiMerchantService } from './api/apiMerchantService';
 import { createApiMeService } from './api/apiMeService';
 import { createApiOfferService } from './api/apiOfferService';
+import { createApiOrderService } from './api/apiOrderService';
 import { createApiRequestServices } from './api/apiRequestServices';
 import { isDemoLoginEnabled, resolveDataSource } from './api/config';
 import type { AuthService } from './authService';
@@ -15,6 +16,7 @@ import { mockDemandService } from './mockDemandService';
 import { mockFounderService } from './mockFounderService';
 import { mockMerchantService } from './mockMerchantService';
 import { mockOfferService } from './mockOfferService';
+import { mockOrderService } from './mockOrderService';
 import { mockMyRequestService } from './mockMyRequestService';
 import { mockReportDescriptionGenerator } from './mockReportDescriptionGenerator';
 import { mockRequestSubmitter } from './mockRequestSubmitter';
@@ -24,6 +26,7 @@ import type { FounderService } from './founderService';
 import type { MeService } from './meService';
 import type { MerchantService } from './merchantService';
 import type { OfferService } from './offerService';
+import type { OrderService } from './orderService';
 import type { MyRequestService } from './myRequestService';
 import type { RequestSubmitter } from './requestSubmitter';
 import type { RequestSummarizer } from './requestSummarizer';
@@ -39,6 +42,7 @@ export type {
 } from './merchantService';
 export type { MyRequestService } from './myRequestService';
 export type { OfferService } from './offerService';
+export type { OrderService } from './orderService';
 export { isNoShopError, NoShopError } from './merchantService';
 export type { AreaDescriptionGenerator, ReportDescriptionGenerator } from './reportDescription';
 export type { RequestSubmitter } from './requestSubmitter';
@@ -51,7 +55,7 @@ export type { RequestSummarizer, RequestSummary } from './requestSummarizer';
  *   예비 창업자 순위·리포트(founderService·reportDescriptionGenerator),
  *   사장님 가게 정보·동네 수요(merchantService·areaDescriptionGenerator)와 제안(offerService).
  * - mock: 같은 서비스를 메모리 목으로 쓴다. 네트워크 요청과 로그인이 전혀 일어나지 않는다.
- * 서버 API 중 아직 서비스가 없는 것(제안 주문·완료·취소, 주문 취소)은 여기에 없고 화면도 없다.
+ * 주민의 선주문·예약 취소(orderService)도 api 모드에서는 서버를 쓴다.
  */
 const dataSource = resolveDataSource(
   import.meta.env.VITE_DATA_SOURCE,
@@ -124,6 +128,10 @@ export const reportDescriptionGenerator: ReportDescriptionGenerator =
 export const offerService: OfferService =
   dataSource === 'api' ? createApiOfferService() : mockOfferService;
 
+/** 주민의 선주문·예약 취소. api 모드는 POST /offers/{id}/orders·DELETE /orders/{id}(데모 세션은 차단), mock 은 서버 규칙을 따르는 메모리 목. */
+export const orderService: OrderService =
+  dataSource === 'api' ? createApiOrderService() : mockOrderService;
+
 /** 인증. api 모드는 게스트 로그인(+ 플래그가 켜진 경우 사장님 데모 로그인), mock 은 아무것도 하지 않는다. */
 export const authService: AuthService =
   dataSource === 'api'
@@ -140,6 +148,7 @@ export {
   DEMO_WRITE_BLOCKED_MESSAGE,
   ERROR_MESSAGES_BY_CODE,
   NOT_FOUND_MESSAGES_BY_CONTEXT,
+  ORDER_MESSAGES_BY_CODE,
   VALIDATION_MESSAGES_BY_CONTEXT,
   describeApiError,
 } from './api/errorMessages';

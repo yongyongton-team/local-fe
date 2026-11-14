@@ -18,6 +18,10 @@ interface MemoryDb {
   /** 사장님이 보낸 제안. 배열 앞이 가장 최근이다. */
   offers: OwnerOffer[];
   nextOfferNumber: number;
+  /** 주문 번호 발급용(mock-order-N). 시드 주문과 겹치지 않는 이름을 쓴다. */
+  nextOrderNumber: number;
+  /** 취소한 주문의 id(제안 id → 주문 id). 서버처럼 다시 주문하면 같은 주문이 되살아난다. */
+  cancelledOrderIds: Record<string, string>;
 }
 
 function createInitialDb(): MemoryDb {
@@ -31,6 +35,8 @@ function createInitialDb(): MemoryDb {
     shop: null,
     offers: mockSeedOffers.map((offer) => ({ ...offer })),
     nextOfferNumber: 1,
+    nextOrderNumber: 1,
+    cancelledOrderIds: {},
   };
 }
 

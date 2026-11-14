@@ -149,7 +149,7 @@ export interface CreateResponseDto {
   notifiedOwnerCount?: Nullable<number>;
 }
 
-/** GET /me/requests 의 제안 myOrder. 이 화면은 쓰지 않는다. */
+/** 주문 한 건(OrderView). GET /me/requests 의 제안 myOrder 와 POST /offers/{id}/orders 응답의 order 가 같은 모양이다. */
 export interface OrderDto {
   id?: Nullable<number>;
   offerId?: Nullable<number>;
@@ -157,9 +157,16 @@ export interface OrderDto {
   status?: Nullable<string>;
 }
 
+/** POST /offers/{offerId}/orders 응답. order 와 주문 직후의 orderCount·minOrders. */
+export interface CreateOrderResponseDto {
+  order?: Nullable<OrderDto>;
+  orderCount?: Nullable<number>;
+  minOrders?: Nullable<number>;
+}
+
 /**
- * GET /me/requests 항목의 제안. 실서버에서 제안을 본 적이 없어 모양은 명세 기준이다(미확인).
- * 이 화면이 쓰는 것은 status·shopName·title 뿐이다.
+ * GET /me/requests 항목의 제안(명세 ResidentOfferView). 실서버에서 제안을 본 적이 없어 모양은 명세 기준이다(미확인).
+ * 취소된 제안은 서버가 주지 않는다. 사장님 응답 한 줄과 제안 상세(주민)가 읽는다.
  */
 export interface OfferDto {
   id?: Nullable<number>;

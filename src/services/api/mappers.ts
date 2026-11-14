@@ -18,6 +18,7 @@ import type {
   NewOffer,
   NewStoreRequest,
   OfferSent,
+  OrderResult,
   RequestedStore,
   ResidentOffer,
   ResidentOfferStatus,
@@ -39,6 +40,7 @@ import type {
   CategoryDto,
   CreateOfferBody,
   CreateOfferResponseDto,
+  CreateOrderResponseDto,
   CreateRequestBody,
   CreateResponseDto,
   DongDto,
@@ -530,7 +532,7 @@ const isCountNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
 /** myOrder → 도메인. 없음(null)이거나 형식이 맞지 않거나 취소·모르는 상태면 null 이다. */
-function mapMyOrder(raw: unknown): MyOrder | null {
+export function mapMyOrder(raw: unknown): MyOrder | null {
   if (!isObject(raw)) return null;
   const id = safeDomainId(raw.id);
   const offerId = safeDomainId(raw.offerId);
@@ -623,6 +625,19 @@ export function selectOfferResponse(
   offers: OfferDto[] | null | undefined,
 ): MerchantResponse | undefined {
   return responseFromParsed(parseOffers(offers));
+}
+
+/**
+ * POST /offers/{offerId}/orders 응답 → 선주문 결과. order·orderCount·minOrders 를 알아볼 수 없으면 parse 오류다
+ * (서버에서는 주문이 만들어졌을 수 있어 화면은 서버 상태를 다시 불러온다).
+ */
+export function mapOrderResult(dto: CreateOrderResponseDto | undefined): OrderResult {
+  const body = isObject(dto) ? dto : {};
+  const order = mapMyOrder(body.order);
+  if (order === null || !isCountNumber(body.orderCount) || !isCountNumber(body.minOrders)) {
+    throw parseError('POST /offers/{id}/orders 응답을 알아볼 수 없어요.');
+  }
+  return { order, orderCount: body.orderCount, minOrders: body.minOrders };
 }
 
 /**

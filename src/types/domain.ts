@@ -110,6 +110,13 @@ export interface ResidentOffer {
   myOrder: MyOrder | null;
 }
 
+/** 선주문 결과(POST /offers/{id}/orders 응답). orderCount·minOrders 는 주문 직후의 제안 값이다. */
+export interface OrderResult {
+  order: MyOrder;
+  orderCount: number;
+  minOrders: number;
+}
+
 /** 내 요청 화면의 한 항목. 요청 인원은 수요 데이터에서 계산한 해당 동네·업종의 전체 요청 인원이다. */
 export interface MyRequest {
   request: StoreRequest;

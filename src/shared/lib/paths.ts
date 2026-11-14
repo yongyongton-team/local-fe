@@ -10,6 +10,8 @@ export const paths = {
   resident: '/resident',
   residentRequestNew: '/resident/requests/new',
   residentRequests: '/resident/requests',
+  /** 주민 제안 상세(선주문·예약 취소). 내 요청 카드의 "사장님 응답"에서 들어간다. offerId 는 서버 제안 id(숫자 문자열). */
+  residentOffer: (offerId: string) => `/resident/offers/${encodeURIComponent(offerId)}`,
   merchant: '/merchant',
   merchantArea: (areaId: string) => `/merchant/areas/${encodeURIComponent(areaId)}`,
   /**
