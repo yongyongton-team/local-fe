@@ -29,7 +29,7 @@ describe('창업자 입지 찾기의 네이버 지도', () => {
       within(mapRegion())
         .getAllByRole('listitem')
         .map((li) => li.textContent),
-    ).toEqual(['1. 구성동', '3. 보정동', '4. 마북동']);
+    ).toEqual(['1. 구성동', '4. 보정동', '9. 마북동']);
     expect(screen.queryByText('지도를 불러오지 못했어요')).not.toBeInTheDocument();
   });
 
@@ -39,7 +39,7 @@ describe('창업자 입지 찾기의 네이버 지도', () => {
     await openFounder();
 
     await waitFor(() => expect(fake.attached()).toHaveLength(3));
-    expect(labels(fake.attached())).toEqual(['1. 구성동', '3. 보정동', '4. 마북동']);
+    expect(labels(fake.attached())).toEqual(['1. 구성동', '4. 보정동', '9. 마북동']);
     for (const marker of fake.attached()) {
       expect(marker.options.position.lat).toBeGreaterThan(37.2);
       expect(marker.options.position.lat).toBeLessThan(37.4);
@@ -71,7 +71,7 @@ describe('창업자 입지 찾기의 네이버 지도', () => {
 
     await user.selectOptions(select(), '과일 / 채소 가게');
     await waitFor(() => expect(fake.attached()).toHaveLength(3));
-    expect(labels(fake.attached())).toEqual(['1. 구성동', '3. 보정동', '4. 마북동']);
+    expect(labels(fake.attached())).toEqual(['1. 구성동', '4. 보정동', '9. 마북동']);
     // 세 동네가 다시 모두 보이게 맞춘다(처음 한 번 + 되돌아왔을 때 한 번).
     expect(map!.fitBounds).toHaveBeenCalledTimes(2);
 
@@ -100,6 +100,10 @@ describe('창업자 입지 찾기의 네이버 지도', () => {
     const live = await within(mapRegion()).findByText('과일 / 채소 가게 기준 동네 3곳 표시 중');
     expect(live).toHaveAttribute('aria-live', 'polite');
     await user.selectOptions(select(), '빵집');
+    // 빵집은 모두 부족하지 않은 동네(NOT_SHORT)라 접힌 상태에서는 지도 알약이 없다.
+    await within(mapRegion()).findByText('빵집 기준 동네 0곳 표시 중');
+    expect(screen.queryByRole('link', { name: /^1\. 구성동/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '부족하지 않은 동네 1곳 더 보기' }));
     await within(mapRegion()).findByText('빵집 기준 동네 1곳 표시 중');
     expect(screen.getAllByRole('link', { name: /^1\. 구성동/ })).toHaveLength(1);
   });

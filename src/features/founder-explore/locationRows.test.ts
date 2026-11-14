@@ -6,6 +6,7 @@ import {
   describeLocationRow,
   describePublicData,
   resolveCategoryId,
+  splitRankRows,
 } from './locationRows';
 
 const rank = (overrides: Partial<LocationRank> = {}): LocationRank => ({
@@ -180,5 +181,60 @@ describe('buildMapSummary / resolveCategoryId', () => {
     expect(resolveCategoryId(null, list, 'a')).toBe('a');
     expect(resolveCategoryId('zzz', list, 'a')).toBe('a');
     expect(resolveCategoryId('', list, 'a')).toBe('a');
+  });
+});
+
+describe('splitRankRows', () => {
+  const withVerdict = (rankNo: number, verdict?: string): LocationRank =>
+    rank({
+      rank: rankNo,
+      neighborhood: { id: `n${rankNo}`, district: '기흥구', name: `동${rankNo}` },
+      ...(verdict === undefined
+        ? {}
+        : {
+            publicData: {
+              population: 1,
+              expectedCount: 1,
+              dongStoreCount: 1,
+              verdict,
+              verdictLabel: '',
+            },
+          }),
+    });
+
+  it('NOT_SHORT 만 접힌 쪽이고 각 그룹은 서버 순서와 순위 번호를 그대로 유지한다', () => {
+    const items = [
+      withVerdict(1, 'SHORT'),
+      withVerdict(2, 'NOT_SHORT'),
+      withVerdict(3, 'SOME_NEARBY'),
+      withVerdict(4, 'NOT_SHORT'),
+      withVerdict(5, 'NEXT_DONG'),
+    ];
+
+    const { visible, folded } = splitRankRows(items);
+
+    expect(visible.map((r) => r.rank)).toEqual([1, 3, 5]);
+    expect(folded.map((r) => r.rank)).toEqual([2, 4]);
+  });
+
+  it('NOT_JUDGED·공공데이터 없음·알 수 없는 판정 값은 접지 않는다', () => {
+    const items = [withVerdict(1, 'NOT_JUDGED'), withVerdict(2), withVerdict(3, 'SOMETHING_NEW')];
+
+    const { visible, folded } = splitRankRows(items);
+
+    expect(visible).toHaveLength(3);
+    expect(folded).toHaveLength(0);
+  });
+
+  it('빈 목록은 둘 다 비고, 전부 NOT_SHORT 면 보이는 쪽이 비며 원본 배열은 바뀌지 않는다', () => {
+    expect(splitRankRows([])).toEqual({ visible: [], folded: [] });
+
+    const items = [withVerdict(1, 'NOT_SHORT'), withVerdict(2, 'NOT_SHORT')];
+    const copy = [...items];
+    const { visible, folded } = splitRankRows(items);
+
+    expect(visible).toEqual([]);
+    expect(folded.map((r) => r.rank)).toEqual([1, 2]);
+    expect(items).toEqual(copy);
   });
 });
