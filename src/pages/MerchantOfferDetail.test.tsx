@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/mocks/memoryDb';
-import { authService, offerService } from '@/services';
+import { authService, merchantService, NoShopError, offerService } from '@/services';
 import { ApiError } from '@/services/api/apiError';
 import { renderApp } from '@/test/renderApp';
 import type { OfferStatus, OwnerOffer } from '@/types/domain';
@@ -10,8 +10,8 @@ import type { OfferStatus, OwnerOffer } from '@/types/domain';
 const heading1 = (name: string) => screen.findByRole('heading', { level: 1, name });
 const dialog = () => screen.getByRole('dialog');
 const actionButton = (name: string) => screen.getByRole('button', { name });
-const queryAction = (name: string) => screen.queryByRole('button', { name });
-const COMPLETE = '판매 끝 (모두 받아 갔어요)';
+const queryAction = (name: string | RegExp) => screen.queryByRole('button', { name });
+const COMPLETE = '수령 완료 처리';
 const CANCEL = '제안 취소';
 
 /** 상태별 제안을 메모리 DB 에 직접 만든다(CLOSED·CANCELLED·DONE 화면용). */
@@ -33,14 +33,16 @@ function addOffer(status: OfferStatus, overrides: Partial<OwnerOffer> = {}): Own
   return offer;
 }
 
-async function openDetail(id: string) {
-  const view = renderApp([`/merchant/offers/${id}`]);
-  await heading1('제안 상세');
-  await screen.findByRole('region', { name: '예약 현황' });
+async function openDetail(id: string, state?: unknown) {
+  const view = renderApp([
+    state === undefined ? `/merchant/offers/${id}` : { pathname: `/merchant/offers/${id}`, state },
+  ]);
+  await heading1('보낸 제안 상세');
+  await screen.findByRole('heading', { level: 2 });
   return view;
 }
-const card = () => within(screen.getByRole('region', { name: '예약 현황' }));
-const bar = () => card().getByRole('progressbar');
+const bar = () => screen.getByRole('progressbar');
+const queryToList = () => screen.queryByRole('link', { name: '보낸 제안으로' });
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -53,10 +55,10 @@ describe('제안 상세: 진입', () => {
     expect(link).toHaveAttribute('href', '/merchant/offers/offer-seed-1');
     await user.click(link);
 
-    expect(await heading1('제안 상세')).toBeInTheDocument();
+    expect(await heading1('보낸 제안 상세')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/merchant/offers/offer-seed-1');
     expect(
-      await screen.findByRole('heading', { level: 2, name: '제철 과일 꾸러미' }),
+      await screen.findByRole('heading', { level: 2, name: '싱싱과일 / 제철 과일 꾸러미' }),
     ).toBeInTheDocument();
   });
 
@@ -64,7 +66,7 @@ describe('제안 상세: 진입', () => {
     const user = userEvent.setup();
     const { router } = renderApp(['/merchant/offers']);
     await user.click(await screen.findByRole('link', { name: '제철 과일 꾸러미' }));
-    await heading1('제안 상세');
+    await heading1('보낸 제안 상세');
 
     await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
 
@@ -103,102 +105,167 @@ describe('제안 상세: 진입', () => {
 });
 
 describe('제안 상세: 상태별 화면', () => {
-  it('OPEN: 뱃지·마감·제목·동네·업종·예약 현황·받는 날·받는 곳, 버튼은 「제안 취소」뿐이다', async () => {
+  it('OPEN: 뱃지·마감·"가게 / 제안"·설명·값 행·막대·상태 카드, 버튼은 「제안 취소」(기본 버튼) 하나뿐이다', async () => {
     await openDetail('offer-seed-1');
 
     expect(screen.getByText('모집 중')).toBeInTheDocument();
     expect(screen.getByText('마감 11/14(토) 18:00')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: '제철 과일 꾸러미' })).toBeInTheDocument();
-    expect(await screen.findByText('구성동 · 과일 가게')).toBeInTheDocument();
-    expect(card().getByText('예약 0명 · 최소 20명')).toBeInTheDocument();
     expect(
-      card().getByText('마감(11/14(토) 18:00)까지 20명이 모이면 확정돼요'),
+      screen.getByRole('heading', { level: 2, name: '싱싱과일 / 제철 과일 꾸러미' }),
     ).toBeInTheDocument();
-    expect(card().getByText('받는 날').nextElementSibling).toHaveTextContent(
-      '11/15(일) 오전 10:00',
-    );
-    expect(card().getByText('받는 곳').nextElementSibling).toHaveTextContent('구성동 주민센터 앞');
+    expect(screen.getByText('제철 과일을 소포장으로 동네에서 받아 가요')).toBeInTheDocument();
+    const rows = [...document.querySelectorAll('dl > div')].map((row) => row.textContent);
+    expect(rows).toEqual([
+      '가격15,000원',
+      '받는 날11/15(일) 오전 10:00',
+      '마감11/14(토) 18:00',
+      '받는 곳구성동 주민센터 앞',
+    ]);
+    expect(bar()).toHaveAccessibleName('0 / 20명 예약');
+    expect((bar().firstElementChild as HTMLElement).style.width).toBe('0%');
+    // 상태 카드 하나(위쪽 "예약 N명 · 최소 M명" 카드와 예전 안내 문구는 없다)
+    expect(screen.getByText('현재 0명 / 최소 20명')).toBeInTheDocument();
+    expect(screen.getByText('주문 마감 후 확정 여부가 정해져요')).toBeInTheDocument();
+    expect(screen.queryByText(/예약 0명/)).not.toBeInTheDocument();
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
     expect(actionButton(CANCEL)).toBeInTheDocument();
+    expect(queryToList()).not.toBeInTheDocument();
   });
 
-  it('CONFIRMED: 뱃지 "확정", 시안 문구, 막대 가득, 판매 끝과 제안 취소 둘 다 있다', async () => {
+  it('시안의 샘플 값(11/12·30.000원 등)은 쓰지 않고 실제 데이터로 계산한다', async () => {
+    await openDetail('offer-seed-1');
+
+    expect(screen.queryByText(/11\/12/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/30\.000/)).not.toBeInTheDocument();
+    // 시안에서 제목이 한 번 더 반복되는 소제목은 그리지 않는다.
+    expect(screen.getAllByText(/제철 과일 꾸러미/)).toHaveLength(1);
+  });
+
+  it('CONFIRMED: 뱃지 "확정", 받는 곳 행 유지, 상태 카드 하나, 「수령 완료 처리」(기본)와 「제안 취소」(보조)', async () => {
     await openDetail('offer-seed-2');
 
     expect(screen.getByText('확정')).toBeInTheDocument();
-    expect(screen.getByText('보정동 · 과일 가게')).toBeInTheDocument();
-    expect(card().getByText('예약 22명 · 최소 20명')).toBeInTheDocument();
-    expect(card().getByText('최소 주문을 채워서 확정됐어요')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: '싱싱과일 / 주말 채소 박스' }),
+    ).toBeInTheDocument();
+    // 설명이 없는 제안이라 부제 줄이 없다.
+    expect(document.querySelector('h2 + p')).toBeNull();
+    expect(screen.getByText('받는 곳').nextElementSibling).toHaveTextContent(
+      '보정동 행정복지센터 앞',
+    );
+    expect(screen.getByText('22 / 20명 예약')).toBeInTheDocument();
     expect((bar().firstElementChild as HTMLElement).style.width).toBe('100%');
-    expect(actionButton(COMPLETE)).toBeInTheDocument();
-    expect(actionButton(CANCEL)).toBeInTheDocument();
+    // 숫자는 orderCount 하나만 쓴다(시안의 22명·24명 불일치가 없다).
+    expect(screen.getByText('현재 22명 / 최소 20명')).toBeInTheDocument();
+    expect(screen.getByText('최소 인원이 채워져 제안이 확정됐어요')).toBeInTheDocument();
+    expect(screen.queryByText(/24명|예약 22명/)).not.toBeInTheDocument();
+    expect(actionButton(COMPLETE).className).toBe(
+      actionButton(CANCEL).className.replace('neutral', 'highlight'),
+    );
+    expect(actionButton(COMPLETE)).not.toBe(actionButton(CANCEL));
+    expect(queryToList()).not.toBeInTheDocument();
   });
 
   it('OPEN 인데 인원이 이미 찼어도 "확정됐어요"라고 쓰지 않는다(서버는 마감 뒤에야 확정한다)', async () => {
     addOffer('OPEN', { id: 't-full', orderCount: 25 });
     await openDetail('t-full');
 
-    expect(
-      card().getByText('최소 인원을 채웠어요. 마감 시각이 지나면 확정돼요'),
-    ).toBeInTheDocument();
-    expect(card().queryByText(/확정됐어요/)).not.toBeInTheDocument();
+    expect(screen.getByText('현재 25명 / 최소 20명')).toBeInTheDocument();
+    expect(screen.getByText('주문 마감 후 확정 여부가 정해져요')).toBeInTheDocument();
+    expect(screen.queryByText(/확정됐어요/)).not.toBeInTheDocument();
     expect(screen.getByText('모집 중')).toBeInTheDocument();
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
   });
 
   it.each([
-    ['CLOSED', '마감', '마감됐지만 최소 인원을 채우지 못했어요'],
+    ['CLOSED', '마감', '최소 인원 모집을 채우지 못했어요'],
     ['CANCELLED', '취소', '취소한 제안이에요'],
-    ['DONE', '수령 끝', '수령이 끝난 제안이에요'],
-  ] as const)('%s: 뱃지 "%s", 안내 문구, 버튼 없이 읽기 전용이다', async (status, badge, note) => {
-    addOffer(status);
-    await openDetail(`t-${status}`);
+    ['DONE', '완료', '수량이 완료된 제안이에요'],
+  ] as const)(
+    '%s: 뱃지 "%s", 부제 "%s", 상태 카드 없이 버튼은 「보낸 제안으로」뿐이다',
+    async (status, badge, subtitle) => {
+      addOffer(status, { description: '설명은 상태 문구가 대신한다' });
+      await openDetail(`t-${status}`);
 
-    expect(screen.getByText(badge, { selector: 'span' })).toBeInTheDocument();
-    expect(card().getByText(note)).toBeInTheDocument();
-    expect(queryAction(COMPLETE)).not.toBeInTheDocument();
-    expect(queryAction(CANCEL)).not.toBeInTheDocument();
+      expect(screen.getByText(badge, { selector: 'span' })).toBeInTheDocument();
+      expect(screen.getByText(subtitle)).toBeInTheDocument();
+      expect(screen.queryByText('설명은 상태 문구가 대신한다')).not.toBeInTheDocument();
+      expect(screen.queryByText(/^현재 \d+명/)).not.toBeInTheDocument();
+      expect(queryAction(COMPLETE)).not.toBeInTheDocument();
+      expect(queryAction(CANCEL)).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '보낸 제안으로' })).toHaveAttribute(
+        'href',
+        '/merchant/offers',
+      );
+    },
+  );
+
+  it('「보낸 제안으로」를 누르면 제안 목록으로 간다', async () => {
+    const user = userEvent.setup();
+    addOffer('DONE');
+    const { router } = await openDetail('t-DONE');
+
+    await user.click(screen.getByRole('link', { name: '보낸 제안으로' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/merchant/offers'));
   });
 
-  it('막대 비율은 예약 ÷ 최소 주문이고 초과하면 가득 찬다(aria 값은 그대로)', async () => {
+  it('막대 비율은 예약 ÷ 최소 주문이고 초과하면 가득 찬다(aria 값은 최소 주문을 넘지 않는다)', async () => {
     addOffer('OPEN', { id: 't-half', orderCount: 10 });
     addOffer('OPEN', { id: 't-over', orderCount: 30 });
 
     const { unmount } = await openDetail('t-half');
     expect((bar().firstElementChild as HTMLElement).style.width).toBe('50%');
-    expect(bar()).toHaveAccessibleName('예약 10명 · 최소 20명');
+    expect(bar()).toHaveAccessibleName('10 / 20명 예약');
     unmount();
 
     await openDetail('t-over');
     expect((bar().firstElementChild as HTMLElement).style.width).toBe('100%');
-    expect(bar()).toHaveAttribute('aria-valuenow', '30');
+    expect(bar()).toHaveAttribute('aria-valuenow', '20');
     expect(bar()).toHaveAttribute('aria-valuemax', '20');
   });
 
-  it('값이 비어 있으면 그 행·문구를 숨긴다(받는 날·받는 곳·마감·동네)', async () => {
+  it('설명이 있으면 부제로 보이고, 없으면 그 줄을 숨긴다', async () => {
+    addOffer('OPEN', { id: 't-desc', description: '직접 쓴 설명입니다' });
+    addOffer('OPEN', { id: 't-nodesc' });
+
+    const { unmount } = await openDetail('t-desc');
+    expect(screen.getByText('직접 쓴 설명입니다')).toBeInTheDocument();
+    unmount();
+
+    await openDetail('t-nodesc');
+    expect(document.querySelector('h2 + p')).toBeNull();
+  });
+
+  it('가게 정보를 못 불러오면 제목 줄은 제안 제목만 보인다', async () => {
+    vi.spyOn(merchantService, 'getProfile').mockRejectedValue(new NoShopError());
+    await openDetail('offer-seed-1');
+
+    expect(screen.getByRole('heading', { level: 2, name: '제철 과일 꾸러미' })).toBeInTheDocument();
+    expect(screen.queryByText(/싱싱과일/)).not.toBeInTheDocument();
+  });
+
+  it('값이 비어 있으면 그 행·문구를 숨긴다(받는 날·받는 곳·마감)', async () => {
     addOffer('OPEN', {
       id: 't-empty',
       pickupAt: undefined,
       pickupPlace: undefined,
       deadlineAt: undefined,
-      dongName: undefined,
+      price: undefined,
     });
     await openDetail('t-empty');
 
-    expect(card().queryByText('받는 날')).not.toBeInTheDocument();
-    expect(card().queryByText('받는 곳')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('dl > div')).toHaveLength(0);
     expect(screen.queryByText(/^마감 /)).not.toBeInTheDocument();
-    // 동네가 없어도 업종은 보인다.
-    expect(await screen.findByText('과일 가게')).toBeInTheDocument();
-    expect(card().getByText('20명이 모이면 확정돼요')).toBeInTheDocument();
+    expect(screen.getByText('현재 5명 / 최소 20명')).toBeInTheDocument();
   });
 
   it('받는 곳만 비어 있으면 그 행만 숨는다', async () => {
     addOffer('OPEN', { id: 't-one', pickupPlace: undefined });
     await openDetail('t-one');
 
-    expect(card().getByText('받는 날')).toBeInTheDocument();
-    expect(card().queryByText('받는 곳')).not.toBeInTheDocument();
+    expect(screen.getByText('받는 날')).toBeInTheDocument();
+    expect(screen.queryByText('받는 곳')).not.toBeInTheDocument();
   });
 });
 
@@ -227,10 +294,10 @@ describe('제안 상세: 판매 끝', () => {
     await user.click(within(dialog()).getByRole('button', { name: '끝내기' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByText('수령 끝', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText('완료', { selector: 'span' })).toBeInTheDocument();
     expect(screen.queryByText('확정', { selector: 'span' })).not.toBeInTheDocument();
-    expect(card().getByText('수령이 끝난 제안이에요')).toBeInTheDocument();
-    expect(card().getByText('예약 22명 · 최소 20명')).toBeInTheDocument();
+    expect(screen.getByText('수량이 완료된 제안이에요')).toBeInTheDocument();
+    expect(screen.getByText('22 / 20명 예약')).toBeInTheDocument();
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
     expect(queryAction(CANCEL)).not.toBeInTheDocument();
     expect(getDb().offers.find((o) => o.id === 'offer-seed-2')?.status).toBe('DONE');
@@ -264,7 +331,7 @@ describe('제안 상세: 판매 끝', () => {
 });
 
 describe('제안 상세: 제안 취소', () => {
-  it('「제안 취소」는 임시 팝업(제목·본문·[아니요][제안 취소])을 연다', async () => {
+  it('「제안 취소」는 팝업(제목·본문·[돌아가기][취소하기])을 열고 취소 사유 입력칸은 없다', async () => {
     const user = userEvent.setup();
     await openDetail('offer-seed-1');
 
@@ -274,8 +341,11 @@ describe('제안 상세: 제안 취소', () => {
     expect(
       within(dialog()).getByText('취소한 제안은 되돌릴 수 없고, 예약한 주문도 모두 취소돼요.'),
     ).toBeInTheDocument();
-    expect(within(dialog()).getByRole('button', { name: '아니요' })).toBeInTheDocument();
-    expect(within(dialog()).getByRole('button', { name: '제안 취소' })).toBeInTheDocument();
+    expect(within(dialog()).getByRole('button', { name: '돌아가기' })).toBeInTheDocument();
+    expect(within(dialog()).getByRole('button', { name: '취소하기' })).toBeInTheDocument();
+    // 서버가 취소 사유를 받지 않으므로 입력칸이 없고, 시안의 주민용 본문도 쓰지 않는다.
+    expect(within(dialog()).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(within(dialog()).queryByText(/예약 인원에서 빠져요/)).not.toBeInTheDocument();
   });
 
   it('OPEN 을 취소하면 취소 뱃지, 안내 문구, 버튼 없음으로 바로 바뀐다', async () => {
@@ -283,11 +353,11 @@ describe('제안 상세: 제안 취소', () => {
     await openDetail('offer-seed-1');
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByText('취소', { selector: 'span' })).toBeInTheDocument();
-    expect(card().getByText('취소한 제안이에요')).toBeInTheDocument();
+    expect(screen.getByText('취소한 제안이에요')).toBeInTheDocument();
     expect(queryAction(CANCEL)).not.toBeInTheDocument();
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
   });
@@ -295,24 +365,24 @@ describe('제안 상세: 제안 취소', () => {
   it('확정된 제안을 취소하면 예약이 0명이 되고 막대가 비며 취소 뱃지가 된다', async () => {
     const user = userEvent.setup();
     await openDetail('offer-seed-2');
-    expect(card().getByText('예약 22명 · 최소 20명')).toBeInTheDocument();
+    expect(screen.getByText('22 / 20명 예약')).toBeInTheDocument();
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
 
-    await waitFor(() => expect(card().getByText('예약 0명 · 최소 20명')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('0 / 20명 예약')).toBeInTheDocument());
     expect(screen.getByText('취소', { selector: 'span' })).toBeInTheDocument();
     expect((bar().firstElementChild as HTMLElement).style.width).toBe('0%');
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
   });
 
-  it('[아니요]를 누르면 아무 일도 일어나지 않는다', async () => {
+  it('[돌아가기]를 누르면 아무 일도 일어나지 않는다', async () => {
     const user = userEvent.setup();
     const cancel = vi.spyOn(offerService, 'cancelOffer');
     await openDetail('offer-seed-1');
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '아니요' }));
+    await user.click(within(dialog()).getByRole('button', { name: '돌아가기' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(cancel).not.toHaveBeenCalled();
@@ -323,9 +393,9 @@ describe('제안 상세: 제안 취소', () => {
     const user = userEvent.setup();
     renderApp(['/merchant/offers']);
     await user.click(await screen.findByRole('link', { name: '제철 과일 꾸러미' }));
-    await heading1('제안 상세');
+    await heading1('보낸 제안 상세');
     await user.click(actionButton(CANCEL));
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
@@ -343,7 +413,7 @@ describe('제안 상세: 오류와 재조회', () => {
     getDb().offers.find((o) => o.id === 'offer-seed-1')!.status = 'CLOSED';
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '지금은 처리할 수 없는 상태예요. 최신 상태로 다시 보여드릴게요.',
@@ -351,7 +421,7 @@ describe('제안 상세: 오류와 재조회', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // 서버 상태(CLOSED)로 다시 맞춰져 뱃지·안내가 바뀌고 버튼이 사라진다.
     await waitFor(() => expect(screen.getByText('마감', { selector: 'span' })).toBeInTheDocument());
-    expect(card().getByText('마감됐지만 최소 인원을 채우지 못했어요')).toBeInTheDocument();
+    expect(screen.getByText('최소 인원 모집을 채우지 못했어요')).toBeInTheDocument();
     expect(queryAction(CANCEL)).not.toBeInTheDocument();
     expect(screen.queryByText('모집 중')).not.toBeInTheDocument();
   });
@@ -365,9 +435,7 @@ describe('제안 상세: 오류와 재조회', () => {
     await user.click(within(dialog()).getByRole('button', { name: '끝내기' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('지금은 처리할 수 없는 상태예요');
-    await waitFor(() =>
-      expect(screen.getByText('수령 끝', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('완료', { selector: 'span' })).toBeInTheDocument());
     expect(queryAction(COMPLETE)).not.toBeInTheDocument();
   });
 
@@ -377,7 +445,7 @@ describe('제안 상세: 오류와 재조회', () => {
     getDb().offers = getDb().offers.filter((o) => o.id !== 'offer-seed-1');
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
 
     expect(await screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '제안 목록으로' })).toBeInTheDocument();
@@ -391,7 +459,7 @@ describe('제안 상세: 오류와 재조회', () => {
     await openDetail('offer-seed-1');
     await user.click(actionButton(CANCEL));
 
-    await user.click(within(dialog()).getByRole('button', { name: '제안 취소' }));
+    await user.click(within(dialog()).getByRole('button', { name: '취소하기' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '내 제안이 아니라서 처리할 수 없어요.',
@@ -432,7 +500,7 @@ describe('제안 상세: 오류와 재조회', () => {
     await user.click(within(dialog()).getByRole('button', { name: '끝내기' }));
 
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
-    expect(screen.getByText('수령 끝', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText('완료', { selector: 'span' })).toBeInTheDocument();
   });
 });
 
@@ -447,7 +515,7 @@ describe('제안 상세: 중복 클릭과 데모', () => {
     );
     await openDetail('offer-seed-1');
     await user.click(actionButton(CANCEL));
-    const confirm = within(dialog()).getByRole('button', { name: /^제안 취소/ });
+    const confirm = within(dialog()).getByRole('button', { name: '취소하기' });
 
     await user.click(confirm);
     await user.click(confirm);
@@ -475,10 +543,95 @@ describe('제안 상세: 중복 클릭과 데모', () => {
     await user.click(actionButton(COMPLETE));
     await user.click(within(dialog()).getByRole('button', { name: '끝내기' }));
 
-    await waitFor(() =>
-      expect(screen.getByText('수령 끝', { selector: 'span' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('완료', { selector: 'span' })).toBeInTheDocument());
     expect(screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('제안 상세: 제안을 보낸 직후(배너)', () => {
+  const sent = (notifiedResidentCount?: number) => ({
+    justSent: true,
+    ...(notifiedResidentCount !== undefined && { notifiedResidentCount }),
+  });
+
+  it('작성 화면이 넘긴 state 가 있으면 맨 위에 "제안을 보냈어요!" 배너와 "{N}명의 주민에게 알렸어요"가 보인다', async () => {
+    await openDetail('offer-seed-1', sent(29));
+
+    const banner = screen.getByRole('status');
+    expect(banner).toHaveTextContent('제안을 보냈어요!');
+    expect(screen.getByRole('heading', { level: 3, name: '모집 현황' })).toBeInTheDocument();
+    expect(screen.getByText('29명의 주민에게 알렸어요')).toBeInTheDocument();
+    // 배너는 상태 줄보다 위에 있다.
+    expect(
+      banner.compareDocumentPosition(screen.getByText('모집 중')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // 일반 상세와 같은 상태별 버튼 규칙(OPEN 은 「제안 취소」)을 쓴다.
+    expect(actionButton(CANCEL)).toBeInTheDocument();
+    expect(queryAction(/선주문/)).not.toBeInTheDocument();
+  });
+
+  it('알린 주민이 0명이어도 "0명의 주민에게 알렸어요"를 보인다', async () => {
+    await openDetail('offer-seed-1', sent(0));
+
+    expect(screen.getByText('0명의 주민에게 알렸어요')).toBeInTheDocument();
+  });
+
+  it('알린 주민 수를 모르면 배너만 보이고 모집 현황 영역은 없다', async () => {
+    await openDetail('offer-seed-1', sent());
+
+    expect(screen.getByRole('status')).toHaveTextContent('제안을 보냈어요!');
+    expect(screen.queryByRole('heading', { level: 3, name: '모집 현황' })).not.toBeInTheDocument();
+  });
+
+  it('state 가 없으면(새로고침·다시 들어옴) 배너와 알린 주민 영역이 없다', async () => {
+    await openDetail('offer-seed-1');
+
+    expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(/명의 주민에게 알렸어요/)).not.toBeInTheDocument();
+  });
+
+  it('state 를 읽은 뒤 지워서 새로고침해도 배너가 다시 뜨지 않고, 이 화면에서는 배너가 유지된다', async () => {
+    const { router } = await openDetail('offer-seed-1', sent(5));
+
+    await waitFor(() => expect(router.state.location.state).toBeNull());
+    expect(router.state.location.pathname).toBe('/merchant/offers/offer-seed-1');
+    expect(screen.getByText('제안을 보냈어요!')).toBeInTheDocument();
+  });
+
+  it('justSent 가 아닌 모양의 state 는 무시한다', async () => {
+    await openDetail('offer-seed-1', { justSent: 'yes', notifiedResidentCount: 3 });
+
+    expect(screen.queryByText('제안을 보냈어요!')).not.toBeInTheDocument();
+  });
+
+  it('만든 직후 목록에서 못 찾으면 한 번 다시 조회한다', async () => {
+    const real = offerService.getOwnerOffer.bind(offerService);
+    const spy = vi
+      .spyOn(offerService, 'getOwnerOffer')
+      .mockResolvedValueOnce(null)
+      .mockImplementation(real);
+    await openDetail('offer-seed-1', sent(2));
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('모집 중')).toBeInTheDocument();
+  });
+
+  it('state 가 없으면 못 찾아도 다시 조회하지 않고 "찾을 수 없는 제안" 이다', async () => {
+    const spy = vi.spyOn(offerService, 'getOwnerOffer').mockResolvedValue(null);
+    renderApp(['/merchant/offers/offer-seed-1']);
+
+    expect(await screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('다시 조회해도 없으면 "찾을 수 없는 제안" 이다', async () => {
+    const spy = vi.spyOn(offerService, 'getOwnerOffer').mockResolvedValue(null);
+    renderApp([{ pathname: '/merchant/offers/offer-seed-1', state: sent(2) }]);
+
+    expect(await screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

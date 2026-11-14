@@ -34,7 +34,9 @@ export interface OfferRowData {
 }
 
 /** 제안 카드의 행. 값이 없는 행(가격·받는 날은 서버가 아직 주지 않을 수 있다)은 만들지 않는다. */
-export function buildOfferRows(offer: OwnerOffer): OfferRowData[] {
+export function buildOfferRows(
+  offer: Pick<OwnerOffer, 'price' | 'pickupAt' | 'deadlineAt'>,
+): OfferRowData[] {
   const rows: OfferRowData[] = [];
   if (offer.price !== undefined) {
     rows.push({
@@ -90,35 +92,20 @@ export function buildDeadlineText(offer: Pick<OwnerOffer, 'deadlineAt'>): string
   return offer.deadlineAt ? OFFER_COPY.deadlineText(formatMonthDay24h(offer.deadlineAt)) : null;
 }
 
-/** 제목 아래 줄. "{동네} · {업종}"이고 둘 중 없는 쪽은 뺀다. 둘 다 없으면 null. */
-export function buildDetailPlace(
-  offer: Pick<OwnerOffer, 'dongName'>,
-  categoryLabel: string | undefined,
-): string | null {
-  const parts = [offer.dongName, categoryLabel].filter(
-    (part): part is string => part !== undefined && part !== '',
-  );
-  return parts.length === 0 ? null : parts.join(' · ');
-}
-
 export interface DetailRowData {
-  key: 'pickupAt' | 'pickupPlace';
+  key: 'price' | 'pickupAt' | 'deadlineAt' | 'pickupPlace';
   label: string;
   value: string;
 }
 
-/** 예약 현황 카드의 행(받는 날·받는 곳). 값이 없으면 그 행을 만들지 않는다. */
+/**
+ * 상세의 값 행: 가격·받는 날·마감·받는 곳(이 순서). 값이 없는 행은 만들지 않는다.
+ * 받는 곳은 시안(79:2449)에 있어서 유지한다.
+ */
 export function buildDetailRows(
-  offer: Pick<OwnerOffer, 'pickupAt' | 'pickupPlace'>,
+  offer: Pick<OwnerOffer, 'price' | 'pickupAt' | 'pickupPlace' | 'deadlineAt'>,
 ): DetailRowData[] {
-  const rows: DetailRowData[] = [];
-  if (offer.pickupAt) {
-    rows.push({
-      key: 'pickupAt',
-      label: OFFER_COPY.rowPickup,
-      value: formatMonthDayMeridiem(offer.pickupAt),
-    });
-  }
+  const rows: DetailRowData[] = buildOfferRows(offer);
   if (offer.pickupPlace) {
     rows.push({ key: 'pickupPlace', label: OFFER_COPY.rowPickupPlace, value: offer.pickupPlace });
   }
@@ -126,45 +113,59 @@ export function buildDetailRows(
 }
 
 /**
- * 상태별 안내 문구. 상태를 모르면 null 이다.
- * OPEN 은 서버가 마감 전에는 항상 OPEN 이라 인원이 이미 찼어도 "확정됐어요"라고 쓰지 않는다.
+ * 제목 아래 부제 한 줄. 마감·완료·취소는 상태 문구가 설명 자리를 대신하고, 그 밖에는 제안 설명(description)이다.
+ * 설명이 없으면 null 이라 줄 자체를 그리지 않는다.
  */
-export function buildStatusNote(
-  offer: Pick<OwnerOffer, 'status' | 'orderCount' | 'minOrders' | 'deadlineAt'>,
-): string | null {
-  const note = OFFER_COPY.statusNote;
+export function buildSubtitle(offer: Pick<OwnerOffer, 'status' | 'description'>): string | null {
   switch (offer.status) {
-    case 'OPEN':
-      return offer.orderCount >= offer.minOrders && offer.minOrders > 0
-        ? note.openFilled
-        : note.open(offer.minOrders, offer.deadlineAt ? formatMonthDay24h(offer.deadlineAt) : null);
-    case 'CONFIRMED':
-      return note.confirmed;
     case 'CLOSED':
-      return note.closed;
-    case 'CANCELLED':
-      return note.cancelled;
+      return OFFER_COPY.subtitle.closed;
     case 'DONE':
-      return note.done;
+      return OFFER_COPY.subtitle.done;
+    case 'CANCELLED':
+      return OFFER_COPY.subtitle.cancelled;
     default:
-      return null;
+      return offer.description ? offer.description : null;
   }
 }
 
-export interface OfferActions {
-  /** 「판매 끝」: 서버가 CONFIRMED 일 때만 받는다 */
-  complete: boolean;
-  /** 「제안 취소」: 서버가 OPEN·CONFIRMED 일 때만 받는다 */
-  cancel: boolean;
+export interface StatusCardData {
+  title: string;
+  note: string;
 }
 
 /**
- * 상태별 버튼 노출 규칙(서버 규칙과 같다): OPEN 은 「제안 취소」만, CONFIRMED 는 「판매 끝」+「제안 취소」,
- * CLOSED·CANCELLED·DONE 과 모르는 상태는 버튼 없이 읽기 전용이다.
+ * 상태 카드(연한 라임 카드): 모집 중·확정에서만 있다. 제목은 "현재 N명 / 최소 M명"이고 숫자는 orderCount 하나만 쓴다.
+ * 마감 시각이 지나야 확정·마감이 정해지므로 모집 중에는 인원이 차도 "확정됐어요"라고 쓰지 않는다.
+ */
+export function buildStatusCard(
+  offer: Pick<OwnerOffer, 'status' | 'orderCount' | 'minOrders'>,
+): StatusCardData | null {
+  if (offer.status !== 'OPEN' && offer.status !== 'CONFIRMED') return null;
+  return {
+    title: OFFER_COPY.statusCardTitle(offer.orderCount, offer.minOrders),
+    note:
+      offer.status === 'OPEN'
+        ? OFFER_COPY.statusCardNote.open
+        : OFFER_COPY.statusCardNote.confirmed,
+  };
+}
+
+export interface OfferActions {
+  /** 「수령 완료 처리」: 서버가 CONFIRMED 일 때만 받는다 */
+  complete: boolean;
+  /** 「제안 취소」: 서버가 OPEN·CONFIRMED 일 때만 받는다 */
+  cancel: boolean;
+  /** 「보낸 제안으로」: 처리할 수 없는 상태(마감·완료·취소, 모르는 상태)의 읽기 전용 화면에서 목록으로 돌아가는 버튼 */
+  toList: boolean;
+}
+
+/**
+ * 상태별 버튼 노출 규칙(서버 규칙과 같다): OPEN 은 「제안 취소」만, CONFIRMED 는 「수령 완료 처리」+「제안 취소」,
+ * CLOSED·CANCELLED·DONE 과 모르는 상태는 처리 버튼 없이 읽기 전용이고 「보낸 제안으로」만 있다.
  */
 export function availableActions(status: OfferStatus | undefined): OfferActions {
-  return {
-    complete: status === 'CONFIRMED',
-    cancel: status === 'OPEN' || status === 'CONFIRMED',
-  };
+  const complete = status === 'CONFIRMED';
+  const cancel = status === 'OPEN' || status === 'CONFIRMED';
+  return { complete, cancel, toList: !cancel };
 }

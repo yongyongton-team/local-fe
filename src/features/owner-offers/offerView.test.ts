@@ -5,11 +5,11 @@ import {
   availableActions,
   buildConditionSummary,
   buildDeadlineText,
-  buildDetailPlace,
+  buildSubtitle,
   buildDetailRows,
   buildOfferRows,
   buildProgress,
-  buildStatusNote,
+  buildStatusCard,
   buildSummaryText,
   statusLabel,
 } from './offerView';
@@ -81,7 +81,7 @@ describe('buildOfferRows', () => {
 
     expect(buildOfferRows(noPrice).map((r) => r.key)).toEqual(['pickupAt', 'deadlineAt']);
     expect(buildOfferRows(noPickup).map((r) => r.key)).toEqual(['price', 'deadlineAt']);
-    expect(buildOfferRows({ id: '1', title: 't', orderCount: 0, minOrders: 1 })).toEqual([]);
+    expect(buildOfferRows({})).toEqual([]);
   });
 
   it('가격 0원은 숨기지 않고 그대로 보인다', () => {
@@ -96,6 +96,8 @@ describe('buildOfferRows', () => {
 describe('statusLabel', () => {
   it('OPEN 은 시안의 "모집 중"이고 다섯 상태 모두 문구가 있다', () => {
     expect(statusLabel(offer({ status: 'OPEN' }))).toBe('모집 중');
+    // 완료는 예전 "수령 끝"에서 최신 시안(79:2418)에 맞춰 바꿨다.
+    expect(statusLabel(offer({ status: 'DONE' }))).toBe('완료');
     for (const status of ['OPEN', 'CONFIRMED', 'CLOSED', 'CANCELLED', 'DONE'] as const) {
       expect(statusLabel(offer({ status }))).toBe(OFFER_STATUS_LABELS[status]);
       expect(OFFER_STATUS_LABELS[status]).not.toBe('');
@@ -132,22 +134,18 @@ describe('제안 상세 도우미', () => {
     expect(buildDeadlineText({})).toBeNull();
   });
 
-  it('"동네 · 업종": 둘 중 없는 쪽은 빼고, 둘 다 없으면 null', () => {
-    expect(buildDetailPlace({ dongName: '보정동' }, '과일 가게')).toBe('보정동 · 과일 가게');
-    expect(buildDetailPlace({ dongName: '보정동' }, undefined)).toBe('보정동');
-    expect(buildDetailPlace({}, '과일 가게')).toBe('과일 가게');
-    expect(buildDetailPlace({}, undefined)).toBeNull();
-    expect(buildDetailPlace({ dongName: '' }, '')).toBeNull();
-  });
-
-  it('예약 현황 행: 받는 날과 받는 곳, 값이 없는 행은 만들지 않는다', () => {
+  it('값 행: 가격·받는 날·마감·받는 곳을 이 순서로 만들고 값이 없는 행은 만들지 않는다', () => {
     expect(
       buildDetailRows({
+        price: 15000,
         pickupAt: new Date('2026-11-15T10:00:00+09:00'),
+        deadlineAt: new Date('2026-11-14T18:00:00+09:00'),
         pickupPlace: '구성동 주민센터 앞',
       }),
     ).toEqual([
+      { key: 'price', label: '가격', value: '15,000원' },
       { key: 'pickupAt', label: '받는 날', value: '11/15(일) 오전 10:00' },
+      { key: 'deadlineAt', label: '마감', value: '11/14(토) 18:00' },
       { key: 'pickupPlace', label: '받는 곳', value: '구성동 주민센터 앞' },
     ]);
     expect(buildDetailRows({ pickupPlace: '앞' }).map((r) => r.key)).toEqual(['pickupPlace']);
@@ -157,50 +155,47 @@ describe('제안 상세 도우미', () => {
     expect(buildDetailRows({})).toEqual([]);
   });
 
-  it('상태별 안내 문구(OPEN 은 확정됐다고 쓰지 않는다)', () => {
-    const base = {
-      orderCount: 3,
-      minOrders: 20,
-      deadlineAt: new Date('2026-11-14T18:00:00+09:00'),
-    };
-
-    expect(buildStatusNote({ ...base, status: 'OPEN' })).toBe(
-      '마감(11/14(토) 18:00)까지 20명이 모이면 확정돼요',
+  it('부제: 마감·완료·취소는 상태 문구가 설명을 대신하고 그 밖에는 설명이다(없으면 null)', () => {
+    expect(buildSubtitle({ status: 'CLOSED', description: '설명' })).toBe(
+      '최소 인원 모집을 채우지 못했어요',
     );
-    expect(buildStatusNote({ ...base, status: 'CONFIRMED' })).toBe('최소 주문을 채워서 확정됐어요');
-    expect(buildStatusNote({ ...base, status: 'CLOSED' })).toBe(
-      '마감됐지만 최소 인원을 채우지 못했어요',
+    expect(buildSubtitle({ status: 'DONE', description: '설명' })).toBe('수량이 완료된 제안이에요');
+    expect(buildSubtitle({ status: 'CANCELLED' })).toBe('취소한 제안이에요');
+    expect(buildSubtitle({ status: 'OPEN', description: '설명' })).toBe('설명');
+    expect(buildSubtitle({ status: 'CONFIRMED', description: '설명' })).toBe('설명');
+    expect(buildSubtitle({ status: 'OPEN' })).toBeNull();
+    expect(buildSubtitle({ status: 'OPEN', description: '' })).toBeNull();
+    expect(buildSubtitle({ description: '상태를 몰라도 설명은 보인다' })).toBe(
+      '상태를 몰라도 설명은 보인다',
     );
-    expect(buildStatusNote({ ...base, status: 'CANCELLED' })).toBe('취소한 제안이에요');
-    expect(buildStatusNote({ ...base, status: 'DONE' })).toBe('수령이 끝난 제안이에요');
-    expect(buildStatusNote(base)).toBeNull();
   });
 
-  it('OPEN 인데 인원이 이미 찼으면 "마감 시각이 지나면 확정돼요"이고 "확정됐어요"는 쓰지 않는다', () => {
-    const note = buildStatusNote({
-      status: 'OPEN',
-      orderCount: 25,
-      minOrders: 20,
-      deadlineAt: new Date('2026-11-14T18:00:00+09:00'),
+  it('상태 카드: 모집 중·확정에서만, 숫자는 orderCount 하나이고 OPEN 은 확정됐다고 쓰지 않는다', () => {
+    expect(buildStatusCard({ status: 'OPEN', orderCount: 12, minOrders: 20 })).toEqual({
+      title: '현재 12명 / 최소 20명',
+      note: '주문 마감 후 확정 여부가 정해져요',
     });
-
-    expect(note).toBe('최소 인원을 채웠어요. 마감 시각이 지나면 확정돼요');
-    expect(note).not.toContain('확정됐어요');
-  });
-
-  it('OPEN 에 마감 시각이 없으면 마감 문구 없이 안내한다', () => {
-    expect(buildStatusNote({ status: 'OPEN', orderCount: 0, minOrders: 5 })).toBe(
-      '5명이 모이면 확정돼요',
+    expect(buildStatusCard({ status: 'CONFIRMED', orderCount: 24, minOrders: 20 })).toEqual({
+      title: '현재 24명 / 최소 20명',
+      note: '최소 인원이 채워져 제안이 확정됐어요',
+    });
+    // 모집 중에는 인원이 차도 확정 문구를 쓰지 않는다.
+    expect(buildStatusCard({ status: 'OPEN', orderCount: 25, minOrders: 20 })?.note).not.toContain(
+      '확정됐어요',
     );
+    for (const status of ['CLOSED', 'CANCELLED', 'DONE'] as const) {
+      expect(buildStatusCard({ status, orderCount: 1, minOrders: 20 })).toBeNull();
+    }
+    expect(buildStatusCard({ orderCount: 1, minOrders: 20 })).toBeNull();
   });
 
-  it('버튼 노출 규칙: OPEN 은 취소만, CONFIRMED 는 판매 끝+취소, 나머지는 없다', () => {
-    expect(availableActions('OPEN')).toEqual({ complete: false, cancel: true });
-    expect(availableActions('CONFIRMED')).toEqual({ complete: true, cancel: true });
+  it('버튼 노출 규칙: OPEN 은 취소만, CONFIRMED 는 수령 완료 처리+취소, 나머지는 「보낸 제안으로」뿐이다', () => {
+    expect(availableActions('OPEN')).toEqual({ complete: false, cancel: true, toList: false });
+    expect(availableActions('CONFIRMED')).toEqual({ complete: true, cancel: true, toList: false });
     for (const status of ['CLOSED', 'CANCELLED', 'DONE'] as const) {
-      expect(availableActions(status)).toEqual({ complete: false, cancel: false });
+      expect(availableActions(status)).toEqual({ complete: false, cancel: false, toList: true });
     }
-    expect(availableActions(undefined)).toEqual({ complete: false, cancel: false });
+    expect(availableActions(undefined)).toEqual({ complete: false, cancel: false, toList: true });
   });
 
   it('진행 막대는 예약 ÷ 최소 주문이고 초과하면 가득 찬다', () => {

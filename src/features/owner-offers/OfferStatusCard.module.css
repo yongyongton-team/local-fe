@@ -1,0 +1,29 @@
+/* 상태 카드 (Figma 79:2488, 362×84): 연한 라임 바탕(주민 요청 카드의 사장님 응답 박스와 같은 바탕), 모서리 20px, 제목 18px SemiBold, 안내 14px */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(ellipse 45% 38% at 50% 50%, var(--color-ai-card-glow), transparent),
+    var(--color-ai-card);
+}
+
+.title,
+.note {
+  margin: 0;
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
+}
+
+.title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+}
+
+.note {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+}

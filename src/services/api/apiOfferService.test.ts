@@ -166,6 +166,22 @@ describe('mapCreateOfferResponse', () => {
     expect(mapCreateOfferResponse({ notifiedResidentCount: null })).toEqual({});
     expect(mapCreateOfferResponse(undefined)).toEqual({});
   });
+
+  it('만든 제안의 id(offer.id)는 양의 정수일 때만 문자열로 쓴다', () => {
+    expect(mapCreateOfferResponse({ offer: { id: 41 }, notifiedResidentCount: 3 })).toEqual({
+      offerId: '41',
+      notifiedResidentCount: 3,
+    });
+    expect(mapCreateOfferResponse({ offer: { id: 41 } })).toEqual({ offerId: '41' });
+    for (const id of [0, -1, 1.5, null, undefined, '41' as never]) {
+      expect(mapCreateOfferResponse({ offer: { id }, notifiedResidentCount: 3 })).toEqual({
+        notifiedResidentCount: 3,
+      });
+    }
+    expect(mapCreateOfferResponse({ offer: null, notifiedResidentCount: 3 })).toEqual({
+      notifiedResidentCount: 3,
+    });
+  });
 });
 
 describe('createApiOfferService', () => {
@@ -237,17 +253,27 @@ describe('createApiOfferService', () => {
 // 판매 끝·제안 취소 응답(갱신된 OwnerOfferItem). [임의] 테스트용 값이다.
 const FULL = {
   ...ITEM,
-  description: '설명은 읽지 않는다',
+  description: ' 제철 과일을 소포장으로 드려요 ',
   pickupPlace: ' 구성동 주민센터 앞 ',
   dong: { id: 22, name: ' 구성동 ' },
 };
 
 describe('mapOwnerOffer', () => {
-  it('받는 곳(공백 정리)과 동네 이름(dong.name)을 읽고 설명은 읽지 않는다', () => {
+  it('받는 곳·설명(공백 정리)과 동네 이름(dong.name)을 읽는다', () => {
     const offer = mapOwnerOffer(FULL);
 
-    expect(offer).toMatchObject({ id: '5', pickupPlace: '구성동 주민센터 앞', dongName: '구성동' });
-    expect(offer).not.toHaveProperty('description');
+    expect(offer).toMatchObject({
+      id: '5',
+      pickupPlace: '구성동 주민센터 앞',
+      description: '제철 과일을 소포장으로 드려요',
+      dongName: '구성동',
+    });
+  });
+
+  it('설명이 없거나(null) 비어 있으면 description 필드가 없다', () => {
+    for (const description of [null, undefined, '', '   ']) {
+      expect(mapOwnerOffer({ ...FULL, description })).not.toHaveProperty('description');
+    }
   });
 
   it('받는 곳·동네가 없거나 비어 있으면 그 필드만 없다', () => {

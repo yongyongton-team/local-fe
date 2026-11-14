@@ -175,9 +175,3 @@
   padding-bottom: calc(var(--sticky-footer-gap) - var(--space-6) + env(safe-area-inset-bottom));
   background: linear-gradient(to bottom, transparent, var(--color-surface) var(--space-5));
 }
-
-.sentBody {
-  margin: var(--dialog-gap-body) 0 var(--dialog-gap-actions);
-  font: var(--font-caption);
-  color: var(--color-text-secondary);
-}

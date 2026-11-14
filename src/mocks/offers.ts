@@ -11,6 +11,8 @@ export const mockSeedOffers: readonly OwnerOffer[] = [
   {
     id: 'offer-seed-1',
     title: '제철 과일 꾸러미',
+    // [임의] 설명이 있는 제안(서버 description). 다른 시드는 설명이 없다.
+    description: '제철 과일을 소포장으로 동네에서 받아 가요',
     status: 'OPEN',
     price: 15000,
     pickupAt: new Date('2026-11-15T10:00:00+09:00'),

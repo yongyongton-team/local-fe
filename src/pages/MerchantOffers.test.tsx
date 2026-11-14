@@ -103,7 +103,7 @@ describe('내 가게(제안 목록): 기본 시드(모집 중 1건 + 확정 1건
 });
 
 describe('내 가게(제안 목록): 상태·행·진행', () => {
-  it('상태 다섯 가지의 배지 문구(모집 중 / 확정 / 마감 / 취소 / 수령 끝)', async () => {
+  it('상태 다섯 가지의 배지 문구(모집 중 / 확정 / 마감 / 취소 / 완료)', async () => {
     listOffers(
       (['OPEN', 'CONFIRMED', 'CLOSED', 'CANCELLED', 'DONE'] as const).map((status, i) =>
         offer({ id: `s${i}`, title: `제안 ${status}`, status }),
@@ -114,7 +114,7 @@ describe('내 가게(제안 목록): 상태·행·진행', () => {
     await screen.findByRole('article', { name: '제안 OPEN' });
     const badge = (title: string) =>
       within(screen.getByRole('article', { name: title })).getByText(
-        /^(모집 중|확정|마감|취소|수령 끝)$/,
+        /^(모집 중|확정|마감|취소|완료)$/,
         {
           selector: 'span',
         },
@@ -123,7 +123,7 @@ describe('내 가게(제안 목록): 상태·행·진행', () => {
     expect(badge('제안 CONFIRMED')).toHaveTextContent('확정');
     expect(badge('제안 CLOSED')).toHaveTextContent('마감');
     expect(badge('제안 CANCELLED')).toHaveTextContent('취소');
-    expect(badge('제안 DONE')).toHaveTextContent('수령 끝');
+    expect(badge('제안 DONE')).toHaveTextContent('완료');
   });
 
   it('상태를 모르면 배지가 없다', async () => {

@@ -9,8 +9,6 @@ import {
 import { formatMonthDay24h, formatMonthDayMeridiem, parseKstInput } from '@/shared/lib/kstDate';
 import { paths } from '@/shared/lib/paths';
 import { Button } from '@/shared/ui/Button';
-import { Modal } from '@/shared/ui/Modal';
-import type { OfferSent } from '@/types/domain';
 import { OFFER_COPY } from './copy';
 import { DateTimeField } from './DateTimeField';
 import {
@@ -33,7 +31,8 @@ const displayWith = (format: (date: Date) => string) => (value: string) => {
 
 /**
  * 방문 판매 제안 작성 폼(Figma 45:542). 동네·업종은 context(내 가게의 업종, 제안 대상 동네)에서 가져온다.
- * 보내는 동안은 버튼을 막아 중복 제출을 막고, 성공하면 알림 보낸 주민 수를 Modal 로 알린 뒤 내 가게(제안 목록)로 간다.
+ * 보내는 동안은 버튼을 막아 중복 제출을 막고, 성공하면 만든 제안의 상세로 간다(replace 라 뒤로 가도 다시 보내지 않는다).
+ * 이때 라우터 state 로 알림 보낸 주민 수를 넘겨 상세가 "제안을 보냈어요!" 배너를 보인다. 서버가 제안 id 를 주지 않았으면 제안 목록으로 간다.
  */
 export function OfferForm({ context }: { context: OfferContext }) {
   const navigate = useNavigate();
@@ -45,7 +44,6 @@ export function OfferForm({ context }: { context: OfferContext }) {
   const [priceTooHigh, setPriceTooHigh] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<OfferSent | null>(null);
   // state 갱신보다 빠른 연타도 막으려고 ref 로 확인한다.
   const submittingRef = useRef(false);
   const deadlineErrorId = useId();
@@ -54,7 +52,6 @@ export function OfferForm({ context }: { context: OfferContext }) {
   const descriptionId = useId();
   const priceId = useId();
   const placeId = useId();
-  const sentBodyId = useId();
 
   const check = checkOfferForm(values, now);
   const hint = dirty ? firstHint(check) : null;
@@ -97,7 +94,19 @@ export function OfferForm({ context }: { context: OfferContext }) {
         pickupPlace: values.pickupPlace,
         deadlineAt,
       });
-      setSent(result);
+      if (result.offerId === undefined) {
+        goToList();
+      } else {
+        void navigate(paths.merchantOffer(result.offerId), {
+          replace: true,
+          state: {
+            justSent: true,
+            ...(result.notifiedResidentCount !== undefined && {
+              notifiedResidentCount: result.notifiedResidentCount,
+            }),
+          },
+        });
+      }
     } catch (e) {
       // 서버 message 는 쓰지 않는다. 오류 종류·코드로 정한 문구만 보여준다.
       setError(describeApiError(e, 'offer'));
@@ -266,17 +275,6 @@ export function OfferForm({ context }: { context: OfferContext }) {
           </Button>
         </div>
       </form>
-
-      {sent && (
-        <Modal title={OFFER_COPY.sentTitle} describedBy={sentBodyId} onClose={goToList}>
-          <p id={sentBodyId} className={styles.sentBody}>
-            {OFFER_COPY.sentBody(sent.notifiedResidentCount)}
-          </p>
-          <Button variant="highlight" size="medium" onClick={goToList}>
-            {OFFER_COPY.sentConfirm}
-          </Button>
-        </Modal>
-      )}
     </>
   );
 }
