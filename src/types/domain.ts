@@ -71,6 +71,45 @@ export interface MerchantResponse {
   pickupPlace?: string;
 }
 
+/** 주민 화면의 제안 상태. 서버는 취소(CANCELLED)된 제안을 주민에게 주지 않는다. */
+export type ResidentOfferStatus = 'OPEN' | 'CONFIRMED' | 'CLOSED' | 'DONE';
+
+/** 내 주문 상태. 취소한 주문은 서버가 주지 않는다(주문이 없는 것과 같다). */
+export type MyOrderStatus = 'RESERVED' | 'PICKED_UP';
+
+/**
+ * 내가 한 주문. 주문하지 않았거나 취소했으면 제안의 myOrder 가 null 이다.
+ * id 는 문자열이다(서버 숫자 id 는 toDomainId 로 바꾼 값, 목은 slug).
+ */
+export interface MyOrder {
+  id: string;
+  offerId: string;
+  /** 주문 수량 */
+  quantity: number;
+  status: MyOrderStatus;
+}
+
+/**
+ * 내 요청의 동네·업종에 사장님이 보낸 제안(서버 ResidentOfferView). 취소된 제안은 없고 서버 순서(최신순)다.
+ * 이 모양을 보여 주는 화면은 아직 없다(내 요청 카드는 아래 MyRequest.response 한 줄만 쓴다).
+ */
+export interface ResidentOffer {
+  id: string;
+  shopName: string;
+  title: string;
+  /** 원 */
+  price: number;
+  pickupAt: Date;
+  pickupPlace: string;
+  /** 최소 주문 수 */
+  minOrders: number;
+  /** 주문 수량의 합계 */
+  orderCount: number;
+  deadlineAt: Date;
+  status: ResidentOfferStatus;
+  myOrder: MyOrder | null;
+}
+
 /** 내 요청 화면의 한 항목. 요청 인원은 수요 데이터에서 계산한 해당 동네·업종의 전체 요청 인원이다. */
 export interface MyRequest {
   request: StoreRequest;
@@ -79,8 +118,10 @@ export interface MyRequest {
   requestCount: number;
   /** 요청을 보낸 시각. 서버가 주지 않거나 올바르지 않으면 없음 */
   createdAt?: Date;
-  /** 사장님 응답이 없으면 없음 */
+  /** 사장님 응답이 없으면 없음. offers 중 보여 줄 첫 제안에서 고른 한 줄 요약이다. */
   response?: MerchantResponse;
+  /** 이 요청의 동네·업종에 온 제안 전체(서버 순서). 제안이 없으면 빈 배열 */
+  offers: ResidentOffer[];
 }
 
 /** 동네·업종별 수요 수치. 수치는 구조화된 데이터가 기준이다. */

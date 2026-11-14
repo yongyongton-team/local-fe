@@ -1,4 +1,4 @@
-import type { DemandSummary, MeShop, OwnerOffer } from '@/types/domain';
+import type { DemandSummary, MeShop, OwnerOffer, ResidentOffer } from '@/types/domain';
 import { mockDemandSummaries, mockSeedRequests, type MockStoredRequest } from './demand';
 import { mockSeedOffers } from './offers';
 
@@ -23,14 +23,24 @@ interface MemoryDb {
 function createInitialDb(): MemoryDb {
   return {
     summaries: mockDemandSummaries.map((summary) => ({ ...summary })),
-    requests: mockSeedRequests.map(({ request, response }) => ({
+    requests: mockSeedRequests.map(({ request, offers }) => ({
       request: { ...request },
-      response: response && { ...response },
+      offers: offers?.map(copyResidentOffer),
     })),
     nextRequestNumber: 1,
     shop: null,
     offers: mockSeedOffers.map((offer) => ({ ...offer })),
     nextOfferNumber: 1,
+  };
+}
+
+/** 시드 제안을 복사한다(날짜·주문 포함). 테스트가 상태를 바꿔도 시드는 그대로여야 한다. */
+export function copyResidentOffer(offer: ResidentOffer): ResidentOffer {
+  return {
+    ...offer,
+    pickupAt: new Date(offer.pickupAt),
+    deadlineAt: new Date(offer.deadlineAt),
+    myOrder: offer.myOrder && { ...offer.myOrder },
   };
 }
 
