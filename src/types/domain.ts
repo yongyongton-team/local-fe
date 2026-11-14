@@ -338,9 +338,13 @@ export interface OwnerOffer {
   price?: number;
   /** 받는 날(수령 시각). 없거나 해석하지 못하면 없다 */
   pickupAt?: Date;
+  /** 받는 곳. 비어 있으면 없다 */
+  pickupPlace?: string;
+  /** 제안한 동네 이름(서버 dong.name). 없으면 없다 */
+  dongName?: string;
   /** 주문 마감. 없거나 해석하지 못하면 없다 */
   deadlineAt?: Date;
-  /** 예약한 주민 수 */
+  /** 예약 수(서버는 취소를 뺀 주문 수량의 합계) */
   orderCount: number;
   /** 확정에 필요한 최소 주문 수 */
   minOrders: number;

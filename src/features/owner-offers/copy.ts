@@ -43,6 +43,55 @@ export const OFFER_COPY = {
   /** [시안] "{동} · {업종} 가게" */
   summaryTitle: (dongName: string, categoryLabel: string) => `${dongName} · ${categoryLabel}`,
 
+  // ── 제안 상세(Figma 66:472) ──
+  detailTitle: '제안 상세', // [시안]
+  detailRegionLabel: '예약 현황', // [시안] 카드 이름(접근성)
+  /** [시안] "마감 11/12(목) 18:00" */
+  deadlineText: (date: string) => `마감 ${date}`,
+  /** [시안] "예약 22명 · 최소 20명" */
+  reservedSummary: (orderCount: number, minOrders: number) =>
+    `예약 ${orderCount}명 · 최소 ${minOrders}명`,
+  rowPickupPlace: '받는 곳', // [시안]
+  completeAction: '판매 끝 (모두 받아 갔어요)', // [시안]
+  cancelAction: '제안 취소', // [시안]
+  /** [시안] 「판매를 끝낼까요?」 팝업. 본문은 주석이 아니라 내용이다. */
+  completeDialog: {
+    title: '판매를 끝낼까요?',
+    body: '모두 받아 갔다면 "수령 끝"으로 바꿔요. 이 기록은 창업자 리포트의 실제 수령 숫자에 들어가요.',
+    cancel: '취소',
+    confirm: '끝내기',
+  },
+  // TODO(디자인 확정 후 교체): 「제안 취소」 팝업은 시안이 없다.
+  cancelDialog: {
+    title: '제안을 취소할까요?',
+    body: '취소한 제안은 되돌릴 수 없고, 예약한 주문도 모두 취소돼요.',
+    cancel: '아니요',
+    confirm: '제안 취소',
+  },
+  /**
+   * 상태별 안내 문구(예약 현황 카드 안). 서버는 마감 시각이 지난 뒤에야 확정(CONFIRMED)·마감(CLOSED)을 정하므로
+   * 모집 중(OPEN)에서는 "확정됐어요"라고 쓰지 않는다.
+   */
+  statusNote: {
+    // TODO(디자인 확정 후 교체): OPEN·CLOSED·CANCELLED·DONE 문구는 시안이 없다.
+    open: (minOrders: number, deadline: string | null) =>
+      deadline === null
+        ? `${minOrders}명이 모이면 확정돼요`
+        : `마감(${deadline})까지 ${minOrders}명이 모이면 확정돼요`,
+    openFilled: '최소 인원을 채웠어요. 마감 시각이 지나면 확정돼요',
+    confirmed: '최소 주문을 채워서 확정됐어요', // [시안]
+    closed: '마감됐지만 최소 인원을 채우지 못했어요',
+    cancelled: '취소한 제안이에요',
+    done: '수령이 끝난 제안이에요',
+  },
+  // TODO(디자인 확정 후 교체): 아래 오류·찾을 수 없음 문구는 시안이 없다.
+  actionClosed: '지금은 처리할 수 없는 상태예요. 최신 상태로 다시 보여드릴게요.',
+  actionForbidden: '내 제안이 아니라서 처리할 수 없어요.',
+  detailNotFoundTitle: '찾을 수 없는 제안이에요',
+  detailNotFoundBody: '이미 지워졌거나 주소가 잘못된 제안이에요.',
+  detailNotFoundAction: '제안 목록으로',
+  detailFailedTitle: '제안을 가져오지 못했어요',
+
   // ── 방문 판매 제안(작성) ──
   formTitle: '방문 판매 제안', // [시안]
   fieldTitle: '제목', // [시안]

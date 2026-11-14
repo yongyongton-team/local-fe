@@ -3,7 +3,13 @@ import type { NewOffer } from '@/types/domain';
 import { jsonResponse, stubFetch } from '@/test/apiStub';
 import { createApiClient } from './apiClient';
 import { createApiOfferService } from './apiOfferService';
-import { buildCreateOfferBody, mapCreateOfferResponse, mapOwnerOffers } from './mappers';
+import {
+  buildCreateOfferBody,
+  mapCreateOfferResponse,
+  mapOwnerOffer,
+  mapOwnerOfferResponse,
+  mapOwnerOffers,
+} from './mappers';
 import { createTokenStore } from './tokenStore';
 
 const NOW = 1_000_000;
@@ -225,5 +231,171 @@ describe('createApiOfferService', () => {
       status: 403,
       code: 'FORBIDDEN',
     });
+  });
+});
+
+// 판매 끝·제안 취소 응답(갱신된 OwnerOfferItem). [임의] 테스트용 값이다.
+const FULL = {
+  ...ITEM,
+  description: '설명은 읽지 않는다',
+  pickupPlace: ' 구성동 주민센터 앞 ',
+  dong: { id: 22, name: ' 구성동 ' },
+};
+
+describe('mapOwnerOffer', () => {
+  it('받는 곳(공백 정리)과 동네 이름(dong.name)을 읽고 설명은 읽지 않는다', () => {
+    const offer = mapOwnerOffer(FULL);
+
+    expect(offer).toMatchObject({ id: '5', pickupPlace: '구성동 주민센터 앞', dongName: '구성동' });
+    expect(offer).not.toHaveProperty('description');
+  });
+
+  it('받는 곳·동네가 없거나 비어 있으면 그 필드만 없다', () => {
+    for (const patch of [
+      { pickupPlace: null, dong: null },
+      { pickupPlace: '   ', dong: { id: 1, name: '' } },
+      { pickupPlace: undefined, dong: undefined },
+    ]) {
+      const offer = mapOwnerOffer({ ...FULL, ...patch });
+
+      expect(offer).toBeDefined();
+      expect(offer).not.toHaveProperty('pickupPlace');
+      expect(offer).not.toHaveProperty('dongName');
+    }
+  });
+
+  it('id 가 올바르지 않으면 undefined 이고, 목록은 그 항목을 건너뛴다', () => {
+    expect(mapOwnerOffer({ ...FULL, id: 0 })).toBeUndefined();
+    expect(mapOwnerOffer(null)).toBeUndefined();
+    expect(mapOwnerOffers([{ ...FULL, id: null }, FULL])).toHaveLength(1);
+  });
+});
+
+describe('mapOwnerOfferResponse (done·cancel 응답)', () => {
+  it('갱신된 제안으로 옮긴다(상태 DONE·CANCELLED, 취소하면 orderCount 0)', () => {
+    expect(mapOwnerOfferResponse({ ...FULL, status: 'DONE' })).toMatchObject({
+      id: '5',
+      status: 'DONE',
+      orderCount: 3,
+    });
+    expect(mapOwnerOfferResponse({ ...FULL, status: 'CANCELLED', orderCount: 0 })).toMatchObject({
+      status: 'CANCELLED',
+      orderCount: 0,
+    });
+  });
+
+  it('알아볼 수 없는 응답은 parse 오류다(처리됐는지 알 수 없다)', () => {
+    expect(() => mapOwnerOfferResponse(undefined)).toThrow();
+    expect(() => mapOwnerOfferResponse({ status: 'DONE' })).toThrow();
+  });
+});
+
+describe('createApiOfferService: 상세·판매 끝·제안 취소', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('getOwnerOffer 는 GET /owner/offers 의 배열에서 id 로 찾는다(단건 엔드포인트 없음)', async () => {
+    storeSession();
+    const { calls } = stubFetch(() => jsonResponse(200, [FULL, { ...FULL, id: 9, title: '둘째' }]));
+    const client = newClient();
+    const service = createApiOfferService(() => client);
+
+    expect((await service.getOwnerOffer('9'))?.title).toBe('둘째');
+    expect(await service.getOwnerOffer('77')).toBeNull();
+    expect(calls.map((c) => [c.method, c.path])).toEqual([
+      ['GET', '/api/v1/owner/offers'],
+      ['GET', '/api/v1/owner/offers'],
+    ]);
+  });
+
+  it('getOwnerOffer 는 숫자가 아닌 id 면 요청 없이 null 이다', async () => {
+    storeSession();
+    const { fn } = stubFetch(() => jsonResponse(200, []));
+    const client = newClient();
+
+    expect(await createApiOfferService(() => client).getOwnerOffer('offer-seed-1')).toBeNull();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('completeOffer 는 POST /offers/{id}/done 을 본문 없이 보내고 갱신된 제안을 돌려준다', async () => {
+    storeSession();
+    const { calls } = stubFetch(() => jsonResponse(200, { ...FULL, status: 'DONE' }));
+    const client = newClient();
+
+    const done = await createApiOfferService(() => client).completeOffer('5');
+
+    expect(done).toMatchObject({ id: '5', status: 'DONE' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/v1/offers/5/done', body: null });
+  });
+
+  it('cancelOffer 는 POST /offers/{id}/cancel 을 본문 없이 보내고 예약 0 의 제안을 돌려준다', async () => {
+    storeSession();
+    const { calls } = stubFetch(() =>
+      jsonResponse(200, { ...FULL, status: 'CANCELLED', orderCount: 0 }),
+    );
+    const client = newClient();
+
+    const cancelled = await createApiOfferService(() => client).cancelOffer('5');
+
+    expect(cancelled).toMatchObject({ status: 'CANCELLED', orderCount: 0 });
+    expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/v1/offers/5/cancel', body: null });
+  });
+
+  it('숫자가 아닌 id 는 요청 없이 INVALID_ID 오류다', async () => {
+    storeSession();
+    const { fn } = stubFetch(() => jsonResponse(200, FULL));
+    const client = newClient();
+    const service = createApiOfferService(() => client);
+
+    await expect(service.completeOffer('offer-seed-1')).rejects.toMatchObject({
+      code: 'INVALID_ID',
+    });
+    await expect(service.cancelOffer('x')).rejects.toMatchObject({ code: 'INVALID_ID' });
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [409, 'OFFER_CLOSED'],
+    [403, 'FORBIDDEN'],
+    [404, 'NOT_FOUND'],
+  ] as const)('%s %s 는 서버 message 없이 ApiError 코드로 던진다', async (status, code) => {
+    storeSession();
+    stubFetch(() => jsonResponse(status, { code, message: '서버 원문' }));
+    const client = newClient();
+    const service = createApiOfferService(() => client);
+
+    for (const run of [() => service.completeOffer('5'), () => service.cancelOffer('5')]) {
+      const error = await run().then(
+        () => null,
+        (e: unknown) => e as Error,
+      );
+      expect(error).toMatchObject({ kind: 'http', status, code });
+      expect(error?.message).not.toContain('서버 원문');
+    }
+  });
+
+  it('응답이 올바르지 않으면 parse 오류다', async () => {
+    storeSession();
+    stubFetch(() => jsonResponse(200, {}));
+    const client = newClient();
+
+    await expect(createApiOfferService(() => client).completeOffer('5')).rejects.toMatchObject({
+      kind: 'parse',
+    });
+  });
+
+  it('데모 세션에서도 done·cancel 을 막지 않고 서버로 보낸다', async () => {
+    storeSession(true);
+    const { calls } = stubFetch(() => jsonResponse(200, FULL));
+    const client = newClient();
+    const service = createApiOfferService(() => client);
+
+    await service.completeOffer('5');
+    await service.cancelOffer('5');
+
+    expect(calls.map((c) => [c.method, c.path])).toEqual([
+      ['POST', '/api/v1/offers/5/done'],
+      ['POST', '/api/v1/offers/5/cancel'],
+    ]);
   });
 });

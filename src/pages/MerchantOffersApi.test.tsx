@@ -61,7 +61,7 @@ const ITEM_FULL = {
 };
 
 type Handler = (call: StubCall) => Response | Promise<Response>;
-function stubServer(routes: { offers?: Handler; create?: Handler } = {}) {
+function stubServer(routes: { offers?: Handler; create?: Handler; action?: Handler } = {}) {
   return stubFetch((call) => {
     if (call.path === '/api/v1/auth/guest') {
       return jsonResponse(200, { accessToken: 'tok-1', expiresIn: 3600, isNew: true });
@@ -73,6 +73,18 @@ function stubServer(routes: { offers?: Handler; create?: Handler } = {}) {
     if (detail) return jsonResponse(200, detailFor(Number(detail[1])));
     if (call.path === '/api/v1/owner/offers') {
       return routes.offers?.(call) ?? jsonResponse(200, [ITEM_WITHOUT_PRICE]);
+    }
+    const action = /^\/api\/v1\/offers\/(\d+)\/(done|cancel)$/.exec(call.path);
+    if (call.method === 'POST' && action) {
+      return (
+        routes.action?.(call) ??
+        jsonResponse(200, {
+          ...ITEM_FULL,
+          id: Number(action[1]),
+          status: action[2] === 'done' ? 'DONE' : 'CANCELLED',
+          orderCount: action[2] === 'done' ? ITEM_FULL.orderCount : 0,
+        })
+      );
     }
     if (call.method === 'POST' && call.path === '/api/v1/offers') {
       return routes.create?.(call) ?? jsonResponse(201, { notifiedResidentCount: 4 });
@@ -267,5 +279,134 @@ describe('api 모드의 방문 판매 제안 작성', () => {
       '입력한 값을 확인해 주세요. 날짜 순서와 가게 정보도 확인해 주세요.',
     );
     expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+  });
+});
+
+describe('api 모드의 제안 상세·판매 끝·제안 취소', () => {
+  const CONFIRMED = { ...ITEM_FULL, id: 6, status: 'CONFIRMED', orderCount: 22 };
+  const open = async (app: App, id = 6) => {
+    app.renderApp([`/merchant/offers/${id}`]);
+    await app.screen.findByRole('heading', { level: 2, name: '값이 다 있는 제안' });
+  };
+
+  it('GET /owner/offers 에서 id 로 찾아 보여주고, 제안 취소는 POST /offers/6/cancel 을 본문 없이 보낸다', async () => {
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [ITEM_FULL]) });
+    const app = await loadApp();
+    await open(app);
+    expect(app.screen.getByText('모집 중')).toBeInTheDocument();
+
+    await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
+    await app.user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+    );
+
+    expect(await app.screen.findByText('취소한 제안이에요')).toBeInTheDocument();
+    const posts = calls.filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest'));
+    expect(posts.map((c) => c.path)).toEqual(['/api/v1/offers/6/cancel']);
+    expect(posts[0]?.body).toBeNull();
+    expect(app.screen.getByText('예약 0명 · 최소 20명')).toBeInTheDocument();
+  });
+
+  it('판매 끝은 POST /offers/6/done 이고 성공하면 수령 끝이 된다', async () => {
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [CONFIRMED]) });
+    const app = await loadApp();
+    await open(app);
+
+    await app.user.click(app.screen.getByRole('button', { name: '판매 끝 (모두 받아 갔어요)' }));
+    await app.user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '끝내기' }),
+    );
+
+    expect(await app.screen.findByText('수령이 끝난 제안이에요')).toBeInTheDocument();
+    expect(
+      calls
+        .filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest'))
+        .map((c) => c.path),
+    ).toEqual(['/api/v1/offers/6/done']);
+  });
+
+  it('데모 세션도 막지 않고 POST 를 보낸다(데모 차단 문구 없음)', async () => {
+    localStorage.setItem(
+      'yyt.session',
+      JSON.stringify({ token: 'tok-demo', expiresAt: Date.now() + 1e7, demo: true }),
+    );
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [CONFIRMED]) });
+    const app = await loadApp();
+    await open(app);
+
+    await app.user.click(app.screen.getByRole('button', { name: '판매 끝 (모두 받아 갔어요)' }));
+    await app.user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '끝내기' }),
+    );
+
+    expect(await app.screen.findByText('수령이 끝난 제안이에요')).toBeInTheDocument();
+    expect(
+      calls.filter((c) => c.method === 'POST' && !c.path.endsWith('/auth/guest')),
+    ).toHaveLength(1);
+    expect(app.screen.queryByText(/데모 계정은 사장님 화면만/)).not.toBeInTheDocument();
+  });
+
+  it('409 OFFER_CLOSED 는 안내 후 GET /owner/offers 를 다시 불러 서버 상태로 맞춘다', async () => {
+    let listCalls = 0;
+    const { calls } = stubServer({
+      offers: () =>
+        jsonResponse(200, [++listCalls === 1 ? ITEM_FULL : { ...ITEM_FULL, status: 'CLOSED' }]),
+      action: () => jsonResponse(409, { code: 'OFFER_CLOSED', message: '서버 원문' }),
+    });
+    const app = await loadApp();
+    await open(app);
+
+    await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
+    await app.user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+    );
+
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '지금은 처리할 수 없는 상태예요. 최신 상태로 다시 보여드릴게요.',
+    );
+    expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
+    await app.waitFor(() =>
+      expect(app.screen.getByText('마감', { selector: 'span' })).toBeInTheDocument(),
+    );
+    expect(calls.filter((c) => c.path === '/api/v1/owner/offers')).toHaveLength(2);
+    expect(app.screen.queryByRole('button', { name: '제안 취소' })).not.toBeInTheDocument();
+  });
+
+  it('403 은 내 제안이 아니라는 안내이고, 404 는 찾을 수 없는 제안 화면이다', async () => {
+    stubServer({
+      offers: () => jsonResponse(200, [ITEM_FULL]),
+      action: () => jsonResponse(403, { code: 'FORBIDDEN', message: '서버 원문' }),
+    });
+    const app = await loadApp();
+    await open(app);
+    await app.user.click(app.screen.getByRole('button', { name: '제안 취소' }));
+    await app.user.click(
+      app.within(app.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+    );
+    expect(await app.screen.findByRole('alert')).toHaveTextContent(
+      '내 제안이 아니라서 처리할 수 없어요.',
+    );
+    app.cleanup();
+
+    stubServer({
+      offers: () => jsonResponse(200, [ITEM_FULL]),
+      action: () => jsonResponse(404, { code: 'NOT_FOUND', message: '서버 원문' }),
+    });
+    const app2 = await loadApp();
+    await open(app2);
+    await app2.user.click(app2.screen.getByRole('button', { name: '제안 취소' }));
+    await app2.user.click(
+      app2.within(app2.screen.getByRole('dialog')).getByRole('button', { name: '제안 취소' }),
+    );
+    expect(await app2.screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
+  });
+
+  it('목록에 없는 id·숫자가 아닌 id 는 찾을 수 없는 제안이다(숫자가 아니면 요청도 없다)', async () => {
+    const { calls } = stubServer({ offers: () => jsonResponse(200, [ITEM_FULL]) });
+    const app = await loadApp();
+    app.renderApp(['/merchant/offers/offer-seed-1']);
+
+    expect(await app.screen.findByText('찾을 수 없는 제안이에요')).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === '/api/v1/owner/offers')).toHaveLength(0);
   });
 });
