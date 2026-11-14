@@ -1,4 +1,4 @@
-import { VERDICT_NOT_JUDGED } from '@/shared/lib/publicData';
+import { VERDICT_NOT_JUDGED, VERDICT_NOT_SHORT } from '@/shared/lib/publicData';
 import type { LocationRank, MapMarker, PublicData, StoreCategory } from '@/types/domain';
 import { FOUNDER_COPY } from './copy';
 
@@ -114,4 +114,21 @@ export function resolveCategoryId(
  */
 export function shouldShowRankMap(remote: boolean, markerCount: number): boolean {
   return !remote || markerCount > 0;
+}
+
+/**
+ * 순위를 "기본으로 보이는 행"과 "접힌 행(NOT_SHORT)"으로 나눈다. 다시 정렬하지 않는다:
+ * 각 그룹 안에서 서버 순서를 그대로 유지하고, 순위 번호(rank)도 서버 값 그대로라 접힌 행 때문에 번호가 건너뛸 수 있다.
+ * NOT_JUDGED 와 공공데이터가 없는 행은 부족하지 않다고 판정된 것이 아니므로 보이는 쪽이다.
+ */
+export function splitRankRows(items: readonly LocationRank[]): {
+  visible: LocationRank[];
+  folded: LocationRank[];
+} {
+  const visible: LocationRank[] = [];
+  const folded: LocationRank[] = [];
+  for (const item of items) {
+    (item.publicData?.verdict === VERDICT_NOT_SHORT ? folded : visible).push(item);
+  }
+  return { visible, folded };
 }

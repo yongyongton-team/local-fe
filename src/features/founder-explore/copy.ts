@@ -7,4 +7,11 @@ export const FOUNDER_COPY = {
   rankSectionTitle: '인구에 비해 가게가 부족한 동네',
   /** 인구로 기대하는 가게 수와 실제 가게 수. expected 는 이미 반올림한 정수다. */
   expectedActual: (expected: number, actual: number) => `기대 ${expected}곳 · 실제 ${actual}곳`,
+  // TODO(디자인 확정 후 교체): 아래 세 문구는 임시다(시안에는 접기 동작이 없다).
+  /** 접힌 "부족하지 않은 동네"를 펼치는 버튼 */
+  showNotShort: (count: number) => `부족하지 않은 동네 ${count}곳 더 보기`,
+  /** 펼친 "부족하지 않은 동네"를 다시 접는 버튼 */
+  hideNotShort: '접기',
+  /** 보이는 행이 하나도 없을 때(전부 부족하지 않은 동네) 목록 자리의 안내 */
+  noShortNotice: '인구에 비해 가게가 부족한 동네가 아직 없어요.',
 } as const;

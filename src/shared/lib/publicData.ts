@@ -4,11 +4,14 @@
  */
 export const VERDICT_NOT_JUDGED = 'NOT_JUDGED';
 
+/** 인구에 비해 가게가 부족하지 않다는 판정. 입지 찾기 순위는 이 행을 기본으로 접어 둔다. */
+export const VERDICT_NOT_SHORT = 'NOT_SHORT';
+
 /** 지금까지 알려진 판정 값(문서용·테스트용). 이 밖의 값도 올 수 있다. */
 export const KNOWN_VERDICTS = [
   'SHORT',
   'SOME_NEARBY',
   'NEXT_DONG',
-  'NOT_SHORT',
+  VERDICT_NOT_SHORT,
   VERDICT_NOT_JUDGED,
 ] as const;

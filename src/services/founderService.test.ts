@@ -13,21 +13,46 @@ const summary = async (categoryId: string) =>
   ]);
 
 describe('입지 순위 목 서비스', () => {
-  it('과일/채소: 목 서버가 정한 순서 그대로이고(요청 0명 예시동이 2위), 실제 동네는 수요 데이터 값을 그대로 쓴다', async () => {
+  it('과일/채소: 목 서버가 정한 판정 우선순위 순서 그대로이고(요청 0명 예시동이 3위), 실제 동네는 수요 데이터 값을 그대로 쓴다', async () => {
     const rows = await summary(FRUIT);
 
     expect(rows.map((r) => [r[0], r[1], r[2]])).toEqual([
       [1, '구성동', 29],
-      [2, '예시동 가', 0],
-      [3, '보정동', 14],
-      [4, '마북동', 9],
+      [2, '예시동 라', 3],
+      [3, '예시동 가', 0],
+      [4, '보정동', 14],
       [5, '예시동 나', 2],
-      [6, '예시동 다', 1],
-      [7, '예시동 라', 3],
+      [6, '예시동 마', 1],
+      [7, '예시동 바', 0],
+      [8, '예시동 다', 1],
+      [9, '마북동', 9],
     ]);
     expect(rows[0]).toEqual([1, '구성동', 29, 0, 2.4]);
-    expect(rows[2]).toEqual([3, '보정동', 14, 1, 1.9]);
-    expect(rows[3]).toEqual([4, '마북동', 9, 0, 3.1]);
+    expect(rows[3]).toEqual([4, '보정동', 14, 1, 1.9]);
+    expect(rows[8]).toEqual([9, '마북동', 9, 0, 3.1]);
+  });
+
+  it('과일/채소의 판정은 SHORT → SOME_NEARBY → NEXT_DONG → NOT_SHORT(3곳) → NOT_JUDGED 순이고 공공데이터 없는 마북동은 마지막이다', async () => {
+    const rows = await founderService.listLocationRanks(FRUIT);
+
+    expect(rows.map((r) => r.publicData?.verdict)).toEqual([
+      'SHORT',
+      'SHORT',
+      'SOME_NEARBY',
+      'NEXT_DONG',
+      'NOT_SHORT',
+      'NOT_SHORT',
+      'NOT_SHORT',
+      'NOT_JUDGED',
+      undefined,
+    ]);
+  });
+
+  it('빵집은 순위에 오른 동네가 모두 NOT_SHORT 라 접으면 보일 행이 없다', async () => {
+    const rows = await founderService.listLocationRanks('bakery');
+
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.publicData?.verdict === 'NOT_SHORT')).toBe(true);
   });
 
   it('요청 수로 다시 정렬하지 않는다: 요청이 더 많은 동네가 아래에 있어도 서버 순서 그대로다', async () => {
@@ -35,7 +60,7 @@ describe('입지 순위 목 서비스', () => {
 
     const counts = rows.map((r) => r.requestCount);
     expect(counts).not.toEqual([...counts].sort((a, b) => b - a));
-    expect(rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('공공데이터: 판정 5가지, 소수 expectedCount, 숫자 없는 NOT_JUDGED, 공공데이터 없는 항목이 모두 있다', async () => {
