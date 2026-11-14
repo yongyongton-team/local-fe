@@ -83,6 +83,21 @@ describe('처음 진입한 상태(시드: 구성동 반찬 요청 1건)', () => 
     expect(item.queryByText('아직 사장님 응답이 없어요')).not.toBeInTheDocument();
   });
 
+  it('제안 데이터가 늘어도 카드에는 사장님 응답 한 줄만 보이고 제안 제목·가격·예약 같은 새 문구는 없다', async () => {
+    await openMyRequests();
+
+    const [card] = cards();
+    const item = within(card!);
+    expect(item.getAllByRole('group', { name: '사장님 응답' })).toHaveLength(1);
+    expect(item.getByRole('group', { name: '사장님 응답' }).textContent).toBe(
+      '사장님 응답맛나반찬: 토요일 오전 10시, 구성동 주민센터 앞에서 방문 판매해요',
+    );
+    // 두 번째 제안(푸른반찬)과 제안 제목·가격·주문은 카드에 나오지 않는다.
+    for (const text of [/푸른반찬/, /제철 반찬 꾸러미/, /15,?000/, /예약/, /주문/]) {
+      expect(card!.textContent).not.toMatch(text);
+    }
+  });
+
   it('요청 카드 안에는 링크나 버튼이 없고 삭제할 요청을 고르는 체크만 있다', async () => {
     await openMyRequests();
 

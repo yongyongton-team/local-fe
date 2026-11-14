@@ -63,6 +63,7 @@ const item = (overrides: Partial<MyRequest> = {}): MyRequest => ({
     titleLabel: '과일 가게',
   },
   requestCount: 30,
+  offers: [],
   ...overrides,
 });
 

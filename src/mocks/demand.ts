@@ -3,7 +3,7 @@ import type {
   GeoBounds,
   MapMarkerKind,
   MapPosition,
-  MerchantResponse,
+  ResidentOffer,
   Neighborhood,
   StoreCategory,
   StoreRequest,
@@ -201,10 +201,14 @@ export const mockMarkerPlacements: MockMarkerPlacement[] = [
   },
 ];
 
-/** 메모리 DB 에 들어 있는 요청 한 건. 사장님 응답은 목 시드로만 존재한다. */
+/**
+ * 메모리 DB 에 들어 있는 요청 한 건. 사장님 제안(offers)은 목 시드로만 존재하고 최신순이다(서버 GET /me/requests 와 같다).
+ * 내 요청 카드의 "사장님 응답" 한 줄은 이 제안 중 첫 OPEN·CONFIRMED 제안에서 만든다(mockMyRequestService).
+ * 새로 보낸 요청에는 offers 가 없다.
+ */
 export interface MockStoredRequest {
   request: StoreRequest;
-  response?: MerchantResponse;
+  offers?: ResidentOffer[];
 }
 
 /**
@@ -223,12 +227,43 @@ export const mockSeedRequests: MockStoredRequest[] = [
       visitTimes: ['weekday-evening'],
       visitFrequency: 'monthly',
     },
-    response: {
-      merchantName: '맛나반찬',
-      // 2026-11-14 는 토요일이다.
-      pickupAt: new Date('2026-11-14T10:00:00+09:00'),
-      pickupPlace: '구성동 주민센터 앞',
-    },
+    offers: [
+      // 카드의 "사장님 응답" 한 줄은 서버 순서의 첫 OPEN·CONFIRMED 제안(아래 첫 번째)이다.
+      {
+        id: 'mock-offer-seed-1',
+        shopName: '맛나반찬',
+        title: '[임의] 제철 반찬 꾸러미',
+        price: 15000,
+        // 2026-11-14 는 토요일이다.
+        pickupAt: new Date('2026-11-14T10:00:00+09:00'),
+        pickupPlace: '구성동 주민센터 앞',
+        minOrders: 20,
+        orderCount: 8,
+        deadlineAt: new Date('2026-11-13T18:00:00+09:00'),
+        status: 'OPEN',
+        // 주문이 없는 모집 중 제안
+        myOrder: null,
+      },
+      {
+        id: 'mock-offer-seed-2',
+        shopName: '푸른반찬',
+        title: '[임의] 국·찌개 세트',
+        price: 12000,
+        pickupAt: new Date('2026-11-15T11:00:00+09:00'),
+        pickupPlace: '구성동 놀이터 앞',
+        minOrders: 10,
+        orderCount: 12,
+        deadlineAt: new Date('2026-11-14T18:00:00+09:00'),
+        // 최소 주문 수를 채운 제안 + 내가 예약한 주문
+        status: 'CONFIRMED',
+        myOrder: {
+          id: 'mock-order-seed-1',
+          offerId: 'mock-offer-seed-2',
+          quantity: 2,
+          status: 'RESERVED',
+        },
+      },
+    ],
   },
 ];
 
