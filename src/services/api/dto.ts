@@ -272,7 +272,7 @@ export interface OwnerDetailDto {
 
 /**
  * GET /owner/offers 의 제안 한 항목(명세 OwnerOfferItem). 명세에는 price·pickupAt·pickupPlace·description 이 있고(필수 표시는 없다)
- * 응답은 배열이다. 이 화면은 price·pickupAt 까지만 읽는다(pickupPlace·description·dong 은 쓰지 않는다).
+ * 응답은 배열이다. 화면은 price·pickupAt·pickupPlace·dong.name 까지 읽는다(description 은 시안에 없어 쓰지 않는다).
  * 모든 필드를 선택으로 둔 것은 명세에 필수 표시가 없어서다. 값이 없으면 매퍼가 그 필드만 비운다.
  */
 export interface OwnerOfferDto {
@@ -281,6 +281,8 @@ export interface OwnerOfferDto {
   status?: Nullable<string>;
   price?: Nullable<number>;
   pickupAt?: Nullable<string>;
+  pickupPlace?: Nullable<string>;
+  dong?: Nullable<IdNameDto>;
   deadlineAt?: Nullable<string>;
   minOrders?: Nullable<number>;
   orderCount?: Nullable<number>;

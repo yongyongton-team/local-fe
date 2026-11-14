@@ -345,6 +345,23 @@ describe('데모 세션 보호', () => {
     expect(calls.map((c) => [c.method, c.path])).toEqual([['POST', '/api/v1/offers']]);
   });
 
+  it('데모 세션에서도 판매 끝·제안 취소(POST /offers/{id}/done·cancel)는 막지 않는다(제안 보내기와 같은 정책)', async () => {
+    const { calls } = stubFetch(() =>
+      jsonResponse(200, { id: 5, title: 't', status: 'DONE', orderCount: 0, minOrders: 20 }),
+    );
+    storeDemo();
+    const client = newClient();
+    const service = createApiOfferService(() => client);
+
+    await service.completeOffer('5');
+    await service.cancelOffer('5');
+
+    expect(calls.map((c) => [c.method, c.path])).toEqual([
+      ['POST', '/api/v1/offers/5/done'],
+      ['POST', '/api/v1/offers/5/cancel'],
+    ]);
+  });
+
   it('describeApiError: DEMO_SESSION 은 임시 안내 문구다(다른 parse 오류는 마지막 문구)', () => {
     expect(DEMO_WRITE_BLOCKED_MESSAGE).toBe(
       '데모 계정은 사장님 화면만 볼 수 있어요. 나가려면 주소 끝에 ?demo=off를 붙여 주세요.',

@@ -928,30 +928,49 @@ export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
         : null;
   if (list === null) throw parseError('GET /owner/offers 응답이 목록이 아니에요.');
   return list.flatMap((raw): OwnerOffer[] => {
-    const item: OwnerOfferDto = isObject(raw) ? raw : {};
-    const id = safeDomainId(item.id);
-    if (id === undefined) return [];
-    const price = asNumber(item.price);
-    const pickupAt = parseIsoDate(item.pickupAt);
-    const deadlineAt = parseIsoDate(item.deadlineAt);
-    const status = toOfferStatus(item.status);
-    const count = (value: unknown) => {
-      const n = asNumber(value);
-      return n !== undefined && n >= 0 ? n : 0;
-    };
-    return [
-      {
-        id,
-        title: asString(item.title).trim(),
-        ...(status !== null && { status }),
-        ...(price !== undefined && price >= 0 && { price }),
-        ...(pickupAt !== undefined && { pickupAt }),
-        ...(deadlineAt !== undefined && { deadlineAt }),
-        orderCount: count(item.orderCount),
-        minOrders: count(item.minOrders),
-      },
-    ];
+    const offer = mapOwnerOffer(raw);
+    return offer === undefined ? [] : [offer];
   });
+}
+
+/**
+ * OwnerOfferItem 한 건 → 도메인 OwnerOffer. id 가 양의 정수가 아니면 undefined.
+ * 목록(GET /owner/offers)의 항목과 POST /offers/{id}/done·cancel 의 응답이 같은 모양이다.
+ * 받는 곳(pickupPlace)과 동네 이름(dong.name)은 비어 있으면 없다. 설명(description)은 읽지 않는다.
+ */
+export function mapOwnerOffer(raw: unknown): OwnerOffer | undefined {
+  const item: OwnerOfferDto = isObject(raw) ? raw : {};
+  const id = safeDomainId(item.id);
+  if (id === undefined) return undefined;
+  const price = asNumber(item.price);
+  const pickupAt = parseIsoDate(item.pickupAt);
+  const deadlineAt = parseIsoDate(item.deadlineAt);
+  const status = toOfferStatus(item.status);
+  const pickupPlace = asString(item.pickupPlace).trim();
+  const dongName = isObject(item.dong) ? asString(item.dong.name).trim() : '';
+  const count = (value: unknown) => {
+    const n = asNumber(value);
+    return n !== undefined && n >= 0 ? n : 0;
+  };
+  return {
+    id,
+    title: asString(item.title).trim(),
+    ...(status !== null && { status }),
+    ...(price !== undefined && price >= 0 && { price }),
+    ...(pickupAt !== undefined && { pickupAt }),
+    ...(pickupPlace !== '' && { pickupPlace }),
+    ...(dongName !== '' && { dongName }),
+    ...(deadlineAt !== undefined && { deadlineAt }),
+    orderCount: count(item.orderCount),
+    minOrders: count(item.minOrders),
+  };
+}
+
+/** POST /offers/{id}/done·cancel 응답(갱신된 OwnerOfferItem) → 도메인. 알아볼 수 없으면 parse 오류(처리됐는지 알 수 없다). */
+export function mapOwnerOfferResponse(dto: unknown): OwnerOffer {
+  const offer = mapOwnerOffer(dto);
+  if (offer === undefined) throw parseError('제안 처리 응답에 제안 id 가 없어요.');
+  return offer;
 }
 
 /** 제안 보내기 본문. 설명이 비면 보내지 않고, 날짜는 +09:00 오프셋 ISO 8601 이다. 동네·업종 id 가 숫자가 아니면 던진다. */
