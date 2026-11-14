@@ -1,3 +1,11 @@
+import {
+  OFFER_DESCRIPTION_MAX,
+  OFFER_MIN_ORDERS_MAX,
+  OFFER_MIN_ORDERS_MIN,
+  OFFER_PICKUP_PLACE_MAX,
+  OFFER_PRICE_MAX,
+  OFFER_TITLE_MAX,
+} from '@/shared/lib/inputLimits';
 import type { OfferStatus } from '@/types/domain';
 
 /*
@@ -65,6 +73,16 @@ export const OFFER_COPY = {
     pickupPlace: '받는 곳을 입력해 주세요.',
     deadlineAt: '주문 마감 날짜와 시간을 골라 주세요.',
   },
+  // TODO(디자인 확정 후 교체): 시안에 없는 임시 안내. 서버 규칙 `지금 < 마감 < 받는 시각` 중 앞부분이다.
+  deadlineBeforeNow: '마감은 지금보다 늦어야 해요.',
+  // TODO(디자인 확정 후 교체): 서버 제약(길이·범위)을 넘었을 때의 임시 안내. 입력 칸이 먼저 막아 주므로 드물게 보인다.
+  outOfRange: {
+    title: `제목은 ${OFFER_TITLE_MAX}자 이하로 입력해 주세요.`,
+    description: `설명은 ${OFFER_DESCRIPTION_MAX}자 이하로 입력해 주세요.`,
+    price: `가격은 ${OFFER_PRICE_MAX.toLocaleString('ko-KR')}원 이하로 입력해 주세요.`,
+    pickupPlace: `받는 곳은 ${OFFER_PICKUP_PLACE_MAX}자 이하로 입력해 주세요.`,
+    minOrders: `최소 주문은 ${OFFER_MIN_ORDERS_MIN}~${OFFER_MIN_ORDERS_MAX}명으로 정해 주세요.`,
+  },
   // TODO(디자인 확정 후 교체): 시안에 없는 성공 안내
   sentTitle: '제안을 보냈어요',
   sentBody: (notifiedResidentCount: number | undefined) =>
@@ -75,14 +93,14 @@ export const OFFER_COPY = {
 } as const;
 
 /**
- * 제안 상태 배지 문구. OPEN 은 시안("모집 중")이고 나머지는 시안에 없는 임시 문구다.
- * 배지 색은 디자인에서 상태별로 정한다고 해서(Figma 컴포넌트 설명) 아직 한 가지 모양만 쓴다.
+ * 제안 상태 배지 문구. 시안의 상태 배지 컴포넌트 설명("모집 중, 확정, 마감, 취소, 수령 끝")을 따른 임시 문구다.
+ * OPEN 만 시안 화면에 그려져 있다. 배지 색은 디자인에서 상태별로 정한다고 해서(Figma 컴포넌트 설명) 아직 한 가지 모양만 쓴다.
  */
+// TODO(디자인 확정 후 교체): 색과 OPEN 외 상태의 문구는 시안이 확정되면 바꾼다.
 export const OFFER_STATUS_LABELS: Readonly<Record<OfferStatus, string>> = {
-  OPEN: '모집 중', // [시안]
-  // TODO(디자인 확정 후 교체): 아래 네 가지는 임시 문구
+  OPEN: '모집 중',
   CONFIRMED: '확정',
   CLOSED: '마감',
   CANCELLED: '취소',
-  DONE: '수령 완료',
+  DONE: '수령 끝',
 };

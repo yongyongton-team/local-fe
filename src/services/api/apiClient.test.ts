@@ -207,6 +207,139 @@ describe('401 처리', () => {
   });
 });
 
+describe('401 처리: 데모 세션 유지', () => {
+  const DEMO = '/api/v1/auth/demo';
+  const KEY = 'yyt.session';
+  const storeDemo = (token = 'tok-demo-old') =>
+    localStorage.setItem(KEY, JSON.stringify({ token, expiresAt: 1_000_000 + 1e7, demo: true }));
+  const storeGuest = (token = 'tok-guest-old') =>
+    localStorage.setItem(KEY, JSON.stringify({ token, expiresAt: 1_000_000 + 1e7 }));
+  const stored = () => JSON.parse(localStorage.getItem(KEY) ?? '{}');
+  const demoLogins = (calls: StubCall[]) => calls.filter((c) => c.path === DEMO);
+
+  it('데모 세션이 401 이면 게스트가 아니라 같은 역할(OWNER)로 데모 로그인을 다시 하고 그 토큰으로 한 번 재시도한다', async () => {
+    storeDemo();
+    const { calls } = stubFetch((call) => {
+      if (call.path === DEMO) return auth('tok-demo-new');
+      return call.authorization === 'Bearer tok-demo-old'
+        ? jsonResponse(401, {})
+        : jsonResponse(200, { id: 9 });
+    });
+
+    await expect(newClient().request('/me')).resolves.toEqual({ id: 9 });
+
+    expect(calls.map((c) => [c.path, c.authorization])).toEqual([
+      ['/api/v1/me', 'Bearer tok-demo-old'],
+      [DEMO, null],
+      ['/api/v1/me', 'Bearer tok-demo-new'],
+    ]);
+    expect(JSON.parse(demoLogins(calls)[0]?.body ?? '{}')).toEqual({ role: 'OWNER' });
+    expect(logins(calls)).toHaveLength(0);
+    expect(stored()).toMatchObject({ token: 'tok-demo-new', demo: true });
+  });
+
+  it('데모 재로그인이 실패하면 지금처럼 일반 게스트로 돌아가 재시도한다(데모 표시는 사라진다)', async () => {
+    storeDemo();
+    const { calls } = stubFetch((call) => {
+      if (call.path === DEMO) return jsonResponse(500, {});
+      if (call.path === GUEST) return auth('tok-guest-new');
+      return call.authorization === 'Bearer tok-demo-old'
+        ? jsonResponse(401, {})
+        : jsonResponse(200, { id: 9 });
+    });
+
+    await expect(newClient().request('/me')).resolves.toEqual({ id: 9 });
+
+    expect(calls.map((c) => [c.path, c.authorization])).toEqual([
+      ['/api/v1/me', 'Bearer tok-demo-old'],
+      [DEMO, null],
+      [GUEST, null],
+      ['/api/v1/me', 'Bearer tok-guest-new'],
+    ]);
+    expect(stored()).toMatchObject({ token: 'tok-guest-new' });
+    expect(stored()).not.toHaveProperty('demo');
+  });
+
+  it('데모 재로그인 요청이 네트워크로 실패해도 게스트로 돌아간다', async () => {
+    storeDemo();
+    stubFetch((call) => {
+      if (call.path === DEMO) throw new TypeError('network');
+      if (call.path === GUEST) return auth('tok-guest-new');
+      return call.authorization === 'Bearer tok-demo-old'
+        ? jsonResponse(401, {})
+        : jsonResponse(200, { id: 9 });
+    });
+
+    await expect(newClient().request('/me')).resolves.toEqual({ id: 9 });
+    expect(stored()).not.toHaveProperty('demo');
+  });
+
+  it('데모 재로그인 뒤 재시도도 401 이면 ApiError 로 끝나고 더 시도하지 않는다(재시도는 한 번)', async () => {
+    storeDemo();
+    const { calls } = stubFetch((call) =>
+      call.path === DEMO ? auth('tok-demo-new') : jsonResponse(401, { code: 'UNAUTHORIZED' }),
+    );
+
+    const error = await failure(newClient().request('/me'));
+
+    expect(error).toMatchObject({ kind: 'http', status: 401, code: 'UNAUTHORIZED' });
+    expect(demoLogins(calls)).toHaveLength(1);
+    expect(calls.filter((c) => c.path === '/api/v1/me')).toHaveLength(2);
+    expect(logins(calls)).toHaveLength(0);
+  });
+
+  it('일반 게스트의 401 흐름은 그대로다(데모 로그인을 부르지 않고 게스트로 재로그인한다)', async () => {
+    storeGuest();
+    const { calls } = stubFetch((call) => {
+      if (call.path === GUEST) return auth('tok-guest-new');
+      return call.authorization === 'Bearer tok-guest-old'
+        ? jsonResponse(401, {})
+        : jsonResponse(200, { id: 9 });
+    });
+
+    await expect(newClient().request('/me')).resolves.toEqual({ id: 9 });
+
+    expect(demoLogins(calls)).toHaveLength(0);
+    expect(calls.map((c) => [c.path, c.authorization])).toEqual([
+      ['/api/v1/me', 'Bearer tok-guest-old'],
+      [GUEST, null],
+      ['/api/v1/me', 'Bearer tok-guest-new'],
+    ]);
+    expect(stored()).not.toHaveProperty('demo');
+  });
+
+  it('데모 세션에서 동시 요청이 모두 401 을 받아도 데모 재로그인은 한 번이고 모두 새 데모 토큰으로 재시도한다(게스트 로그인 없음)', async () => {
+    storeDemo();
+    const { calls } = stubFetch(async (call) => {
+      if (call.path === DEMO) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return auth('tok-demo-new');
+      }
+      return call.authorization === 'Bearer tok-demo-old'
+        ? jsonResponse(401, {})
+        : jsonResponse(200, {});
+    });
+    const client = newClient();
+
+    await Promise.all([1, 2, 3].map(() => client.request('/me')));
+
+    expect(demoLogins(calls)).toHaveLength(1);
+    expect(logins(calls)).toHaveLength(0);
+    expect(calls.filter((c) => c.authorization === 'Bearer tok-demo-new')).toHaveLength(3);
+    expect(stored()).toMatchObject({ token: 'tok-demo-new', demo: true });
+  });
+
+  it('auth: false 요청의 401 은 데모 세션이어도 재로그인하지 않는다', async () => {
+    storeDemo();
+    const { calls } = stubFetch(() => jsonResponse(401, {}));
+
+    await failure(newClient().request('/health', { auth: false }));
+
+    expect(calls).toHaveLength(1);
+    expect(stored()).toMatchObject({ token: 'tok-demo-old', demo: true });
+  });
+});
+
 describe('세션 보관과 만료', () => {
   it('새로고침·탭을 닫은 뒤에도(새 클라이언트) localStorage 의 토큰을 복원해 로그인하지 않는다', async () => {
     const { calls } = stubFetch((call) =>

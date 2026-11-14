@@ -247,7 +247,7 @@ describe('describeLoadError', () => {
     expect(GENERIC_RETRY_TEXT).toBe('잠시 후 다시 시도해 주세요.');
   });
 
-  it('맥락을 주면 VALIDATION_ERROR 만 그 맥락의 문구가 되고, ApiError 가 아닌 오류는 그대로다', async () => {
+  it('맥락을 주면 VALIDATION_ERROR·NOT_FOUND 만 그 맥락의 문구가 되고, ApiError 가 아닌 오류는 그대로다', async () => {
     const { describeLoadError, GENERIC_RETRY_TEXT } =
       await import('@/features/resident-map/loadErrorText');
     const { ApiError } = await import('@/services/api/apiError');
@@ -260,7 +260,13 @@ describe('describeLoadError', () => {
     });
     const notFound = new ApiError({ kind: 'http', status: 404, code: 'NOT_FOUND', message: 'x' });
     expect(describeLoadError(invalid, 'parse')).toBe('요청 문장을 다시 확인해 주세요.');
-    expect(describeLoadError(notFound, 'parse')).toBe(describeLoadError(notFound));
+    expect(describeLoadError(notFound, 'parse')).toBe(
+      '요청을 정리할 동네를 찾을 수 없어요. 다시 선택해 주세요.',
+    );
+    // 맥락이 없으면 기존 문구 그대로다.
+    expect(describeLoadError(notFound)).toBe(
+      '선택한 동네를 찾을 수 없어요. 다른 동네를 선택해 주세요.',
+    );
     expect(describeLoadError(new Error('boom'), 'parse')).toBe(GENERIC_RETRY_TEXT);
   });
 });

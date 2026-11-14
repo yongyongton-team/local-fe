@@ -9,6 +9,7 @@ import {
 import {
   ERROR_MESSAGES_BY_CODE,
   FALLBACK_ERROR_MESSAGE,
+  NOT_FOUND_MESSAGES_BY_CONTEXT,
   VALIDATION_MESSAGES_BY_CONTEXT,
   describeApiError,
   type ErrorContext,
@@ -130,7 +131,7 @@ describe('describeApiError', () => {
 describe('describeApiError: 맥락별 VALIDATION_ERROR 문구', () => {
   const GENERIC = ERROR_MESSAGES_BY_CODE.VALIDATION_ERROR;
   const CONTEXTS = [
-    ['offer', '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.'],
+    ['offer', '입력한 값을 확인해 주세요. 날짜 순서와 가게 정보도 확인해 주세요.'],
     ['request', '요청 내용을 다시 확인해 주세요. 시간대와 이용 빈도를 선택했는지 살펴봐 주세요.'],
     ['shop', '가게 정보를 다시 확인해 주세요. 가게 이름, 업종, 위치를 살펴봐 주세요.'],
     ['parse', '요청 문장을 다시 확인해 주세요.'],
@@ -165,11 +166,8 @@ describe('describeApiError: 맥락별 VALIDATION_ERROR 문구', () => {
     expect(text).toBe(VALIDATION_MESSAGES_BY_CONTEXT.offer);
   });
 
-  it('VALIDATION_ERROR 가 아닌 오류의 문구와 동작은 맥락과 상관없이 그대로다', () => {
+  it('VALIDATION_ERROR·NOT_FOUND 가 아닌 오류의 문구와 동작은 맥락과 상관없이 그대로다', () => {
     for (const [context] of CONTEXTS) {
-      expect(describeApiError(http(404, 'NOT_FOUND'), context)).toBe(
-        ERROR_MESSAGES_BY_CODE.NOT_FOUND,
-      );
       expect(describeApiError(http(403, 'FORBIDDEN'), context)).toBe(
         ERROR_MESSAGES_BY_CODE.FORBIDDEN,
       );
@@ -192,5 +190,46 @@ describe('describeApiError: 맥락별 VALIDATION_ERROR 문구', () => {
 
   it('5xx 는 VALIDATION_ERROR 코드여도 마지막 문구다(맥락과 상관없이)', () => {
     expect(describeApiError(http(500, 'VALIDATION_ERROR'), 'offer')).toBe(FALLBACK_ERROR_MESSAGE);
+  });
+});
+
+describe('describeApiError: 맥락별 NOT_FOUND 문구', () => {
+  const GENERIC = ERROR_MESSAGES_BY_CODE.NOT_FOUND;
+  const CONTEXTS = [
+    ['offer', '제안할 동네나 업종을 찾을 수 없어요. 다시 선택해 주세요.'],
+    ['request', '요청할 동네나 업종을 찾을 수 없어요. 다시 선택해 주세요.'],
+    ['shop', '선택한 업종이나 동네를 찾을 수 없어요. 다시 선택해 주세요.'],
+    ['parse', '요청을 정리할 동네를 찾을 수 없어요. 다시 선택해 주세요.'],
+  ] as const satisfies readonly (readonly [ErrorContext, string])[];
+
+  it.each(CONTEXTS)('%s 맥락이면 그 맥락의 문구다(대상을 단정하지 않는다)', (context, expected) => {
+    expect(describeApiError(http(404, 'NOT_FOUND'), context)).toBe(expected);
+    expect(NOT_FOUND_MESSAGES_BY_CONTEXT[context]).toBe(expected);
+    expect(expected).toContain('동네');
+  });
+
+  it('맥락을 주지 않으면 기존 문구 그대로다', () => {
+    expect(describeApiError(http(404, 'NOT_FOUND'))).toBe(GENERIC);
+    expect(GENERIC).toBe('선택한 동네를 찾을 수 없어요. 다른 동네를 선택해 주세요.');
+  });
+
+  it('코드가 없는 404 도 NOT_FOUND 로 보고, 서버 message 는 쓰지 않는다', () => {
+    const text = describeApiError(http(404, undefined, '서버 원문 없는 업종'), 'shop');
+
+    expect(text).toBe(NOT_FOUND_MESSAGES_BY_CONTEXT.shop);
+    expect(text).not.toContain('서버 원문');
+  });
+
+  it('맥락 문구는 서로 다르고 기존 문구, 검증 문구와도 다르다', () => {
+    const all = [
+      GENERIC,
+      ...CONTEXTS.map(([, text]) => text),
+      ...Object.values(VALIDATION_MESSAGES_BY_CONTEXT),
+    ];
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it('5xx 는 NOT_FOUND 코드여도 마지막 문구다', () => {
+    expect(describeApiError(http(500, 'NOT_FOUND'), 'shop')).toBe(FALLBACK_ERROR_MESSAGE);
   });
 });
