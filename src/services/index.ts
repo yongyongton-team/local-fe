@@ -139,6 +139,7 @@ export { isApiError } from './api/apiError';
 export {
   DEMO_WRITE_BLOCKED_MESSAGE,
   ERROR_MESSAGES_BY_CODE,
+  NOT_FOUND_MESSAGES_BY_CONTEXT,
   VALIDATION_MESSAGES_BY_CONTEXT,
   describeApiError,
 } from './api/errorMessages';

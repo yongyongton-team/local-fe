@@ -1,6 +1,11 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { describeApiError, offerService } from '@/services';
+import {
+  OFFER_DESCRIPTION_MAX,
+  OFFER_PICKUP_PLACE_MAX,
+  OFFER_TITLE_MAX,
+} from '@/shared/lib/inputLimits';
 import { formatMonthDay24h, formatMonthDayMeridiem, parseKstInput } from '@/shared/lib/kstDate';
 import { paths } from '@/shared/lib/paths';
 import { Button } from '@/shared/ui/Button';
@@ -12,7 +17,9 @@ import {
   EMPTY_OFFER_FORM,
   checkOfferForm,
   clampMinOrders,
+  deadlineError,
   firstHint,
+  isPriceWithinLimit,
   sanitizePrice,
   type OfferFormValues,
 } from './formValidation';
@@ -32,6 +39,10 @@ export function OfferForm({ context }: { context: OfferContext }) {
   const navigate = useNavigate();
   const [values, setValues] = useState<OfferFormValues>(EMPTY_OFFER_FORM);
   const [dirty, setDirty] = useState(false);
+  // 마감 검증의 "지금". 입력할 때와 보내기 직전에 새로 읽는다(시간이 지나 마감이 지났을 수 있다).
+  const [now, setNow] = useState(() => new Date());
+  // 가격이 int32 최댓값을 넘는 입력을 막았을 때 안내를 보이기 위한 표시
+  const [priceTooHigh, setPriceTooHigh] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<OfferSent | null>(null);
@@ -45,11 +56,13 @@ export function OfferForm({ context }: { context: OfferContext }) {
   const placeId = useId();
   const sentBodyId = useId();
 
-  const check = checkOfferForm(values);
+  const check = checkOfferForm(values, now);
   const hint = dirty ? firstHint(check) : null;
+  const deadlineMessage = deadlineError(check);
 
   function update(patch: Partial<OfferFormValues>) {
     setValues((current) => ({ ...current, ...patch }));
+    setNow(new Date());
     setDirty(true);
     setError(null);
   }
@@ -58,7 +71,13 @@ export function OfferForm({ context }: { context: OfferContext }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (submittingRef.current || !check.canSubmit) return;
+    if (submittingRef.current) return;
+    // 보내기 직전의 시각으로 다시 검사한다. 마감이 그새 지났으면 오류를 보이고 보내지 않는다.
+    const submitTime = new Date();
+    if (!checkOfferForm(values, submitTime).canSubmit) {
+      setNow(submitTime);
+      return;
+    }
     const pickupAt = parseKstInput(values.pickupAt);
     const deadlineAt = parseKstInput(values.deadlineAt);
     if (!pickupAt || !deadlineAt) return;
@@ -100,6 +119,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_TITLE_MAX}
             placeholder={OFFER_COPY.titlePlaceholder}
             value={values.title}
             onChange={(event) => update({ title: event.target.value })}
@@ -115,6 +135,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_DESCRIPTION_MAX}
             placeholder={OFFER_COPY.descriptionPlaceholder}
             value={values.description}
             onChange={(event) => update({ description: event.target.value })}
@@ -135,7 +156,16 @@ export function OfferForm({ context }: { context: OfferContext }) {
                 autoComplete="off"
                 placeholder={OFFER_COPY.pricePlaceholder}
                 value={values.price === '' ? '' : Number(values.price).toLocaleString('ko-KR')}
-                onChange={(event) => update({ price: sanitizePrice(event.target.value) })}
+                onChange={(event) => {
+                  const next = sanitizePrice(event.target.value);
+                  // int32 최댓값을 넘는 입력은 받지 않고(이전 값 유지) 안내만 보인다.
+                  if (!isPriceWithinLimit(next)) {
+                    setPriceTooHigh(true);
+                    return;
+                  }
+                  setPriceTooHigh(false);
+                  update({ price: next });
+                }}
               />
               <span className={styles.unit} aria-hidden="true">
                 {OFFER_COPY.priceUnit}
@@ -172,6 +202,12 @@ export function OfferForm({ context }: { context: OfferContext }) {
           </div>
         </div>
 
+        {priceTooHigh && (
+          <p role="alert" className={styles.error}>
+            {OFFER_COPY.outOfRange.price}
+          </p>
+        )}
+
         <DateTimeField
           label={OFFER_COPY.fieldPickupAt}
           value={values.pickupAt}
@@ -189,6 +225,7 @@ export function OfferForm({ context }: { context: OfferContext }) {
             type="text"
             className={`${styles.box} ${styles.input}`}
             autoComplete="off"
+            maxLength={OFFER_PICKUP_PLACE_MAX}
             placeholder={OFFER_COPY.pickupPlacePlaceholder}
             value={values.pickupPlace}
             onChange={(event) => update({ pickupPlace: event.target.value })}
@@ -201,12 +238,12 @@ export function OfferForm({ context }: { context: OfferContext }) {
           display={displayWith(formatMonthDay24h)}
           placeholder={OFFER_COPY.pickPlaceholder}
           onChange={(deadlineAt) => update({ deadlineAt })}
-          invalid={check.deadlineNotBeforePickup}
+          invalid={deadlineMessage !== null}
           errorId={deadlineErrorId}
         />
-        {check.deadlineNotBeforePickup && (
+        {deadlineMessage !== null && (
           <p id={deadlineErrorId} role="alert" className={styles.error}>
-            {OFFER_COPY.deadlineAfterPickup}
+            {deadlineMessage}
           </p>
         )}
 

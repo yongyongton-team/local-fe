@@ -87,8 +87,23 @@ describe('내 가게(제안 목록): 정상', () => {
   });
 });
 
+describe('내 가게(제안 목록): 기본 시드(모집 중 1건 + 확정 1건)', () => {
+  it('처음 목록에 모집 중과 확정 제안이 함께 있고 확정은 막대가 가득 찬다', async () => {
+    renderApp(['/merchant/offers']);
+
+    const open = await screen.findByRole('article', { name: '제철 과일 꾸러미' });
+    const confirmed = await screen.findByRole('article', { name: '주말 채소 박스' });
+    expect(cards()).toHaveLength(2);
+    expect(within(open).getByText('모집 중')).toBeInTheDocument();
+    expect(within(confirmed).getByText('확정')).toBeInTheDocument();
+    expect(within(confirmed).getByText('가격').nextElementSibling).toHaveTextContent('12,000원');
+    const bar = within(confirmed).getByRole('progressbar', { name: '22 / 20명 예약' });
+    expect((bar.firstElementChild as HTMLElement).style.width).toBe('100%');
+  });
+});
+
 describe('내 가게(제안 목록): 상태·행·진행', () => {
-  it('상태 다섯 가지의 배지 문구(OPEN 만 시안, 나머지는 임시)', async () => {
+  it('상태 다섯 가지의 배지 문구(모집 중 / 확정 / 마감 / 취소 / 수령 끝)', async () => {
     listOffers(
       (['OPEN', 'CONFIRMED', 'CLOSED', 'CANCELLED', 'DONE'] as const).map((status, i) =>
         offer({ id: `s${i}`, title: `제안 ${status}`, status }),
@@ -99,7 +114,7 @@ describe('내 가게(제안 목록): 상태·행·진행', () => {
     await screen.findByRole('article', { name: '제안 OPEN' });
     const badge = (title: string) =>
       within(screen.getByRole('article', { name: title })).getByText(
-        /^(모집 중|확정|마감|취소|수령 완료)$/,
+        /^(모집 중|확정|마감|취소|수령 끝)$/,
         {
           selector: 'span',
         },
@@ -108,7 +123,7 @@ describe('내 가게(제안 목록): 상태·행·진행', () => {
     expect(badge('제안 CONFIRMED')).toHaveTextContent('확정');
     expect(badge('제안 CLOSED')).toHaveTextContent('마감');
     expect(badge('제안 CANCELLED')).toHaveTextContent('취소');
-    expect(badge('제안 DONE')).toHaveTextContent('수령 완료');
+    expect(badge('제안 DONE')).toHaveTextContent('수령 끝');
   });
 
   it('상태를 모르면 배지가 없다', async () => {

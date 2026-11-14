@@ -271,8 +271,9 @@ export interface OwnerDetailDto {
 }
 
 /**
- * GET /owner/offers 의 제안 한 항목. 명세의 OwnerOfferItem 에는 price·pickupAt 이 없어 선택으로 두었다(백엔드에 추가 요청 예정).
- * 응답이 배열인지 {items|offers} 객체인지는 실서버에서 확인해야 한다(mapOwnerOffers 는 둘 다 받는다).
+ * GET /owner/offers 의 제안 한 항목(명세 OwnerOfferItem). 명세에는 price·pickupAt·pickupPlace·description 이 있고(필수 표시는 없다)
+ * 응답은 배열이다. 이 화면은 price·pickupAt 까지만 읽는다(pickupPlace·description·dong 은 쓰지 않는다).
+ * 모든 필드를 선택으로 둔 것은 명세에 필수 표시가 없어서다. 값이 없으면 매퍼가 그 필드만 비운다.
  */
 export interface OwnerOfferDto {
   id?: Nullable<number>;

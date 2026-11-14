@@ -260,6 +260,32 @@ describe('내 가게: 신규 등록과 저장 버튼 활성 조건', () => {
   });
 });
 
+describe('내 가게: 가게 이름 길이 제한(서버 명세 50자)', () => {
+  it('입력 칸에 maxLength 50 이 있고 붙여넣어도 50자에서 잘린다', async () => {
+    const { user } = await openShop(merchantMe({ shop: SAVED }));
+    expect(nameInput()).toHaveAttribute('maxlength', '50');
+
+    await user.clear(nameInput());
+    await user.click(nameInput());
+    await user.paste('가'.repeat(80));
+
+    expect((nameInput() as HTMLInputElement).value).toHaveLength(50);
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('정확히 50자는 저장되고 PUT 인자의 이름도 50자다', async () => {
+    const save = vi.spyOn(meService, 'saveShop').mockResolvedValue(undefined);
+    const { user } = await openShop(merchantMe({ shop: SAVED }));
+    await user.clear(nameInput());
+    await user.type(nameInput(), '나'.repeat(50));
+
+    await user.click(saveButton());
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save.mock.calls[0]?.[0].shopName).toHaveLength(50);
+  });
+});
+
 describe('내 가게: 주소로 찾기', () => {
   it('엔터로 검색하면 결과 좌표로 지도 중심이 옮겨지고 위치가 정해진다', async () => {
     const { user, naver } = await openShop(merchantMe());

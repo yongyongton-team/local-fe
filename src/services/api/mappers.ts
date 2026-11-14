@@ -913,10 +913,10 @@ export function mapOwnerDetail(
 
 /**
  * GET /owner/offers 응답 → 도메인 OwnerOffer[]. 서버 순서를 그대로 쓴다.
- * - 응답은 배열이거나 {items|offers} 배열을 가진 객체다(실서버 모양은 명세에 없어 둘 다 받는다). 그 밖이면 parse 오류.
+ * - 응답은 배열이다(명세·실서버 모두). {items|offers} 배열을 가진 객체도 받지만 서버가 주는 모양은 아니다. 그 밖이면 parse 오류.
  * - 항목의 id 가 양의 정수가 아니면 그 항목은 건너뛴다(화면이 키로 쓴다). 제목이 비면 빈 제목으로 둔다.
  * - orderCount·minOrders 가 숫자가 아니면 0 이다(진행 막대가 비어 보인다). 상태가 모르는 값이면 상태가 없다.
- * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 서버가 아직 주지 않을 수 있어 올바르지 않으면 비운다.
+ * - price(0 이상 숫자)·pickupAt·deadlineAt(ISO 8601)은 명세에 필수 표시가 없어 없거나 올바르지 않으면 그 필드만 비운다.
  */
 export function mapOwnerOffers(dto: unknown): OwnerOffer[] {
   const list = Array.isArray(dto)

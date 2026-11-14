@@ -12,6 +12,7 @@ import {
   describeApiError,
   meService,
 } from '@/services';
+import { SHOP_NAME_MAX } from '@/shared/lib/inputLimits';
 import { geocodeAddress, type GeoPoint } from '@/shared/lib/naverGeocode';
 import { paths } from '@/shared/lib/paths';
 import { useAsyncData } from '@/shared/lib/useAsyncData';
@@ -107,7 +108,12 @@ function ShopForm({ me, categories }: { me: Me; categories: StoreCategory[] }) {
   const mapReady = script.status === 'ready' && !mapCrashed;
   const mapFailed = mapCrashed || script.status === 'error';
   const canSave =
-    name.trim() !== '' && categoryId !== '' && position !== null && mapReady && !saving;
+    name.trim() !== '' &&
+    name.trim().length <= SHOP_NAME_MAX &&
+    categoryId !== '' &&
+    position !== null &&
+    mapReady &&
+    !saving;
 
   async function search(text: string) {
     const keyword = text.trim();
@@ -187,6 +193,7 @@ function ShopForm({ me, categories }: { me: Me; categories: StoreCategory[] }) {
           type="text"
           className={styles.input}
           autoComplete="off"
+          maxLength={SHOP_NAME_MAX}
           value={name}
           onChange={(event) => {
             setName(event.target.value);

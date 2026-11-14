@@ -83,10 +83,16 @@ function stubServer(routes: { offers?: Handler; create?: Handler } = {}) {
 const callsTo = (calls: StubCall[], path: string, method = 'GET') =>
   calls.filter((c) => c.method === method && c.path.split('?')[0] === path);
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  // 마감은 "지금"보다 늦어야 하므로 시각을 고정한다(Date 만 가짜로 둔다).
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-01T09:00:00+09:00'));
+});
 afterEach(() => {
   rtl?.cleanup();
   rtl = null;
+  vi.useRealTimers();
 });
 
 const card = (app: App, name: string) => app.screen.findByRole('article', { name });
@@ -258,7 +264,7 @@ describe('api 모드의 방문 판매 제안 작성', () => {
     await app.user.click(app.screen.getByRole('button', { name: /제안 보내기/ }));
 
     expect(await app.screen.findByRole('alert')).toHaveTextContent(
-      '입력한 내용을 다시 확인해 주세요. 가격, 최소 주문 인원, 날짜를 살펴봐 주세요.',
+      '입력한 값을 확인해 주세요. 날짜 순서와 가게 정보도 확인해 주세요.',
     );
     expect(app.screen.queryByText(/서버 원문/)).not.toBeInTheDocument();
   });
